@@ -1,8 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { usePersonnel } from '@/lib/usePersonnel';
 import AccessGate from '@/components/shared/AccessGate';
 import PageHeader from '@/components/shared/PageHeader';
+import PersonnelProfileDialog from '@/components/personnel/PersonnelProfileDialog';
+import PersonnelStatusBadge from '@/components/personnel/PersonnelStatusBadge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,10 +13,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Plus, Pencil, Trash2, Search, AlertCircle, FileUp, Loader2, Filter } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, Search, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, LEVEL_NAMES } from '@/lib/accessLevels';
-import { usePersonnel } from '@/lib/usePersonnel';
 
 const emptyForm = {
   PNumber: '', Rank: '', FirstName: '', Surname: '', Type: 'Cadet',
@@ -23,17 +25,21 @@ const emptyForm = {
 export default function Personnel() {
   const queryClient = useQueryClient();
   const { personnel: currentUser } = usePersonnel();
+  const myLevel = currentUser?.AccessLevel ?? 0;
+
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [starFilter, setStarFilter] = useState('all');
   const [levelFilter, setLevelFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('active'); // default: hide non-active for lower levels
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef(null);
+  const [profilePerson, setProfilePerson] = useState(null);
 
-  const isAdmin = currentUser?.AccessLevel >= ACCESS_LEVELS.SYSTEM_ADMIN;
+  const isSysAdmin = myLevel >= ACCESS_LEVELS.SYSTEM_ADMIN;
+  const isCommander = myLevel >= ACCESS_LEVELS.DET_COMMANDER;
+  const canViewSensitive = myLevel >= ACCESS_LEVELS.DET_2IC; // L4+ can see Suspended/Leavers
 
   const { data: personnel = [] } = useQuery({
     queryKey: ['all-personnel'],
@@ -44,6 +50,7 @@ export default function Personnel() {
     mutationFn: (data) => base44.entities.PersonnelManager.create({
       ...data,
       AccessLevel: parseInt(data.AccessLevel),
+      PersonnelStatus: 'Active',
       IsLinked: false
     }),
     onSuccess: () => {
@@ -79,7 +86,8 @@ export default function Personnel() {
     setEditingId(null);
   }
 
-  function openEdit(record) {
+  function openEdit(record, e) {
+    e.stopPropagation();
     setForm({
       PNumber: record.PNumber,
       Rank: record.Rank || '',
@@ -94,61 +102,11 @@ export default function Personnel() {
     setOpen(true);
   }
 
-  async function handleCsvUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
-      file_url,
-      json_schema: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            PNumber: { type: "string" },
-            Rank: { type: "string" },
-            FirstName: { type: "string" },
-            Surname: { type: "string" },
-            Type: { type: "string" },
-            AccessLevel: { type: "number" },
-            RoleName: { type: "string" },
-            CurrentStarLevel: { type: "string" }
-          }
-        }
-      }
-    });
-
-    if (result.status === 'success' && result.output) {
-      const records = Array.isArray(result.output) ? result.output : [result.output];
-      const batch = records.filter(r => r.PNumber && r.Surname).map(r => ({
-        PNumber: r.PNumber,
-        Rank: r.Rank || '',
-        FirstName: r.FirstName || '',
-        Surname: r.Surname,
-        Type: r.Type || 'Cadet',
-        AccessLevel: parseInt(r.AccessLevel) || 0,
-        RoleName: r.RoleName || '',
-        CurrentStarLevel: r.CurrentStarLevel || 'Basic',
-        IsLinked: false,
-      }));
-      if (batch.length > 0) {
-        for (let i = 0; i < batch.length; i += 50) {
-          await base44.entities.PersonnelManager.bulkCreate(batch.slice(i, i + 50));
-        }
-        toast.success(`Imported ${batch.length} personnel records`);
-        queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
-      } else {
-        toast.error('No valid records found in CSV');
-      }
-    } else {
-      toast.error('Failed to parse CSV: ' + (result.details || 'Unknown error'));
-    }
-    setUploading(false);
-    if (fileRef.current) fileRef.current.value = '';
-  }
-
   const filtered = personnel.filter(p => {
+    // Hide non-active personnel from L3 and below
+    const status = p.PersonnelStatus || 'Active';
+    if (!canViewSensitive && status !== 'Active') return false;
+
     const matchSearch = !search ||
       p.Surname?.toLowerCase().includes(search.toLowerCase()) ||
       p.FirstName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -158,7 +116,8 @@ export default function Personnel() {
     const matchType = typeFilter === 'all' || p.Type === typeFilter;
     const matchStar = starFilter === 'all' || p.CurrentStarLevel === starFilter;
     const matchLevel = levelFilter === 'all' || String(p.AccessLevel) === levelFilter;
-    return matchSearch && matchType && matchStar && matchLevel;
+    const matchStatus = statusFilter === 'all' || (statusFilter === 'active' ? status === 'Active' : status !== 'Active');
+    return matchSearch && matchType && matchStar && matchLevel && matchStatus;
   });
 
   const atLimit = personnel.length >= 999;
@@ -171,15 +130,6 @@ export default function Personnel() {
         icon={Users}
         actions={
           <div className="flex items-center gap-2">
-            {isAdmin && (
-              <>
-                <input type="file" accept=".csv,.xlsx" ref={fileRef} onChange={handleCsvUpload} className="hidden" />
-                <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
-                  {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileUp className="w-4 h-4 mr-2" />}
-                  Import CSV
-                </Button>
-              </>
-            )}
             <Dialog open={open} onOpenChange={(v) => { if (!v) closeDialog(); else setOpen(true); }}>
               <DialogTrigger asChild>
                 <Button disabled={atLimit && !editingId} onClick={() => { setForm(emptyForm); setEditingId(null); }}>
@@ -308,43 +258,72 @@ export default function Personnel() {
                 ))}
               </SelectContent>
             </Select>
+            {canViewSensitive && (
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active Only</SelectItem>
+                  <SelectItem value="non-active">Non-Active</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">{filtered.length} of {personnel.length} shown</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-1">
-            {filtered.map(p => (
-              <div key={p.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                    {p.Surname?.[0]}
+            {filtered.map(p => {
+              const status = p.PersonnelStatus || 'Active';
+              const isInactive = status !== 'Active';
+              return (
+                <div
+                  key={p.id}
+                  className={`flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer ${isInactive ? 'opacity-60' : ''}`}
+                  onClick={() => setProfilePerson(p)}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${isInactive ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}`}>
+                      {p.Surname?.[0]}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {[p.Rank, p.FirstName, p.Surname].filter(Boolean).join(' ')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{p.PNumber} · {p.RoleName}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {[p.Rank, p.FirstName, p.Surname].filter(Boolean).join(' ')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{p.PNumber} · {p.RoleName}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Badge variant="secondary" className="text-xs">{p.Type || 'Cadet'}</Badge>
-                  {p.Type !== 'Adult Instructor' && <Badge variant="outline" className="text-xs">{p.CurrentStarLevel}</Badge>}
-                  <Badge className="text-xs">L{p.AccessLevel}</Badge>
-                  {p.IsLinked && <Badge variant="outline" className="text-xs text-chart-2 border-chart-2/30">Linked</Badge>}
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  {isAdmin && (
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteMutation.mutate(p.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="secondary" className="text-xs">{p.Type || 'Cadet'}</Badge>
+                    {p.Type !== 'Adult Instructor' && <Badge variant="outline" className="text-xs">{p.CurrentStarLevel}</Badge>}
+                    <Badge className="text-xs">L{p.AccessLevel}</Badge>
+                    {p.IsLinked && <Badge variant="outline" className="text-xs text-chart-2 border-chart-2/30">Linked</Badge>}
+                    {canViewSensitive && <PersonnelStatusBadge status={status} />}
+                    <Button variant="ghost" size="sm" onClick={(e) => openEdit(p, e)}>
+                      <Pencil className="w-3.5 h-3.5" />
                     </Button>
-                  )}
+                    {isSysAdmin && (
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(p.id); }}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+            {filtered.length === 0 && (
+              <p className="text-center py-8 text-muted-foreground text-sm">No personnel match the current filters.</p>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Profile dialog — opened by clicking a row */}
+      <PersonnelProfileDialog
+        person={profilePerson}
+        open={!!profilePerson}
+        onClose={() => setProfilePerson(null)}
+      />
     </AccessGate>
   );
 }

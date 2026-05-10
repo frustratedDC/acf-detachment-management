@@ -44,6 +44,31 @@
       ],
       "description": "Current star level (Cadets only)"
     },
+    "PersonnelStatus": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Suspended",
+        "Leaver",
+        "Long-term Absence",
+        "Deceased"
+      ],
+      "default": "Active",
+      "description": "Current status of the personnel member \u2014 Suspended/Leaver visible to L4+ only"
+    },
+    "StatusNotes": {
+      "type": "string",
+      "description": "Commander notes on status change (L4+ visible only)"
+    },
+    "StatusChangedDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the status was last changed"
+    },
+    "StatusChangedByPNumber": {
+      "type": "string",
+      "description": "PNumber of the commander who changed the status"
+    },
     "IsLinked": {
       "type": "boolean",
       "default": false,

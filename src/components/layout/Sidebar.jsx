@@ -24,7 +24,7 @@ const navItems = [
   { path: '/training-manager', label: 'Training Manager', icon: Brain, level: 4 },
   { path: '/training-plan-export', label: 'Training Export', icon: FileDown, level: 3 },
   { path: '/personnel', label: 'Personnel', icon: Users, level: 5 },
-  { path: '/admin', label: 'Admin Controls', icon: Settings, level: 6 },
+  { path: '/admin', label: 'Admin Controls', icon: Settings, level: 5 },
   { path: '/help', label: 'Help & Wiki', icon: HelpCircle, level: 0 },
 ];
 
