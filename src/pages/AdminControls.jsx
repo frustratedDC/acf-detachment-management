@@ -16,35 +16,8 @@ import { ACCESS_LEVELS } from '@/lib/accessLevels';
 // ─── Sys Admin Section (L6 only) ───────────────────────────────────────────
 function SysAdminPanel({ queryClient }) {
   const fileRef = useRef(null);
-  const personnelFileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadingPersonnel, setUploadingPersonnel] = useState(false);
   const [purging, setPurging] = useState(false);
-  const [detName, setDetName] = useState('');
-  const [savingSettings, setSavingSettings] = useState(false);
-
-  const { data: settings = [] } = useQuery({
-    queryKey: ['det-settings'],
-    queryFn: () => base44.entities.DetachmentSettings.filter({}),
-  });
-
-  useEffect(() => {
-    const name = settings.find(s => s.Key === 'detachment_name');
-    if (name) setDetName(name.Value);
-  }, [settings]);
-
-  async function saveDetachmentName() {
-    setSavingSettings(true);
-    const existing = settings.find(s => s.Key === 'detachment_name');
-    if (existing) {
-      await base44.entities.DetachmentSettings.update(existing.id, { Value: detName });
-    } else {
-      await base44.entities.DetachmentSettings.create({ Key: 'detachment_name', Value: detName, Description: 'Detachment display name for exports' });
-    }
-    queryClient.invalidateQueries({ queryKey: ['det-settings'] });
-    toast.success('Detachment name saved');
-    setSavingSettings(false);
-  }
 
   async function handleSyllabusCsvUpload(e) {
     const file = e.target.files?.[0];
@@ -112,31 +85,6 @@ function SysAdminPanel({ queryClient }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Global Detachment Settings */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Settings className="w-4 h-4 text-primary" />
-              Global Detachment Settings
-            </CardTitle>
-            <CardDescription>System-wide configuration applied across the application</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-3 max-w-md">
-              <div className="flex-1">
-                <Label>Detachment Name</Label>
-                <Input value={detName} onChange={e => setDetName(e.target.value)} placeholder="e.g. 123 (City) Sqn ACF" className="mt-1" />
-              </div>
-              <div className="flex items-end">
-                <Button onClick={saveDetachmentName} disabled={savingSettings}>
-                  {savingSettings ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                  Save
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Syllabus CSV Upload */}
         <Card>
           <CardHeader>
@@ -183,6 +131,31 @@ function DetCommanderPanel({ queryClient }) {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [purgingPersonnel, setPurgingPersonnel] = useState(false);
+  const [detName, setDetName] = useState('');
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const { data: settings = [] } = useQuery({
+    queryKey: ['det-settings'],
+    queryFn: () => base44.entities.DetachmentSettings.filter({}),
+  });
+
+  useEffect(() => {
+    const name = settings.find(s => s.Key === 'detachment_name');
+    if (name) setDetName(name.Value);
+  }, [settings]);
+
+  async function saveDetachmentName() {
+    setSavingSettings(true);
+    const existing = settings.find(s => s.Key === 'detachment_name');
+    if (existing) {
+      await base44.entities.DetachmentSettings.update(existing.id, { Value: detName });
+    } else {
+      await base44.entities.DetachmentSettings.create({ Key: 'detachment_name', Value: detName, Description: 'Detachment display name for exports' });
+    }
+    queryClient.invalidateQueries({ queryKey: ['det-settings'] });
+    toast.success('Detachment name saved');
+    setSavingSettings(false);
+  }
 
   async function handlePersonnelCsvUpload(e) {
     const file = e.target.files?.[0];
@@ -258,6 +231,28 @@ function DetCommanderPanel({ queryClient }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Detachment Name */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Settings className="w-4 h-4 text-primary" />
+              Detachment Name
+            </CardTitle>
+            <CardDescription>Display name used in exports and reports</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-3 max-w-md">
+              <div className="flex-1">
+                <Input value={detName} onChange={e => setDetName(e.target.value)} placeholder="e.g. 123 (City) Sqn ACF" />
+              </div>
+              <Button onClick={saveDetachmentName} disabled={savingSettings}>
+                {savingSettings ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Save
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Personnel CSV Upload */}
         <Card>
           <CardHeader>
