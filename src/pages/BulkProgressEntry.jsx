@@ -16,28 +16,51 @@ import { ClipboardCheck, Send, Search, Star, BookOpen, FileText } from 'lucide-r
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
+import { checkAndPromoteCadet } from '@/lib/progressUtils';
 
 const STAR_LEVELS = ['Basic', '1 Star', '2 Star'];
 
-// Returns the lesson codes that will be submitted given current mode/selections
 function resolveTargetLessons(mode, starLevel, subject, lessonCode, syllabus) {
-  if (mode === 'star') {
-    return syllabus.filter(l => l.StarLevel === starLevel);
-  }
-  if (mode === 'subject') {
-    return syllabus.filter(l => l.StarLevel === starLevel && l.SubjectName === subject);
-  }
-  if (mode === 'lesson' && lessonCode) {
-    return syllabus.filter(l => l.LessonCode === lessonCode);
-  }
+  if (mode === 'star') return syllabus.filter(l => l.StarLevel === starLevel);
+  if (mode === 'subject') return syllabus.filter(l => l.StarLevel === starLevel && l.SubjectName === subject);
+  if (mode === 'lesson' && lessonCode) return syllabus.filter(l => l.LessonCode === lessonCode);
   return [];
+}
+
+// Star level progress bar for a single cadet row
+function CadetStarProgress({ cadet, syllabus, approvedSet }) {
+  return (
+    <div className="flex gap-2 mt-1">
+      {STAR_LEVELS.map(sl => {
+        const mandatory = syllabus.filter(l => l.StarLevel === sl && l.IsMandatory);
+        if (mandatory.length === 0) return null;
+        const done = mandatory.filter(l => approvedSet.has(`${cadet.PNumber}::${l.LessonCode}`)).length;
+        const pct = Math.round((done / mandatory.length) * 100);
+        const isCurrent = cadet.CurrentStarLevel === sl;
+        return (
+          <div key={sl} className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className={`text-xs ${isCurrent ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>{sl}</span>
+              <span className="text-xs text-muted-foreground">{mandatory.length - done} left</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-1.5">
+              <div
+                className={`rounded-full h-1.5 transition-all ${pct === 100 ? 'bg-chart-2' : isCurrent ? 'bg-primary' : 'bg-muted-foreground/40'}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function BulkProgressEntry() {
   const { personnel: me } = usePersonnel();
   const queryClient = useQueryClient();
 
-  const [mode, setMode] = useState('lesson'); // 'lesson' | 'subject' | 'star'
+  const [mode, setMode] = useState('lesson');
   const [starLevel, setStarLevel] = useState('Basic');
   const [subject, setSubject] = useState('');
   const [lessonCode, setLessonCode] = useState('');
@@ -64,21 +87,20 @@ export default function BulkProgressEntry() {
   const lessonsForSubject = useMemo(() => syllabus.filter(l => l.StarLevel === starLevel && l.SubjectName === subject), [syllabus, starLevel, subject]);
   const targetLessons = useMemo(() => resolveTargetLessons(mode, starLevel, subject, lessonCode, syllabus), [mode, starLevel, subject, lessonCode, syllabus]);
 
-  // Cadets at this star level (active only)
-  const cadets = personnel.filter(p => isCadet(p.AccessLevel) && p.CurrentStarLevel === starLevel && (p.PersonnelStatus || 'Active') === 'Active');
-  const filteredCadets = cadets.filter(c =>
+  // ALL cadets — any status, any star level
+  const allCadets = useMemo(() => personnel.filter(p => isCadet(p.AccessLevel)), [personnel]);
+  const filteredCadets = useMemo(() => allCadets.filter(c =>
     c.Surname?.toLowerCase().includes(search.toLowerCase()) ||
+    c.FirstName?.toLowerCase().includes(search.toLowerCase()) ||
     c.PNumber?.toLowerCase().includes(search.toLowerCase())
-  );
+  ), [allCadets, search]);
 
   const approvedSet = useMemo(() => new Set(progress.filter(p => p.Status === 'Approved').map(p => `${p.CadetPNumber}::${p.LessonCode}`)), [progress]);
 
-  // A cadet is "already done" if ALL target lessons are approved
   function isFullyDone(pNumber) {
     return targetLessons.length > 0 && targetLessons.every(l => approvedSet.has(`${pNumber}::${l.LessonCode}`));
   }
 
-  // Count how many target lessons a cadet still needs
   function pendingCount(pNumber) {
     return targetLessons.filter(l => !approvedSet.has(`${pNumber}::${l.LessonCode}`)).length;
   }
@@ -94,14 +116,13 @@ export default function BulkProgressEntry() {
   }
 
   const isReady = targetLessons.length > 0 && selectedCadets.length > 0;
+  const isAutoApproved = (me?.AccessLevel ?? 0) >= ACCESS_LEVELS.DET_2IC;
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const isAutoApproved = (me?.AccessLevel ?? 0) >= ACCESS_LEVELS.DET_2IC;
       const records = [];
       for (const pnum of selectedCadets) {
         for (const lesson of targetLessons) {
-          // Skip already approved
           if (approvedSet.has(`${pnum}::${lesson.LessonCode}`)) continue;
           records.push({
             CadetPNumber: pnum,
@@ -118,37 +139,42 @@ export default function BulkProgressEntry() {
       }
       return records.length;
     },
-    onSuccess: (count) => {
+    onSuccess: async (count) => {
       toast.success(`Submitted ${count} progress record${count !== 1 ? 's' : ''}`);
       setSelectedCadets([]);
-      queryClient.invalidateQueries({ queryKey: ['progress-all'] });
-      queryClient.invalidateQueries({ queryKey: ['all-progress'] });
+      await queryClient.invalidateQueries({ queryKey: ['progress-all'] });
+      await queryClient.invalidateQueries({ queryKey: ['all-progress'] });
+
+      // Auto-promotion check (only when records are immediately approved)
+      if (isAutoApproved) {
+        const updatedProgress = await base44.entities.ProgressLedger.filter({});
+        const updatedSyllabus = syllabus;
+        const promotions = [];
+        for (const pnum of selectedCadets) {
+          const cadet = personnel.find(p => p.PNumber === pnum);
+          if (!cadet) continue;
+          const newLevel = await checkAndPromoteCadet(pnum, cadet.CurrentStarLevel, updatedSyllabus, updatedProgress);
+          if (newLevel) promotions.push({ cadet, newLevel });
+        }
+        if (promotions.length > 0) {
+          queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
+          promotions.forEach(({ cadet, newLevel }) => {
+            toast.success(`🎖 ${cadet.Surname} promoted to ${newLevel}!`);
+          });
+        }
+      }
     },
     onError: (err) => toast.error(err.message),
   });
 
-  // Summary of what will be submitted
   const summaryLabel = mode === 'star'
     ? `All lessons — ${starLevel}`
     : mode === 'subject'
     ? `${subject || '—'} (${lessonsForSubject.length} lessons)`
-    : lessonCode
-    ? targetLessons[0] ? `${targetLessons[0].LessonCode} — ${targetLessons[0].LessonName}` : '—'
-    : '—';
+    : targetLessons[0] ? `${targetLessons[0].LessonCode} — ${targetLessons[0].LessonName}` : '—';
 
-  function handleModeChange(v) {
-    setMode(v);
-    setSelectedCadets([]);
-    setLessonCode('');
-    setSubject('');
-  }
-
-  function handleStarChange(v) {
-    setStarLevel(v);
-    setSelectedCadets([]);
-    setLessonCode('');
-    setSubject('');
-  }
+  function handleModeChange(v) { setMode(v); setSelectedCadets([]); setLessonCode(''); setSubject(''); }
+  function handleStarChange(v) { setStarLevel(v); setSelectedCadets([]); setLessonCode(''); setSubject(''); }
 
   return (
     <AccessGate level={ACCESS_LEVELS.DET_2IC}>
@@ -163,7 +189,6 @@ export default function BulkProgressEntry() {
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-sm">Step 1 — What to Mark</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {/* Mode picker */}
             <div>
               <Label className="mb-1 block">Completion Mode</Label>
               <Tabs value={mode} onValueChange={handleModeChange}>
@@ -175,7 +200,6 @@ export default function BulkProgressEntry() {
               </Tabs>
             </div>
 
-            {/* Star Level — always shown */}
             <div>
               <Label>Star Level</Label>
               <Select value={starLevel} onValueChange={handleStarChange}>
@@ -186,7 +210,6 @@ export default function BulkProgressEntry() {
               </Select>
             </div>
 
-            {/* Subject — shown for subject + lesson modes */}
             {(mode === 'subject' || mode === 'lesson') && (
               <div>
                 <Label>Subject</Label>
@@ -199,7 +222,6 @@ export default function BulkProgressEntry() {
               </div>
             )}
 
-            {/* Lesson — shown for lesson mode only */}
             {mode === 'lesson' && (
               <div>
                 <Label>Lesson</Label>
@@ -221,15 +243,12 @@ export default function BulkProgressEntry() {
               <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1" />
             </div>
 
-            {/* Summary */}
             {targetLessons.length > 0 && (
               <div className="p-2 rounded-lg bg-muted/50 text-xs space-y-1">
                 <p className="font-medium">Will mark:</p>
                 <p className="text-muted-foreground">{summaryLabel}</p>
                 <p className="text-muted-foreground">{targetLessons.length} lesson{targetLessons.length !== 1 ? 's' : ''} total</p>
-                {mode === 'star' && (
-                  <p className="text-yellow-700 font-medium">⚠ Marks ALL {targetLessons.length} lessons in {starLevel}</p>
-                )}
+                {mode === 'star' && <p className="text-yellow-700 font-medium">⚠ Marks ALL {targetLessons.length} lessons in {starLevel}</p>}
               </div>
             )}
           </CardContent>
@@ -241,7 +260,7 @@ export default function BulkProgressEntry() {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-sm">Step 2 — Select Cadets ({selectedCadets.length} selected)</CardTitle>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={toggleAll} disabled={!isReady && targetLessons.length === 0}>
+                <Button variant="outline" size="sm" onClick={toggleAll}>
                   {selectedCadets.length > 0 ? 'Deselect All' : 'Select All'}
                 </Button>
                 <div className="relative">
@@ -252,35 +271,41 @@ export default function BulkProgressEntry() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-1 max-h-80 overflow-y-auto mb-4">
+            <div className="space-y-1 max-h-[480px] overflow-y-auto mb-4">
               {filteredCadets.map(cadet => {
                 const done = isFullyDone(cadet.PNumber);
                 const remaining = pendingCount(cadet.PNumber);
+                const isInactive = (cadet.PersonnelStatus || 'Active') !== 'Active';
                 return (
                   <label
                     key={cadet.PNumber}
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-colors cursor-pointer ${done ? 'opacity-40' : 'hover:bg-muted/50'}`}
+                    className={`flex items-start gap-3 p-3 rounded-lg transition-colors cursor-pointer ${done ? 'opacity-40' : 'hover:bg-muted/50'}`}
                   >
                     <Checkbox
+                      className="mt-1"
                       checked={selectedCadets.includes(cadet.PNumber)}
                       onCheckedChange={() => !done && toggleCadet(cadet.PNumber)}
                       disabled={done}
                     />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{[cadet.Rank, cadet.FirstName, cadet.Surname].filter(Boolean).join(' ')}</p>
-                      <p className="text-xs text-muted-foreground">{cadet.PNumber}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium">{[cadet.Rank, cadet.FirstName, cadet.Surname].filter(Boolean).join(' ')}</p>
+                        <span className="text-xs text-muted-foreground">{cadet.PNumber}</span>
+                        <Badge variant="outline" className="text-xs">{cadet.CurrentStarLevel}</Badge>
+                        {isInactive && <Badge variant="secondary" className="text-xs">{cadet.PersonnelStatus}</Badge>}
+                        {done && <Badge variant="outline" className="text-xs text-chart-2 border-chart-2/30">All done</Badge>}
+                        {!done && targetLessons.length > 1 && remaining < targetLessons.length && (
+                          <Badge variant="outline" className="text-xs">{remaining} remaining</Badge>
+                        )}
+                      </div>
+                      {/* Star level progress bars */}
+                      <CadetStarProgress cadet={cadet} syllabus={syllabus} approvedSet={approvedSet} />
                     </div>
-                    {done
-                      ? <Badge variant="outline" className="text-xs text-chart-2 border-chart-2/30">All done</Badge>
-                      : targetLessons.length > 1 && remaining < targetLessons.length
-                        ? <Badge variant="outline" className="text-xs">{remaining} remaining</Badge>
-                        : null
-                    }
                   </label>
                 );
               })}
               {filteredCadets.length === 0 && (
-                <p className="text-center py-6 text-muted-foreground text-sm">No active cadets at {starLevel} level.</p>
+                <p className="text-center py-6 text-muted-foreground text-sm">No cadets found.</p>
               )}
             </div>
             <Button
@@ -291,7 +316,7 @@ export default function BulkProgressEntry() {
               <Send className="w-4 h-4 mr-2" />
               Submit for {selectedCadets.length} Cadet{selectedCadets.length !== 1 ? 's' : ''}
               {targetLessons.length > 1 ? ` (${targetLessons.length} lessons each)` : ''}
-              {(me?.AccessLevel ?? 0) < ACCESS_LEVELS.DET_2IC ? ' — Pending Approval' : ' — Auto-Approved'}
+              {isAutoApproved ? ' — Auto-Approved' : ' — Pending Approval'}
             </Button>
           </CardContent>
         </Card>

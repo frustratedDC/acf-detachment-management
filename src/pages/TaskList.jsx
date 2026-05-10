@@ -11,6 +11,7 @@ import { CheckSquare, Check, X, Clock, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
+import { checkAndPromoteCadet } from '@/lib/progressUtils';
 
 export default function TaskList() {
   const queryClient = useQueryClient();
@@ -31,11 +32,26 @@ export default function TaskList() {
   const pending = allProgress.filter(p => p.Status === 'Pending');
   const approved = allProgress.filter(p => p.Status === 'Approved');
 
+  const { data: syllabus = [] } = useQuery({
+    queryKey: ['syllabus-master-all'],
+    queryFn: () => base44.entities.SyllabusMaster.filter({}),
+  });
+
   const approveMutation = useMutation({
-    mutationFn: (id) => base44.entities.ProgressLedger.update(id, { Status: 'Approved' }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all-progress'] });
+    mutationFn: (entry) => base44.entities.ProgressLedger.update(entry.id, { Status: 'Approved' }),
+    onSuccess: async (_, entry) => {
+      await queryClient.invalidateQueries({ queryKey: ['all-progress'] });
       toast.success('Entry approved');
+      // Check for star level promotion
+      const updatedProgress = await base44.entities.ProgressLedger.filter({});
+      const cadet = personnelMap[entry.CadetPNumber];
+      if (cadet) {
+        const newLevel = await checkAndPromoteCadet(entry.CadetPNumber, cadet.CurrentStarLevel, syllabus, updatedProgress);
+        if (newLevel) {
+          queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
+          toast.success(`🎖 ${cadet.Surname} promoted to ${newLevel}!`);
+        }
+      }
     },
   });
 
@@ -72,7 +88,7 @@ export default function TaskList() {
           </Badge>
           {showActions && (
             <>
-              <Button size="sm" variant="outline" className="text-chart-2 hover:text-chart-2" onClick={() => approveMutation.mutate(entry.id)}>
+              <Button size="sm" variant="outline" className="text-chart-2 hover:text-chart-2" onClick={() => approveMutation.mutate(entry)}>
                 <Check className="w-3.5 h-3.5" />
               </Button>
               <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => rejectMutation.mutate(entry.id)}>
