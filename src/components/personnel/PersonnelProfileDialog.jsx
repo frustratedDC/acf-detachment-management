@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
@@ -28,6 +28,13 @@ export default function PersonnelProfileDialog({ person, open, onClose }) {
   const [status, setStatus] = useState(person?.PersonnelStatus || 'Active');
   const [notes, setNotes] = useState(person?.StatusNotes || '');
   const [dirty, setDirty] = useState(false);
+
+  // Reset state whenever the person changes
+  useEffect(() => {
+    setStatus(person?.PersonnelStatus || 'Active');
+    setNotes(person?.StatusNotes || '');
+    setDirty(false);
+  }, [person?.id]);
 
   const saveMutation = useMutation({
     mutationFn: () => base44.entities.PersonnelManager.update(person.id, {

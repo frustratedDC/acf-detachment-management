@@ -62,6 +62,8 @@ export default function ParadeState() {
   });
 
   const filtered = allPersonnel.filter(p => {
+    // Only show Active personnel on parade state
+    if ((p.PersonnelStatus || 'Active') !== 'Active') return false;
     const matchSearch = p.Surname?.toLowerCase().includes(search.toLowerCase()) ||
       p.PNumber?.toLowerCase().includes(search.toLowerCase()) ||
       p.FirstName?.toLowerCase().includes(search.toLowerCase()) ||

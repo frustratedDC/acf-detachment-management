@@ -30,9 +30,10 @@ export default function ProgressMatrix() {
     queryFn: () => base44.entities.SyllabusMaster.filter({}),
   });
 
-  // Only show Cadets (L0-L2) — Adult Instructors (L3+) do not require syllabus completion
+  // Only show Active Cadets (L0-L2) — Adult Instructors (L3+) and non-Active do not appear
   const cadets = personnel.filter(p =>
     isCadet(p.AccessLevel) &&
+    (p.PersonnelStatus || 'Active') === 'Active' &&
     (starFilter === 'all' || p.CurrentStarLevel === starFilter) &&
     (p.Surname?.toLowerCase().includes(search.toLowerCase()) || p.PNumber?.toLowerCase().includes(search.toLowerCase()))
   );

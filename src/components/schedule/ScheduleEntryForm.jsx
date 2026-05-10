@@ -33,7 +33,7 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
     queryKey: ['instructors'],
     queryFn: async () => {
       const all = await base44.entities.PersonnelManager.filter({});
-      return all.filter(p => p.AccessLevel >= 2);
+      return all.filter(p => p.AccessLevel >= 2 && (p.PersonnelStatus || 'Active') === 'Active');
     },
   });
 

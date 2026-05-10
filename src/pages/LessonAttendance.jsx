@@ -41,11 +41,12 @@ export default function LessonAttendance() {
   const [activeLessonIdx, setActiveLessonIdx] = useState(0);
   const activeLesson = myLessons[activeLessonIdx];
 
-  // Filter cadets: match star level + present
+  // Filter cadets: match star level + present + Active status only
   const presentPNumbers = new Set(paradeState.filter(p => p.AttendanceStatus === 'Present').map(p => p.UserPNumber));
   const eligibleCadets = allPersonnel.filter(p =>
     p.CurrentStarLevel === activeLesson?.AssignedStarLevel &&
-    presentPNumbers.has(p.PNumber)
+    presentPNumbers.has(p.PNumber) &&
+    (p.PersonnelStatus || 'Active') === 'Active'
   );
 
   const filteredCadets = eligibleCadets.filter(c =>
