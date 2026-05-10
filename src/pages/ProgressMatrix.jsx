@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Brain, Search, CheckCircle2, Clock } from 'lucide-react';
-import { ACCESS_LEVELS } from '@/lib/accessLevels';
+import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
 import _ from 'lodash';
 
 export default function ProgressMatrix() {
@@ -30,7 +30,9 @@ export default function ProgressMatrix() {
     queryFn: () => base44.entities.SyllabusMaster.filter({}),
   });
 
+  // Only show Cadets (L0-L2) — Adult Instructors (L3+) do not require syllabus completion
   const cadets = personnel.filter(p =>
+    isCadet(p.AccessLevel) &&
     (starFilter === 'all' || p.CurrentStarLevel === starFilter) &&
     (p.Surname?.toLowerCase().includes(search.toLowerCase()) || p.PNumber?.toLowerCase().includes(search.toLowerCase()))
   );

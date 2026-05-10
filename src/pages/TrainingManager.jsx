@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Brain, AlertTriangle, CheckCircle2, Users, Lightbulb, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { ACCESS_LEVELS } from '@/lib/accessLevels';
+import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
 import _ from 'lodash';
 
 export default function TrainingManager() {
@@ -55,7 +55,7 @@ export default function TrainingManager() {
     const mandatoryLessons = syllabus.filter(l => l.IsMandatory);
 
     const gaps = [];
-    personnel.filter(p => p.AccessLevel === 0).forEach(cadet => {
+    personnel.filter(p => isCadet(p.AccessLevel)).forEach(cadet => {
       const completed = new Set((completedByLevel[cadet.PNumber] || []).map(c => c.LessonCode));
       const missing = mandatoryLessons.filter(l => l.StarLevel === cadet.CurrentStarLevel && !completed.has(l.LessonCode));
       if (missing.length > 0) {

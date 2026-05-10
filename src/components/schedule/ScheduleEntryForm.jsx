@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import LessonSelector from '@/components/shared/LessonSelector';
+import SmartInput from '@/components/shared/SmartInput';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -169,17 +170,19 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <Label className="text-xs">Dress Code</Label>
-                          <Input
+                          <SmartInput
+                            fieldKey="dress_code"
                             value={entry.DressCode}
-                            onChange={(e) => updateEntry(key, 'DressCode', e.target.value)}
+                            onChange={(val) => updateEntry(key, 'DressCode', val)}
                             placeholder="e.g. CS95"
                           />
                         </div>
                         <div>
                           <Label className="text-xs">Location</Label>
-                          <Input
+                          <SmartInput
+                            fieldKey="location"
                             value={entry.Location}
-                            onChange={(e) => updateEntry(key, 'Location', e.target.value)}
+                            onChange={(val) => updateEntry(key, 'Location', val)}
                             placeholder="e.g. Main Hall"
                           />
                         </div>

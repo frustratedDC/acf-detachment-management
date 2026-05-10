@@ -24,6 +24,7 @@ import TrainingManager from '@/pages/TrainingManager';
 import Personnel from '@/pages/Personnel';
 import AdminControls from '@/pages/AdminControls';
 import HelpWiki from '@/pages/HelpWiki';
+import TrainingPlanExport from '@/pages/TrainingPlanExport';
 
 const AppContent = () => {
   const { personnel, loading, needsLinking } = usePersonnel();
@@ -54,6 +55,7 @@ const AppContent = () => {
         <Route path="/training-manager" element={<TrainingManager />} />
         <Route path="/personnel" element={<Personnel />} />
         <Route path="/admin" element={<AdminControls />} />
+        <Route path="/training-plan-export" element={<TrainingPlanExport />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

@@ -6,9 +6,25 @@
       "type": "string",
       "description": "Primary identifier for personnel"
     },
+    "Rank": {
+      "type": "string",
+      "description": "Rank e.g. Cdt, LCpl, Cpl, Sgt, SSgt, WO2, WO1, Lt, Capt, Maj"
+    },
+    "FirstName": {
+      "type": "string",
+      "description": "First name of the person"
+    },
     "Surname": {
       "type": "string",
       "description": "Surname of the person"
+    },
+    "Type": {
+      "type": "string",
+      "enum": [
+        "Cadet",
+        "Adult Instructor"
+      ],
+      "description": "Whether this person is a Cadet or an Adult Instructor"
     },
     "AccessLevel": {
       "type": "number",
@@ -26,7 +42,7 @@
         "1 Star",
         "2 Star"
       ],
-      "description": "Current star level"
+      "description": "Current star level (Cadets only)"
     },
     "IsLinked": {
       "type": "boolean",

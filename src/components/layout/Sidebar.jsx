@@ -5,7 +5,7 @@ import { hasAccess, ACCESS_LEVELS, LEVEL_NAMES } from '@/lib/accessLevels';
 import {
   LayoutDashboard, Users, BookOpen, Calendar, ClipboardList,
   FileCheck, Brain, CheckSquare, Settings, HelpCircle, Shield,
-  ChevronLeft, ChevronRight, BookOpenCheck, LogOut
+  ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,7 @@ const navItems = [
   { path: '/progress', label: 'Progress Matrix', icon: Brain, level: 3 },
   { path: '/tasks', label: 'Task List', icon: CheckSquare, level: 4 },
   { path: '/training-manager', label: 'Training Manager', icon: Brain, level: 4 },
+  { path: '/training-plan-export', label: 'Training Plan Export', icon: FileDown, level: 3 },
   { path: '/personnel', label: 'Personnel', icon: Users, level: 5 },
   { path: '/admin', label: 'Admin Controls', icon: Settings, level: 6 },
   { path: '/help', label: 'Help & Wiki', icon: HelpCircle, level: 0 },

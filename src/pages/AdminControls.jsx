@@ -5,14 +5,16 @@ import AccessGate from '@/components/shared/AccessGate';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, Upload, Trash2, AlertTriangle, Loader2, FileUp } from 'lucide-react';
+import { Settings, Upload, Trash2, AlertTriangle, Loader2, FileUp, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 
 export default function AdminControls() {
   const queryClient = useQueryClient();
   const fileRef = useRef(null);
+  const personnelFileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadingPersonnel, setUploadingPersonnel] = useState(false);
   const [purging, setPurging] = useState(false);
 
   async function handleCsvUpload(e) {
@@ -70,6 +72,59 @@ export default function AdminControls() {
     if (fileRef.current) fileRef.current.value = '';
   }
 
+  async function handlePersonnelCsvUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPersonnel(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
+      file_url,
+      json_schema: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            PNumber: { type: "string" },
+            Rank: { type: "string" },
+            FirstName: { type: "string" },
+            Surname: { type: "string" },
+            Type: { type: "string" },
+            AccessLevel: { type: "number" },
+            RoleName: { type: "string" },
+            CurrentStarLevel: { type: "string" }
+          }
+        }
+      }
+    });
+    if (result.status === 'success' && result.output) {
+      const records = Array.isArray(result.output) ? result.output : [result.output];
+      const batch = records.filter(r => r.PNumber && r.Surname).map(r => ({
+        PNumber: r.PNumber,
+        Rank: r.Rank || '',
+        FirstName: r.FirstName || '',
+        Surname: r.Surname,
+        Type: r.Type || 'Cadet',
+        AccessLevel: parseInt(r.AccessLevel) || 0,
+        RoleName: r.RoleName || '',
+        CurrentStarLevel: r.CurrentStarLevel || 'Basic',
+        IsLinked: false,
+      }));
+      if (batch.length > 0) {
+        for (let i = 0; i < batch.length; i += 50) {
+          await base44.entities.PersonnelManager.bulkCreate(batch.slice(i, i + 50));
+        }
+        toast.success(`Imported ${batch.length} personnel records`);
+        queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
+      } else {
+        toast.error('No valid records found');
+      }
+    } else {
+      toast.error('Failed to parse CSV: ' + (result.details || 'Unknown error'));
+    }
+    setUploadingPersonnel(false);
+    if (personnelFileRef.current) personnelFileRef.current.value = '';
+  }
+
   async function purgeSyllabus() {
     setPurging(true);
     const all = await base44.entities.SyllabusMaster.filter({});
@@ -90,7 +145,41 @@ export default function AdminControls() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* CSV Upload */}
+        {/* Personnel CSV Upload */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="w-4 h-4 text-chart-2" />
+              CSV Upload — Personnel
+            </CardTitle>
+            <CardDescription>
+              Upload a CSV with columns: PNumber, Rank, FirstName, Surname, Type, AccessLevel, RoleName, CurrentStarLevel
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <input
+              type="file"
+              accept=".csv,.xlsx"
+              ref={personnelFileRef}
+              onChange={handlePersonnelCsvUpload}
+              className="hidden"
+            />
+            <Button
+              onClick={() => personnelFileRef.current?.click()}
+              disabled={uploadingPersonnel}
+              className="w-full"
+              variant="outline"
+            >
+              {uploadingPersonnel ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</>
+              ) : (
+                <><FileUp className="w-4 h-4 mr-2" />Choose File</>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Syllabus CSV Upload */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
