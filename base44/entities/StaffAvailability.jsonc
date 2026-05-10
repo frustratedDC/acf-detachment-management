@@ -1,0 +1,28 @@
+{
+  "name": "StaffAvailability",
+  "type": "object",
+  "properties": {
+    "EventDate": {
+      "type": "string",
+      "format": "date",
+      "description": "The training night date"
+    },
+    "PNumber": {
+      "type": "string",
+      "description": "Staff member PNumber"
+    },
+    "IsAvailable": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether they are available"
+    },
+    "Notes": {
+      "type": "string",
+      "description": "Optional note from staff member"
+    }
+  },
+  "required": [
+    "EventDate",
+    "PNumber"
+  ]
+}

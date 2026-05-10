@@ -37,6 +37,16 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
     },
   });
 
+  const { data: availability = [] } = useQuery({
+    queryKey: ['staff-availability'],
+    queryFn: () => base44.entities.StaffAvailability.filter({}),
+  });
+
+  function isAvailableOnDate(pNumber) {
+    const rec = availability.find(a => a.EventDate === formDate && a.PNumber === pNumber);
+    return rec ? rec.IsAvailable : null; // null = no response
+  }
+
   const { data: existingEntries = [] } = useQuery({
     queryKey: ['schedule-date', formDate],
     queryFn: () => base44.entities.NightlySchedule.filter({ Date: formDate }),
@@ -158,11 +168,14 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
                             <SelectContent>
-                              {instructors.map(i => (
-                                <SelectItem key={i.PNumber} value={i.PNumber}>
-                                  {i.Surname} ({i.PNumber})
-                                </SelectItem>
-                              ))}
+                              {instructors.map(i => {
+                                const avail = isAvailableOnDate(i.PNumber);
+                                return (
+                                  <SelectItem key={i.PNumber} value={i.PNumber}>
+                                    {avail === true ? '✓ ' : avail === false ? '✗ ' : ''}{i.Rank ? `${i.Rank} ` : ''}{i.Surname} ({i.PNumber})
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                         </div>

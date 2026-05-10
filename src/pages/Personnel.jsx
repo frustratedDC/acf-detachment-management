@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Plus, Pencil, Trash2, Search, AlertCircle, FileUp, Loader2 } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, Search, AlertCircle, FileUp, Loader2, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, LEVEL_NAMES } from '@/lib/accessLevels';
 import { usePersonnel } from '@/lib/usePersonnel';
@@ -24,6 +24,9 @@ export default function Personnel() {
   const queryClient = useQueryClient();
   const { personnel: currentUser } = usePersonnel();
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [starFilter, setStarFilter] = useState('all');
+  const [levelFilter, setLevelFilter] = useState('all');
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -145,12 +148,18 @@ export default function Personnel() {
     if (fileRef.current) fileRef.current.value = '';
   }
 
-  const filtered = personnel.filter(p =>
-    p.Surname?.toLowerCase().includes(search.toLowerCase()) ||
-    p.FirstName?.toLowerCase().includes(search.toLowerCase()) ||
-    p.PNumber?.toLowerCase().includes(search.toLowerCase()) ||
-    p.RoleName?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = personnel.filter(p => {
+    const matchSearch = !search ||
+      p.Surname?.toLowerCase().includes(search.toLowerCase()) ||
+      p.FirstName?.toLowerCase().includes(search.toLowerCase()) ||
+      p.PNumber?.toLowerCase().includes(search.toLowerCase()) ||
+      p.RoleName?.toLowerCase().includes(search.toLowerCase()) ||
+      p.Rank?.toLowerCase().includes(search.toLowerCase());
+    const matchType = typeFilter === 'all' || p.Type === typeFilter;
+    const matchStar = starFilter === 'all' || p.CurrentStarLevel === starFilter;
+    const matchLevel = levelFilter === 'all' || String(p.AccessLevel) === levelFilter;
+    return matchSearch && matchType && matchStar && matchLevel;
+  });
 
   const atLimit = personnel.length >= 999;
 
@@ -268,10 +277,39 @@ export default function Personnel() {
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Search by name, PNumber or role..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+          <div className="flex flex-wrap gap-2">
+            <div className="relative flex-1 min-w-48">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Search name, PNumber, rank, role..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+            </div>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-36"><SelectValue placeholder="All Types" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="Cadet">Cadet</SelectItem>
+                <SelectItem value="Adult Instructor">Instructor</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={starFilter} onValueChange={setStarFilter}>
+              <SelectTrigger className="w-36"><SelectValue placeholder="Star Level" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stars</SelectItem>
+                <SelectItem value="Basic">Basic</SelectItem>
+                <SelectItem value="1 Star">1 Star</SelectItem>
+                <SelectItem value="2 Star">2 Star</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={levelFilter} onValueChange={setLevelFilter}>
+              <SelectTrigger className="w-36"><SelectValue placeholder="Access Level" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Levels</SelectItem>
+                {Object.entries(LEVEL_NAMES).map(([lvl, name]) => (
+                  <SelectItem key={lvl} value={lvl}>L{lvl} – {name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+          <p className="text-xs text-muted-foreground mt-1">{filtered.length} of {personnel.length} shown</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-1">

@@ -1,11 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import AccessGate from '@/components/shared/AccessGate';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, Upload, Trash2, AlertTriangle, Loader2, FileUp, Users } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Settings, Upload, Trash2, AlertTriangle, Loader2, FileUp, Users, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 
@@ -16,6 +18,30 @@ export default function AdminControls() {
   const [uploading, setUploading] = useState(false);
   const [uploadingPersonnel, setUploadingPersonnel] = useState(false);
   const [purging, setPurging] = useState(false);
+  const [detName, setDetName] = useState('');
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const { data: settings = [] } = useQuery({
+    queryKey: ['det-settings'],
+    queryFn: () => base44.entities.DetachmentSettings.filter({}),
+    onSuccess: (data) => {
+      const name = data.find(s => s.Key === 'detachment_name');
+      if (name) setDetName(name.Value);
+    }
+  });
+
+  async function saveDetachmentName() {
+    setSavingSettings(true);
+    const existing = settings.find(s => s.Key === 'detachment_name');
+    if (existing) {
+      await base44.entities.DetachmentSettings.update(existing.id, { Value: detName });
+    } else {
+      await base44.entities.DetachmentSettings.create({ Key: 'detachment_name', Value: detName, Description: 'Detachment display name for exports' });
+    }
+    queryClient.invalidateQueries({ queryKey: ['det-settings'] });
+    toast.success('Detachment name saved');
+    setSavingSettings(false);
+  }
 
   async function handleCsvUpload(e) {
     const file = e.target.files?.[0];
@@ -145,6 +171,30 @@ export default function AdminControls() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Detachment Settings */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Settings className="w-4 h-4 text-primary" />
+              Detachment Settings
+            </CardTitle>
+            <CardDescription>Configure detachment-wide settings used in exports and display</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-3 max-w-md">
+              <div className="flex-1">
+                <Label>Detachment Name</Label>
+                <Input value={detName} onChange={e => setDetName(e.target.value)} placeholder="e.g. 123 (City) Sqn ACF" className="mt-1" />
+              </div>
+              <div className="flex items-end">
+                <Button onClick={saveDetachmentName} disabled={savingSettings}>
+                  {savingSettings ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Save
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         {/* Personnel CSV Upload */}
         <Card>
           <CardHeader>

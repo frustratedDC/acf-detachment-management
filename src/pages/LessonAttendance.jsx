@@ -79,7 +79,7 @@ export default function LessonAttendance() {
   }
 
   return (
-    <AccessGate level={ACCESS_LEVELS.INSTRUCTOR}>
+    <AccessGate level={ACCESS_LEVELS.DET_INSTRUCTOR}>
       <PageHeader
         title="Lesson Attendance"
         description="Record cadet attendance for your assigned lessons"

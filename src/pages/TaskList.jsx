@@ -86,7 +86,7 @@ export default function TaskList() {
   }
 
   return (
-    <AccessGate level={ACCESS_LEVELS.DET_2IC}>
+    <AccessGate level={ACCESS_LEVELS.DET_INSTRUCTOR}>
       <PageHeader
         title="Task List & Approvals"
         description="Review and approve progress ledger submissions"

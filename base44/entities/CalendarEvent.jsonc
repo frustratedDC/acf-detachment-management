@@ -1,0 +1,56 @@
+{
+  "name": "CalendarEvent",
+  "type": "object",
+  "properties": {
+    "Title": {
+      "type": "string",
+      "description": "Event title"
+    },
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Event date"
+    },
+    "EndDate": {
+      "type": "string",
+      "format": "date",
+      "description": "End date (for multi-day events)"
+    },
+    "EventType": {
+      "type": "string",
+      "enum": [
+        "Training Night",
+        "Camp",
+        "Competition",
+        "Admin",
+        "Other"
+      ],
+      "default": "Training Night"
+    },
+    "Notes": {
+      "type": "string",
+      "description": "Event notes"
+    },
+    "IsTrainingNight": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this closes the detachment for a training night"
+    },
+    "AvailabilityDeadline": {
+      "type": "string",
+      "format": "date",
+      "description": "Deadline for staff to submit availability"
+    },
+    "Location": {
+      "type": "string"
+    },
+    "CreatedByPNumber": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "Title",
+    "Date",
+    "EventType"
+  ]
+}

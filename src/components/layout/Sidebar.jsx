@@ -5,7 +5,7 @@ import { hasAccess, ACCESS_LEVELS, LEVEL_NAMES } from '@/lib/accessLevels';
 import {
   LayoutDashboard, Users, BookOpen, Calendar, ClipboardList,
   FileCheck, Brain, CheckSquare, Settings, HelpCircle, Shield,
-  ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown
+  ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown, CalendarDays, ClipboardCheck
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -14,13 +14,15 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, level: 0 },
   { path: '/parade', label: 'Parade State', icon: ClipboardList, level: 1 },
   { path: '/attendance', label: 'Lesson Attendance', icon: FileCheck, level: 2 },
+  { path: '/calendar', label: 'Training Calendar', icon: CalendarDays, level: 0 },
   { path: '/schedule', label: 'Training Plan', icon: Calendar, level: 2 },
   { path: '/syllabus', label: 'Syllabus', icon: BookOpen, level: 0 },
   { path: '/personal-syllabus', label: 'My Syllabus', icon: BookOpenCheck, level: 0 },
   { path: '/progress', label: 'Progress Matrix', icon: Brain, level: 3 },
-  { path: '/tasks', label: 'Task List', icon: CheckSquare, level: 4 },
+  { path: '/tasks', label: 'Task List', icon: CheckSquare, level: 3 },
+  { path: '/bulk-progress', label: 'Bulk Progress Entry', icon: ClipboardCheck, level: 4 },
   { path: '/training-manager', label: 'Training Manager', icon: Brain, level: 4 },
-  { path: '/training-plan-export', label: 'Training Plan Export', icon: FileDown, level: 3 },
+  { path: '/training-plan-export', label: 'Training Export', icon: FileDown, level: 3 },
   { path: '/personnel', label: 'Personnel', icon: Users, level: 5 },
   { path: '/admin', label: 'Admin Controls', icon: Settings, level: 6 },
   { path: '/help', label: 'Help & Wiki', icon: HelpCircle, level: 0 },

@@ -1,0 +1,21 @@
+{
+  "name": "DetachmentSettings",
+  "type": "object",
+  "properties": {
+    "Key": {
+      "type": "string",
+      "description": "Setting key (unique)"
+    },
+    "Value": {
+      "type": "string",
+      "description": "Setting value"
+    },
+    "Description": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "Key",
+    "Value"
+  ]
+}
