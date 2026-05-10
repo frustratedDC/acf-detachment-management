@@ -1,0 +1,38 @@
+{
+  "name": "PersonalSyllabus",
+  "type": "object",
+  "properties": {
+    "UserPNumber": {
+      "type": "string",
+      "description": "PNumber of the user who created this entry"
+    },
+    "StarLevel": {
+      "type": "string",
+      "enum": [
+        "Basic",
+        "1 Star",
+        "2 Star"
+      ],
+      "description": "Star level"
+    },
+    "SubjectName": {
+      "type": "string",
+      "description": "Subject category"
+    },
+    "LessonCode": {
+      "type": "string",
+      "description": "Custom lesson code"
+    },
+    "LessonName": {
+      "type": "string",
+      "description": "Name of the lesson"
+    }
+  },
+  "required": [
+    "UserPNumber",
+    "StarLevel",
+    "SubjectName",
+    "LessonCode",
+    "LessonName"
+  ]
+}

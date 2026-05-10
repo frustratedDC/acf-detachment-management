@@ -1,0 +1,29 @@
+{
+  "name": "DailyParadeState",
+  "type": "object",
+  "properties": {
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the parade"
+    },
+    "UserPNumber": {
+      "type": "string",
+      "description": "PNumber of the person"
+    },
+    "AttendanceStatus": {
+      "type": "string",
+      "enum": [
+        "Present",
+        "Absent",
+        "Excused"
+      ],
+      "description": "Attendance status"
+    }
+  },
+  "required": [
+    "Date",
+    "UserPNumber",
+    "AttendanceStatus"
+  ]
+}

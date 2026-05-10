@@ -1,0 +1,55 @@
+{
+  "name": "NightlySchedule",
+  "type": "object",
+  "properties": {
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the training night"
+    },
+    "Period": {
+      "type": "number",
+      "description": "Period 1 or 2"
+    },
+    "InstructorPNumber": {
+      "type": "string",
+      "description": "Assigned instructor PNumber"
+    },
+    "LessonCode": {
+      "type": "string",
+      "description": "Lesson code to be taught"
+    },
+    "LessonName": {
+      "type": "string",
+      "description": "Name of the lesson"
+    },
+    "AssignedStarLevel": {
+      "type": "string",
+      "enum": [
+        "Basic",
+        "1 Star",
+        "2 Star"
+      ],
+      "description": "Star level assigned"
+    },
+    "DressCode": {
+      "type": "string",
+      "description": "Required dress code"
+    },
+    "Location": {
+      "type": "string",
+      "description": "Location of the lesson"
+    },
+    "Notes": {
+      "type": "string",
+      "description": "Additional notes for the lesson"
+    }
+  },
+  "required": [
+    "Date",
+    "Period",
+    "InstructorPNumber",
+    "LessonCode",
+    "AssignedStarLevel"
+  ]
+}

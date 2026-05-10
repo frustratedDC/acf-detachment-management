@@ -1,0 +1,38 @@
+{
+  "name": "ProgressLedger",
+  "type": "object",
+  "properties": {
+    "CadetPNumber": {
+      "type": "string",
+      "description": "PNumber of the cadet"
+    },
+    "LessonCode": {
+      "type": "string",
+      "description": "Lesson code completed"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Approved"
+      ],
+      "default": "Pending",
+      "description": "Approval status"
+    },
+    "CompletionDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the lesson was completed"
+    },
+    "InstructorPNumber": {
+      "type": "string",
+      "description": "PNumber of the submitting instructor"
+    }
+  },
+  "required": [
+    "CadetPNumber",
+    "LessonCode",
+    "CompletionDate",
+    "InstructorPNumber"
+  ]
+}

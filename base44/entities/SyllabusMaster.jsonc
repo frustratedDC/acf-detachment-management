@@ -1,0 +1,38 @@
+{
+  "name": "SyllabusMaster",
+  "type": "object",
+  "properties": {
+    "LessonCode": {
+      "type": "string",
+      "description": "Primary key for the lesson"
+    },
+    "StarLevel": {
+      "type": "string",
+      "enum": [
+        "Basic",
+        "1 Star",
+        "2 Star"
+      ],
+      "description": "Star level for the lesson"
+    },
+    "SubjectName": {
+      "type": "string",
+      "description": "Subject category"
+    },
+    "LessonName": {
+      "type": "string",
+      "description": "Name of the lesson"
+    },
+    "IsMandatory": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the lesson is mandatory"
+    }
+  },
+  "required": [
+    "LessonCode",
+    "StarLevel",
+    "SubjectName",
+    "LessonName"
+  ]
+}

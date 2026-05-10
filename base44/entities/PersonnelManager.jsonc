@@ -1,0 +1,47 @@
+{
+  "name": "PersonnelManager",
+  "type": "object",
+  "properties": {
+    "PNumber": {
+      "type": "string",
+      "description": "Primary identifier for personnel"
+    },
+    "Surname": {
+      "type": "string",
+      "description": "Surname of the person"
+    },
+    "AccessLevel": {
+      "type": "number",
+      "description": "Access level 0-6",
+      "default": 0
+    },
+    "RoleName": {
+      "type": "string",
+      "description": "Role name e.g. Cadet, Instructor, etc."
+    },
+    "CurrentStarLevel": {
+      "type": "string",
+      "enum": [
+        "Basic",
+        "1 Star",
+        "2 Star"
+      ],
+      "description": "Current star level"
+    },
+    "IsLinked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this record is linked to a Base44 user"
+    },
+    "LinkedEmailUID": {
+      "type": "string",
+      "description": "Email UID from Base44 Auth"
+    }
+  },
+  "required": [
+    "PNumber",
+    "Surname",
+    "AccessLevel",
+    "RoleName"
+  ]
+}
