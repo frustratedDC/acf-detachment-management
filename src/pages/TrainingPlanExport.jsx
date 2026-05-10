@@ -12,7 +12,6 @@ import { FileDown, Printer, Calendar, Loader2 } from 'lucide-react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { ACCESS_LEVELS, LEVEL_NAMES } from '@/lib/accessLevels';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 export default function TrainingPlanExport() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -87,35 +86,51 @@ export default function TrainingPlanExport() {
         doc.setTextColor(0, 0, 0);
         y += 10;
       } else {
-        const tableData = rows.map(row => [
-          `P${row.Period}`,
-          row.LessonCode || '—',
-          row.LessonName || '—',
-          getInstructorDisplay(row.InstructorPNumber),
-          row.Location || '—',
-          row.DressCode || '—',
-          row.Notes || '—',
-        ]);
+        // Column widths (landscape A4 = 277mm usable)
+        const cols = [14, 20, 65, 40, 35, 30, 63];
+        const headers = ['Period', 'Code', 'Lesson', 'Instructor', 'Location', 'Dress', 'Notes'];
+        const rowH = 7;
+        const startX = 10;
 
-        doc.autoTable({
-          startY: y,
-          head: [['Period', 'Code', 'Lesson', 'Instructor', 'Location', 'Dress', 'Notes']],
-          body: tableData,
-          theme: 'grid',
-          styles: { fontSize: 8, cellPadding: 2 },
-          headStyles: { fillColor: [248, 250, 252], textColor: [30, 41, 59], fontStyle: 'bold' },
-          columnStyles: {
-            0: { cellWidth: 14 },
-            1: { cellWidth: 20 },
-            2: { cellWidth: 65 },
-            3: { cellWidth: 40 },
-            4: { cellWidth: 35 },
-            5: { cellWidth: 30 },
-            6: { cellWidth: 63 },
-          },
-          margin: { left: 10, right: 10 },
+        // Header row
+        doc.setFillColor(248, 250, 252);
+        doc.rect(startX, y, 277, rowH, 'F');
+        doc.setDrawColor(200, 200, 200);
+        let cx = startX;
+        headers.forEach((h, i) => {
+          doc.rect(cx, y, cols[i], rowH, 'S');
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(30, 41, 59);
+          doc.text(h, cx + 2, y + 4.8);
+          cx += cols[i];
         });
-        y = doc.lastAutoTable.finalY + 5;
+        y += rowH;
+
+        // Data rows
+        rows.forEach(row => {
+          const cells = [
+            `P${row.Period}`,
+            row.LessonCode || '—',
+            row.LessonName || '—',
+            getInstructorDisplay(row.InstructorPNumber),
+            row.Location || '—',
+            row.DressCode || '—',
+            row.Notes || '—',
+          ];
+          cx = startX;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(0, 0, 0);
+          cells.forEach((cell, i) => {
+            doc.rect(cx, y, cols[i], rowH, 'S');
+            const txt = doc.splitTextToSize(String(cell), cols[i] - 4);
+            doc.text(txt[0] || '', cx + 2, y + 4.8);
+            cx += cols[i];
+          });
+          y += rowH;
+        });
+        y += 5;
       }
     });
 
