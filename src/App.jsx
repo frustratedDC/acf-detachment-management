@@ -30,6 +30,8 @@ import BulkProgressEntry from '@/pages/BulkProgressEntry';
 import CFAVGovernance from '@/pages/CFAVGovernance';
 import ImportantNotices from '@/pages/ImportantNotices';
 import WeaponHandlingTests from '@/pages/WeaponHandlingTests';
+import StaffAvailability from '@/pages/StaffAvailability';
+import InstructorQualMatrix from '@/pages/InstructorQualMatrix';
 
 const AppContent = () => {
   const { personnel, loading, needsLinking } = usePersonnel();
@@ -66,6 +68,8 @@ const AppContent = () => {
         <Route path="/cfav-governance" element={<CFAVGovernance />} />
         <Route path="/notices" element={<ImportantNotices />} />
         <Route path="/wht" element={<WeaponHandlingTests />} />
+        <Route path="/staff-availability" element={<StaffAvailability />} />
+        <Route path="/instructor-quals" element={<InstructorQualMatrix />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

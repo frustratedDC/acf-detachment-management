@@ -1,0 +1,26 @@
+{
+  "name": "QualificationColumn",
+  "type": "object",
+  "properties": {
+    "Code": {
+      "type": "string",
+      "description": "Short code e.g. ACLC, QAIC"
+    },
+    "Name": {
+      "type": "string",
+      "description": "Full qualification name"
+    },
+    "Category": {
+      "type": "string",
+      "description": "Grouping category e.g. Shooting, Adventure Training"
+    },
+    "SortOrder": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "Code",
+    "Name"
+  ]
+}

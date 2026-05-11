@@ -1,0 +1,26 @@
+{
+  "name": "InstructorQualification",
+  "type": "object",
+  "properties": {
+    "PNumber": {
+      "type": "string",
+      "description": "PNumber of the adult instructor"
+    },
+    "QualCode": {
+      "type": "string",
+      "description": "Qualification code/key"
+    },
+    "AwardedDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date qualification was awarded"
+    },
+    "Notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "PNumber",
+    "QualCode"
+  ]
+}
