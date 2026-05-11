@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { usePersonnel } from '@/lib/usePersonnel';
 import { hasAccess, ACCESS_LEVELS, LEVEL_NAMES } from '@/lib/accessLevels';
@@ -6,12 +6,11 @@ import {
   LayoutDashboard, Users, BookOpen, Calendar, ClipboardList,
   FileCheck, Brain, CheckSquare, Settings, HelpCircle, Shield,
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
-  CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair
+  CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 
-// Grouped navigation structure
 const NAV_GROUPS = [
   {
     label: 'Overview',
@@ -27,6 +26,7 @@ const NAV_GROUPS = [
       { path: '/parade', label: 'Parade State', icon: ClipboardList, level: 1 },
       { path: '/attendance', label: 'Lesson Attendance', icon: FileCheck, level: 2 },
       { path: '/schedule', label: 'Training Plan', icon: Calendar, level: 2 },
+      { path: '/training-manager', label: 'Training Manager', icon: Brain, level: 4 },
       { path: '/training-plan-export', label: 'Export PDF', icon: FileDown, level: 3 },
     ],
   },
@@ -45,7 +45,6 @@ const NAV_GROUPS = [
     items: [
       { path: '/cfav-governance', label: 'CFAV Governance', icon: ShieldCheck, level: 3 },
       { path: '/wht', label: 'Weapon Handling Tests', icon: Crosshair, level: 0 },
-      { path: '/training-manager', label: 'Training Manager', icon: Brain, level: 4 },
     ],
   },
   {
@@ -67,6 +66,13 @@ export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation();
   const { personnel } = usePersonnel();
   const accessLevel = personnel?.AccessLevel ?? 0;
+
+  // Track which groups are collapsed — all expanded by default
+  const [collapsedGroups, setCollapsedGroups] = useState({});
+
+  function toggleGroup(label) {
+    setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
+  }
 
   return (
     <aside
@@ -95,36 +101,56 @@ export default function Sidebar({ collapsed, onToggle }) {
         {NAV_GROUPS.map(group => {
           const visibleItems = group.items.filter(item => hasAccess(accessLevel, item.level));
           if (visibleItems.length === 0) return null;
+          const isGroupCollapsed = !!collapsedGroups[group.label];
+          const hasActiveItem = visibleItems.some(item => location.pathname === item.path);
+
           return (
-            <div key={group.label} className="mb-2">
-              {!collapsed && (
-                <p className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-wider px-3 py-1.5">
-                  {group.label}
-                </p>
+            <div key={group.label} className="mb-1">
+              {!collapsed ? (
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  className="w-full flex items-center justify-between px-3 py-1.5 rounded hover:bg-sidebar-accent/30 transition-colors group"
+                >
+                  <p className={cn(
+                    "text-xs font-semibold uppercase tracking-wider transition-colors",
+                    hasActiveItem ? "text-sidebar-foreground/80" : "text-sidebar-foreground/40",
+                    "group-hover:text-sidebar-foreground/70"
+                  )}>
+                    {group.label}
+                  </p>
+                  <ChevronDown className={cn(
+                    "w-3 h-3 text-sidebar-foreground/30 transition-transform duration-200",
+                    isGroupCollapsed && "-rotate-90"
+                  )} />
+                </button>
+              ) : (
+                <div className="my-1 border-t border-sidebar-border/40" />
               )}
-              {collapsed && <div className="my-1 border-t border-sidebar-border/40" />}
-              <div className="space-y-0.5">
-                {visibleItems.map(item => {
-                  const isActive = location.pathname === item.path;
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200",
-                        isActive
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                      )}
-                      title={collapsed ? item.label : undefined}
-                    >
-                      <Icon className={cn("w-4 h-4 shrink-0", isActive && "text-sidebar-primary")} />
-                      {!collapsed && <span className="truncate">{item.label}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
+
+              {(!isGroupCollapsed || collapsed) && (
+                <div className="space-y-0.5 mt-0.5">
+                  {visibleItems.map(item => {
+                    const isActive = location.pathname === item.path;
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200",
+                          isActive
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                        )}
+                        title={collapsed ? item.label : undefined}
+                      >
+                        <Icon className={cn("w-4 h-4 shrink-0", isActive && "text-sidebar-primary")} />
+                        {!collapsed && <span className="truncate">{item.label}</span>}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
