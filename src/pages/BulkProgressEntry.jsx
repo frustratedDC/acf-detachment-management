@@ -11,8 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ClipboardCheck, Send, Search, Star, BookOpen, FileText } from 'lucide-react';
+import { ClipboardCheck, Search, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
@@ -20,53 +19,17 @@ import { checkAndPromoteCadet } from '@/lib/progressUtils';
 
 const STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
 
-function resolveTargetLessons(mode, starLevel, subject, lessonCode, syllabus) {
-  if (mode === 'star') return syllabus.filter(l => l.StarLevel === starLevel);
-  if (mode === 'subject') return syllabus.filter(l => l.StarLevel === starLevel && l.SubjectName === subject);
-  if (mode === 'lesson' && lessonCode) return syllabus.filter(l => l.LessonCode === lessonCode);
-  return [];
-}
-
-// Star level progress bar for a single cadet row
-function CadetStarProgress({ cadet, syllabus, approvedSet }) {
-  return (
-    <div className="flex gap-2 mt-1">
-      {STAR_LEVELS.map(sl => {
-        const mandatory = syllabus.filter(l => l.StarLevel === sl && l.IsMandatory);
-        if (mandatory.length === 0) return null;
-        const done = mandatory.filter(l => approvedSet.has(`${cadet.PNumber}::${l.LessonCode}`)).length;
-        const pct = Math.round((done / mandatory.length) * 100);
-        const isCurrent = cadet.CurrentStarLevel === sl;
-        return (
-          <div key={sl} className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-0.5">
-              <span className={`text-xs ${isCurrent ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>{sl}</span>
-              <span className="text-xs text-muted-foreground">{mandatory.length - done} left</span>
-            </div>
-            <div className="w-full bg-muted rounded-full h-1.5">
-              <div
-                className={`rounded-full h-1.5 transition-all ${pct === 100 ? 'bg-chart-2' : isCurrent ? 'bg-primary' : 'bg-muted-foreground/40'}`}
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function BulkProgressEntry() {
   const { personnel: me } = usePersonnel();
   const queryClient = useQueryClient();
 
-  const [mode, setMode] = useState('lesson');
-  const [starLevel, setStarLevel] = useState('Basic');
-  const [subject, setSubject] = useState('');
-  const [lessonCode, setLessonCode] = useState('');
-  const [selectedCadets, setSelectedCadets] = useState([]);
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [starLevel, setStarLevel] = useState('1 Star');
+  const [subjectFilter, setSubjectFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  // pending[pnum][lessonCode] = true means "tick to submit"
+  const [pending, setPending] = useState({});
 
   const { data: syllabus = [] } = useQuery({
     queryKey: ['syllabus-master-all'],
@@ -83,244 +46,281 @@ export default function BulkProgressEntry() {
     queryFn: () => base44.entities.ProgressLedger.filter({}),
   });
 
-  const subjects = useMemo(() => [...new Set(syllabus.filter(l => l.StarLevel === starLevel).map(l => l.SubjectName))].sort(), [syllabus, starLevel]);
-  const lessonsForSubject = useMemo(() => syllabus.filter(l => l.StarLevel === starLevel && l.SubjectName === subject), [syllabus, starLevel, subject]);
-  const targetLessons = useMemo(() => resolveTargetLessons(mode, starLevel, subject, lessonCode, syllabus), [mode, starLevel, subject, lessonCode, syllabus]);
+  const approvedSet = useMemo(() =>
+    new Set(progress.filter(p => p.Status === 'Approved').map(p => `${p.CadetPNumber}::${p.LessonCode}`)),
+    [progress]
+  );
+  const pendingDbSet = useMemo(() =>
+    new Set(progress.filter(p => p.Status === 'Pending').map(p => `${p.CadetPNumber}::${p.LessonCode}`)),
+    [progress]
+  );
 
-  // ALL cadets — any status, any star level
-  const allCadets = useMemo(() => personnel.filter(p => isCadet(p.AccessLevel)), [personnel]);
-  const filteredCadets = useMemo(() => allCadets.filter(c =>
-    c.Surname?.toLowerCase().includes(search.toLowerCase()) ||
-    c.FirstName?.toLowerCase().includes(search.toLowerCase()) ||
-    c.PNumber?.toLowerCase().includes(search.toLowerCase())
-  ), [allCadets, search]);
-
-  const approvedSet = useMemo(() => new Set(progress.filter(p => p.Status === 'Approved').map(p => `${p.CadetPNumber}::${p.LessonCode}`)), [progress]);
-
-  function isFullyDone(pNumber) {
-    return targetLessons.length > 0 && targetLessons.every(l => approvedSet.has(`${pNumber}::${l.LessonCode}`));
-  }
-
-  function pendingCount(pNumber) {
-    return targetLessons.filter(l => !approvedSet.has(`${pNumber}::${l.LessonCode}`)).length;
-  }
-
-  function toggleCadet(pnum) {
-    setSelectedCadets(prev => prev.includes(pnum) ? prev.filter(p => p !== pnum) : [...prev, pnum]);
-  }
-
-  function toggleAll() {
-    const eligible = filteredCadets.filter(c => !isFullyDone(c.PNumber));
-    const allSelected = eligible.every(c => selectedCadets.includes(c.PNumber));
-    setSelectedCadets(allSelected ? [] : eligible.map(c => c.PNumber));
-  }
-
-  const isReady = targetLessons.length > 0 && selectedCadets.length > 0;
   const isAutoApproved = (me?.AccessLevel ?? 0) >= ACCESS_LEVELS.DET_2IC;
+
+  // Lessons for selected star level + subject filter
+  const subjectsForLevel = useMemo(() =>
+    [...new Set(syllabus.filter(l => l.StarLevel === starLevel).map(l => l.SubjectName))].sort(),
+    [syllabus, starLevel]
+  );
+  const displayLessons = useMemo(() =>
+    syllabus.filter(l =>
+      l.StarLevel === starLevel &&
+      (subjectFilter === 'all' || l.SubjectName === subjectFilter)
+    ),
+    [syllabus, starLevel, subjectFilter]
+  );
+
+  // Cadets — active, matching search
+  const cadets = useMemo(() =>
+    personnel
+      .filter(p => isCadet(p.AccessLevel) && (p.PersonnelStatus || 'Active') === 'Active')
+      .filter(c =>
+        !search ||
+        c.Surname?.toLowerCase().includes(search.toLowerCase()) ||
+        c.FirstName?.toLowerCase().includes(search.toLowerCase()) ||
+        c.PNumber?.toLowerCase().includes(search.toLowerCase())
+      ),
+    [personnel, search]
+  );
+
+  function isChecked(pnum, lessonCode) {
+    return !!(pending[pnum]?.[lessonCode]);
+  }
+
+  function isDone(pnum, lessonCode) {
+    return approvedSet.has(`${pnum}::${lessonCode}`);
+  }
+
+  function isPendingDb(pnum, lessonCode) {
+    return pendingDbSet.has(`${pnum}::${lessonCode}`);
+  }
+
+  function toggle(pnum, lessonCode) {
+    if (isDone(pnum, lessonCode)) return; // already approved, can't change
+    setPending(prev => {
+      const row = { ...(prev[pnum] || {}) };
+      if (row[lessonCode]) delete row[lessonCode];
+      else row[lessonCode] = true;
+      return { ...prev, [pnum]: row };
+    });
+  }
+
+  // Toggle all cadets for a specific lesson
+  function toggleLesson(lessonCode) {
+    const eligible = cadets.filter(c => !isDone(c.PNumber, lessonCode));
+    const allChecked = eligible.every(c => isChecked(c.PNumber, lessonCode));
+    setPending(prev => {
+      const next = { ...prev };
+      eligible.forEach(c => {
+        const row = { ...(next[c.PNumber] || {}) };
+        if (allChecked) delete row[lessonCode];
+        else row[lessonCode] = true;
+        next[c.PNumber] = row;
+      });
+      return next;
+    });
+  }
+
+  // Toggle all lessons for a specific cadet
+  function toggleCadet(pnum) {
+    const eligible = displayLessons.filter(l => !isDone(pnum, l.LessonCode));
+    const allChecked = eligible.every(l => isChecked(pnum, l.LessonCode));
+    setPending(prev => {
+      const row = { ...(prev[pnum] || {}) };
+      eligible.forEach(l => {
+        if (allChecked) delete row[l.LessonCode];
+        else row[l.LessonCode] = true;
+      });
+      return { ...prev, [pnum]: row };
+    });
+  }
+
+  // Count total pending ticks
+  const totalTicked = useMemo(() =>
+    Object.values(pending).reduce((sum, row) => sum + Object.values(row).filter(Boolean).length, 0),
+    [pending]
+  );
 
   const submitMutation = useMutation({
     mutationFn: async () => {
       const records = [];
-      for (const pnum of selectedCadets) {
-        for (const lesson of targetLessons) {
-          if (approvedSet.has(`${pnum}::${lesson.LessonCode}`)) continue;
+      for (const [pnum, lessons] of Object.entries(pending)) {
+        for (const [lessonCode, ticked] of Object.entries(lessons)) {
+          if (!ticked) continue;
+          if (approvedSet.has(`${pnum}::${lessonCode}`)) continue;
           records.push({
             CadetPNumber: pnum,
-            LessonCode: lesson.LessonCode,
+            LessonCode: lessonCode,
             Status: isAutoApproved ? 'Approved' : 'Pending',
             CompletionDate: date,
             InstructorPNumber: me?.PNumber,
           });
         }
       }
-      if (records.length === 0) throw new Error('All selected cadets already have these lessons approved.');
+      if (records.length === 0) throw new Error('No new completions to submit.');
       for (let i = 0; i < records.length; i += 50) {
         await base44.entities.ProgressLedger.bulkCreate(records.slice(i, i + 50));
       }
-      return records.length;
+      return records;
     },
-    onSuccess: async (count) => {
-      toast.success(`Submitted ${count} progress record${count !== 1 ? 's' : ''}`);
-      setSelectedCadets([]);
+    onSuccess: async (records) => {
+      toast.success(`${isAutoApproved ? 'Approved' : 'Submitted'} ${records.length} completion${records.length !== 1 ? 's' : ''}`);
+      setPending({});
       await queryClient.invalidateQueries({ queryKey: ['progress-all'] });
-      await queryClient.invalidateQueries({ queryKey: ['all-progress'] });
 
-      // Auto-promotion check (only when records are immediately approved)
       if (isAutoApproved) {
         const updatedProgress = await base44.entities.ProgressLedger.filter({});
-        const updatedSyllabus = syllabus;
-        const promotions = [];
-        for (const pnum of selectedCadets) {
+        const pnums = [...new Set(records.map(r => r.CadetPNumber))];
+        for (const pnum of pnums) {
           const cadet = personnel.find(p => p.PNumber === pnum);
           if (!cadet) continue;
-          const result = await checkAndPromoteCadet(pnum, cadet.CurrentStarLevel, updatedSyllabus, updatedProgress);
-          if (result) promotions.push({ cadet, result });
+          const result = await checkAndPromoteCadet(pnum, cadet.CurrentStarLevel, syllabus, updatedProgress);
+          if (result?.newStarLevel) toast.success(`🎖 ${cadet.Surname} promoted to ${result.newStarLevel}!`);
+          if (result?.newAccessLevel) toast.success(`⭐ ${cadet.Surname} is now a Cadet Instructor!`);
         }
-        if (promotions.length > 0) {
-          queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
-          promotions.forEach(({ cadet, result }) => {
-            if (result.newStarLevel) toast.success(`🎖 ${cadet.Surname} promoted to ${result.newStarLevel}!`);
-            if (result.newAccessLevel) toast.success(`⭐ ${cadet.Surname} is now a Cadet Instructor (${result.earnedQual})!`);
-          });
-        }
+        queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
       }
     },
     onError: (err) => toast.error(err.message),
   });
 
-  const summaryLabel = mode === 'star'
-    ? `All lessons — ${starLevel}`
-    : mode === 'subject'
-    ? `${subject || '—'} (${lessonsForSubject.length} lessons)`
-    : targetLessons[0] ? `${targetLessons[0].LessonCode} — ${targetLessons[0].LessonName}` : '—';
-
-  function handleModeChange(v) { setMode(v); setSelectedCadets([]); setLessonCode(''); setSubject(''); }
-  function handleStarChange(v) { setStarLevel(v); setSelectedCadets([]); setLessonCode(''); setSubject(''); }
-
   return (
     <AccessGate level={ACCESS_LEVELS.DET_2IC}>
       <PageHeader
         title="Bulk Progress Entry"
-        description="Mark completions for multiple cadets at once"
+        description="Tick off lesson completions per cadet"
         icon={ClipboardCheck}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        {/* Step 1 */}
+      {/* Filters bar */}
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        <div>
+          <Label className="text-xs mb-1 block">Star Level</Label>
+          <Select value={starLevel} onValueChange={v => { setStarLevel(v); setSubjectFilter('all'); setPending({}); }}>
+            <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {STAR_LEVELS.map(sl => <SelectItem key={sl} value={sl}>{sl}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">Subject</Label>
+          <Select value={subjectFilter} onValueChange={v => { setSubjectFilter(v); setPending({}); }}>
+            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Subjects</SelectItem>
+              {subjectsForLevel.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs mb-1 block">Completion Date</Label>
+          <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-8 w-36 text-xs" />
+        </div>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input placeholder="Search cadets..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 w-40 text-xs" />
+        </div>
+        <div className="ml-auto">
+          <Button
+            onClick={() => submitMutation.mutate()}
+            disabled={totalTicked === 0 || submitMutation.isPending}
+            size="sm"
+          >
+            <Save className="w-4 h-4 mr-1.5" />
+            {submitMutation.isPending ? 'Saving...' : `Save ${totalTicked} Completion${totalTicked !== 1 ? 's' : ''}`}
+            {isAutoApproved ? ' (Auto-Approved)' : ' (Pending)'}
+          </Button>
+        </div>
+      </div>
+
+      {displayLessons.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-12">No lessons found for selected filters.</p>
+      ) : (
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm">Step 1 — What to Mark</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <Label className="mb-1 block">Completion Mode</Label>
-              <Tabs value={mode} onValueChange={handleModeChange}>
-                <TabsList className="w-full">
-                  <TabsTrigger value="lesson" className="flex-1 gap-1 text-xs"><FileText className="w-3 h-3" />Lesson</TabsTrigger>
-                  <TabsTrigger value="subject" className="flex-1 gap-1 text-xs"><BookOpen className="w-3 h-3" />Subject</TabsTrigger>
-                  <TabsTrigger value="star" className="flex-1 gap-1 text-xs"><Star className="w-3 h-3" />Star Level</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            <div>
-              <Label>Star Level</Label>
-              <Select value={starLevel} onValueChange={handleStarChange}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STAR_LEVELS.map(sl => <SelectItem key={sl} value={sl}>{sl}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {(mode === 'subject' || mode === 'lesson') && (
-              <div>
-                <Label>Subject</Label>
-                <Select value={subject} onValueChange={v => { setSubject(v); setLessonCode(''); setSelectedCadets([]); }}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select subject..." /></SelectTrigger>
-                  <SelectContent>
-                    {subjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {mode === 'lesson' && (
-              <div>
-                <Label>Lesson</Label>
-                <Select value={lessonCode} onValueChange={v => { setLessonCode(v); setSelectedCadets([]); }} disabled={!subject}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select lesson..." /></SelectTrigger>
-                  <SelectContent>
-                    {lessonsForSubject.map(l => (
-                      <SelectItem key={l.LessonCode} value={l.LessonCode}>
-                        {l.LessonCode} — {l.LessonName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div>
-              <Label>Completion Date</Label>
-              <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1" />
-            </div>
-
-            {targetLessons.length > 0 && (
-              <div className="p-2 rounded-lg bg-muted/50 text-xs space-y-1">
-                <p className="font-medium">Will mark:</p>
-                <p className="text-muted-foreground">{summaryLabel}</p>
-                <p className="text-muted-foreground">{targetLessons.length} lesson{targetLessons.length !== 1 ? 's' : ''} total</p>
-                {mode === 'star' && <p className="text-yellow-700 font-medium">⚠ Marks ALL {targetLessons.length} lessons in {starLevel}</p>}
-              </div>
-            )}
+          <CardContent className="p-0 overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="bg-muted border-b">
+                  {/* Cadet column */}
+                  <th className="text-left p-3 font-semibold sticky left-0 bg-muted z-10 min-w-[160px]">Cadet</th>
+                  {/* One column per lesson */}
+                  {displayLessons.map(lesson => (
+                    <th key={lesson.LessonCode} className="p-2 text-center font-semibold min-w-[80px] max-w-[100px]">
+                      <button
+                        className="flex flex-col items-center gap-0.5 hover:text-primary transition-colors w-full"
+                        onClick={() => toggleLesson(lesson.LessonCode)}
+                        title={`Toggle all — ${lesson.LessonName}`}
+                      >
+                        <span className="font-mono text-xs">{lesson.LessonCode}</span>
+                        <span className="text-muted-foreground font-normal leading-tight text-center" style={{ fontSize: '0.65rem', maxWidth: 80 }}>
+                          {lesson.LessonName.length > 20 ? lesson.LessonName.slice(0, 18) + '…' : lesson.LessonName}
+                        </span>
+                        {lesson.IsMandatory && <span className="text-destructive font-bold text-xs">*</span>}
+                      </button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {cadets.map(cadet => {
+                  const rowTicked = displayLessons.filter(l => isChecked(cadet.PNumber, l.LessonCode)).length;
+                  return (
+                    <tr key={cadet.PNumber} className="border-b hover:bg-muted/20 transition-colors">
+                      <td className="p-3 sticky left-0 bg-card z-10">
+                        <button
+                          className="flex flex-col items-start text-left hover:text-primary transition-colors w-full"
+                          onClick={() => toggleCadet(cadet.PNumber)}
+                          title="Toggle all lessons for this cadet"
+                        >
+                          <span className="font-medium">{[cadet.Rank, cadet.Surname].filter(Boolean).join(' ')}</span>
+                          <span className="text-muted-foreground">{cadet.FirstName}</span>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Badge variant="outline" className="text-xs py-0 h-4">{cadet.CurrentStarLevel}</Badge>
+                            {rowTicked > 0 && <Badge className="text-xs py-0 h-4 bg-primary/20 text-primary border-0">{rowTicked} ticked</Badge>}
+                          </div>
+                        </button>
+                      </td>
+                      {displayLessons.map(lesson => {
+                        const done = isDone(cadet.PNumber, lesson.LessonCode);
+                        const pendingDb = isPendingDb(cadet.PNumber, lesson.LessonCode);
+                        const ticked = isChecked(cadet.PNumber, lesson.LessonCode);
+                        return (
+                          <td key={lesson.LessonCode} className="p-2 text-center">
+                            {done ? (
+                              <span className="text-chart-2 text-sm" title="Already approved">✓</span>
+                            ) : pendingDb ? (
+                              <span className="text-yellow-500 text-sm" title="Pending approval">⏳</span>
+                            ) : (
+                              <Checkbox
+                                checked={ticked}
+                                onCheckedChange={() => toggle(cadet.PNumber, lesson.LessonCode)}
+                                className={ticked ? 'border-primary' : ''}
+                              />
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+                {cadets.length === 0 && (
+                  <tr>
+                    <td colSpan={displayLessons.length + 1} className="text-center py-8 text-muted-foreground">No cadets found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </CardContent>
         </Card>
+      )}
 
-        {/* Step 2 */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <CardTitle className="text-sm">Step 2 — Select Cadets ({selectedCadets.length} selected)</CardTitle>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={toggleAll}>
-                  {selectedCadets.length > 0 ? 'Deselect All' : 'Select All'}
-                </Button>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 w-36" />
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1 max-h-[480px] overflow-y-auto mb-4">
-              {filteredCadets.map(cadet => {
-                const done = isFullyDone(cadet.PNumber);
-                const remaining = pendingCount(cadet.PNumber);
-                const isInactive = (cadet.PersonnelStatus || 'Active') !== 'Active';
-                return (
-                  <label
-                    key={cadet.PNumber}
-                    className={`flex items-start gap-3 p-3 rounded-lg transition-colors cursor-pointer ${done ? 'opacity-40' : 'hover:bg-muted/50'}`}
-                  >
-                    <Checkbox
-                      className="mt-1"
-                      checked={selectedCadets.includes(cadet.PNumber)}
-                      onCheckedChange={() => !done && toggleCadet(cadet.PNumber)}
-                      disabled={done}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium">{[cadet.Rank, cadet.FirstName, cadet.Surname].filter(Boolean).join(' ')}</p>
-                        <span className="text-xs text-muted-foreground">{cadet.PNumber}</span>
-                        <Badge variant="outline" className="text-xs">{cadet.CurrentStarLevel}</Badge>
-                        {isInactive && <Badge variant="secondary" className="text-xs">{cadet.PersonnelStatus}</Badge>}
-                        {done && <Badge variant="outline" className="text-xs text-chart-2 border-chart-2/30">All done</Badge>}
-                        {!done && targetLessons.length > 1 && remaining < targetLessons.length && (
-                          <Badge variant="outline" className="text-xs">{remaining} remaining</Badge>
-                        )}
-                      </div>
-                      {/* Star level progress bars */}
-                      <CadetStarProgress cadet={cadet} syllabus={syllabus} approvedSet={approvedSet} />
-                    </div>
-                  </label>
-                );
-              })}
-              {filteredCadets.length === 0 && (
-                <p className="text-center py-6 text-muted-foreground text-sm">No cadets found.</p>
-              )}
-            </div>
-            <Button
-              className="w-full"
-              onClick={() => submitMutation.mutate()}
-              disabled={!isReady || submitMutation.isPending}
-            >
-              <Send className="w-4 h-4 mr-2" />
-              Submit for {selectedCadets.length} Cadet{selectedCadets.length !== 1 ? 's' : ''}
-              {targetLessons.length > 1 ? ` (${targetLessons.length} lessons each)` : ''}
-              {isAutoApproved ? ' — Auto-Approved' : ' — Pending Approval'}
-            </Button>
-          </CardContent>
-        </Card>
+      {/* Legend */}
+      <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+        <span><span className="text-chart-2">✓</span> Already approved</span>
+        <span><span className="text-yellow-500">⏳</span> Pending approval</span>
+        <span className="text-destructive">* = Mandatory lesson</span>
+        <span>Click cadet name to toggle all their lessons · Click lesson header to toggle all cadets</span>
       </div>
     </AccessGate>
   );
