@@ -32,6 +32,8 @@ const STAR_LEVEL_COLORS = {
   'Basic':  ACF.darkGreen,
   '1 Star': ACF.green,
   '2 Star': ACF.blue,
+  '3 Star': ACF.orange,
+  '4 Star': ACF.red,
 };
 
 const EVENT_TYPE_COLORS = {
@@ -111,7 +113,7 @@ export default function TrainingPlanExport() {
 
     // All calendar events in range (training nights + non-training)
     const calEventsInRange = events.filter(ev => ev.Date >= start && ev.Date <= end).sort((a, b) => a.Date.localeCompare(b.Date));
-    const starLevels = ['Basic', '1 Star', '2 Star'];
+    const starLevels = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
 
     // ── HEADER ──────────────────────────────────────────────────────
     doc.setFillColor(...ACF.darkGreen);
@@ -132,39 +134,37 @@ export default function TrainingPlanExport() {
     doc.setTextColor(...ACF.black);
     let y = 28;
 
-    // ── CALENDAR EVENTS SECTION (closures, camps, etc.) ──────────────
-    const nonTrainingEvents = calEventsInRange.filter(ev => !ev.IsTrainingNight);
-    if (nonTrainingEvents.length > 0) {
-      // Section header
+    // ── CALENDAR EVENTS SECTION (all events in range) ──────────────
+    if (calEventsInRange.length > 0) {
       doc.setFillColor(...ACF.greenWash);
-      doc.rect(margin, y, usableW, 6, 'F');
-      doc.setFontSize(7);
+      doc.rect(margin, y, usableW, 5.5, 'F');
+      doc.setFontSize(6.5);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...ACF.white);
-      doc.text('CALENDAR EVENTS & NOTICES', margin + 3, y + 4.2);
-      y += 7;
+      doc.text('CALENDAR EVENTS & TRAINING NIGHTS', margin + 3, y + 3.8);
+      y += 6.5;
 
-      // Events in a compact horizontal strip
-      const evChunkSize = Math.floor(usableW / 65);
+      const evW = 58;
+      const evH = 5.5;
+      const evChunkSize = Math.floor(usableW / evW);
       let ex = margin;
       let evRowY = y;
-      nonTrainingEvents.forEach((ev, idx) => {
+      calEventsInRange.forEach((ev, idx) => {
         if (idx > 0 && idx % evChunkSize === 0) {
-          evRowY += 8;
+          evRowY += evH + 1.5;
           ex = margin;
-          y = evRowY;
         }
-        const evCol = EVENT_TYPE_COLORS[ev.EventType] || ACF.greenWash;
+        const evCol = ev.IsTrainingNight ? ACF.darkGreen : (EVENT_TYPE_COLORS[ev.EventType] || ACF.greenWash);
         doc.setFillColor(...evCol);
-        doc.roundedRect(ex, evRowY, 62, 6, 2, 2, 'F');
-        doc.setFontSize(6.5);
+        doc.roundedRect(ex, evRowY, evW - 2, evH, 1.5, 1.5, 'F');
+        doc.setFontSize(6);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...ACF.white);
         const evLabel = `${format(parseISO(ev.Date), 'dd MMM')}  ${ev.Title}`;
-        doc.text(evLabel.substring(0, 28), ex + 2, evRowY + 4.2);
-        ex += 64;
+        doc.text(evLabel.substring(0, 26), ex + 2, evRowY + 3.6);
+        ex += evW;
       });
-      y = evRowY + 10;
+      y = evRowY + evH + 4;
     }
 
     if (trainingDates.length === 0) {

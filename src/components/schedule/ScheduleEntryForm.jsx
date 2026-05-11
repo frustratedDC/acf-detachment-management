@@ -7,13 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, Save, AlertTriangle } from 'lucide-react';
+import { X, Save, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { subMonths, parseISO } from 'date-fns';
+import { subMonths, parseISO, subDays, format as dateFnsFormat } from 'date-fns';
 
-const STAR_LEVELS = ['Basic', '1 Star', '2 Star'];
+const STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
 const PERIODS = [1, 2];
 
 const emptyEntry = () => ({
@@ -25,10 +25,54 @@ const emptyEntry = () => ({
   Notes: '',
 });
 
+function RecentDaysSummary({ schedule, personnel, formDate }) {
+  const personnelMap = {};
+  personnel.forEach(p => { personnelMap[p.PNumber] = p; });
+
+  const prevDates = [...new Set(
+    schedule
+      .filter(s => s.Date < formDate)
+      .map(s => s.Date)
+      .sort()
+      .reverse()
+      .slice(0, 2)
+  )];
+
+  if (prevDates.length === 0) return null;
+
+  return (
+    <div className="mb-4 space-y-2">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Entries</p>
+      {prevDates.map(d => {
+        const rows = schedule.filter(s => s.Date === d).sort((a, b) => a.Period - b.Period);
+        return (
+          <div key={d} className="p-2 rounded-lg bg-muted/40 border">
+            <p className="text-xs font-bold text-muted-foreground mb-1.5">{dateFnsFormat(parseISO(d), 'EEE dd MMM yyyy')}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {rows.map(r => {
+                const inst = personnelMap[r.InstructorPNumber];
+                return (
+                  <div key={r.id} className="flex items-center gap-1 text-xs bg-background rounded px-2 py-0.5 border">
+                    <Badge variant="outline" className="text-xs py-0 h-4">P{r.Period}</Badge>
+                    <span className="text-muted-foreground">{r.AssignedStarLevel}</span>
+                    <span className="font-medium truncate max-w-[120px]">{r.LessonName || r.LessonCode}</span>
+                    {inst && <span className="text-muted-foreground">{inst.Rank ? `${inst.Rank} ` : ''}{inst.Surname}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ScheduleEntryForm({ date, onClose, onSaved }) {
   const queryClient = useQueryClient();
   const [formDate, setFormDate] = useState(date);
   const [entries, setEntries] = useState({});
+  const [expandedStars, setExpandedStars] = useState({ 'Basic': true, '1 Star': true, '2 Star': true, '3 Star': false, '4 Star': false });
 
   const { data: instructors = [] } = useQuery({
     queryKey: ['instructors'],
@@ -38,47 +82,20 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
     },
   });
 
+  const { data: allPersonnel = [] } = useQuery({
+    queryKey: ['all-personnel'],
+    queryFn: () => base44.entities.PersonnelManager.filter({}),
+  });
+
   const { data: availability = [] } = useQuery({
     queryKey: ['staff-availability'],
     queryFn: () => base44.entities.StaffAvailability.filter({}),
   });
 
-  function isAvailableOnDate(pNumber) {
-    const rec = availability.find(a => a.EventDate === formDate && a.PNumber === pNumber);
-    return rec ? rec.IsAvailable : null;
-  }
-
   const { data: recentSchedule = [] } = useQuery({
     queryKey: ['schedule-recent'],
     queryFn: () => base44.entities.NightlySchedule.filter({}),
   });
-
-  // Returns a warning string if lesson was recently taught (within 2 months)
-  function recentLessonWarning(lessonCode) {
-    if (!lessonCode) return null;
-    const twoMonthsAgo = subMonths(new Date(), 2);
-    const recent = recentSchedule.find(s =>
-      s.LessonCode === lessonCode &&
-      s.Date !== formDate &&
-      parseISO(s.Date) >= twoMonthsAgo
-    );
-    return recent ? `⚠ Last taught ${recent.Date}` : null;
-  }
-
-  // Returns a warning string if instructor is not qualified for the lesson's subject
-  function instructorQualWarning(pNumber, lessonCode) {
-    if (!pNumber || !lessonCode) return null;
-    const instructor = instructors.find(i => i.PNumber === pNumber);
-    if (!instructor) return null;
-    const lesson = allLessons.find(l => l.LessonCode === lessonCode);
-    if (!lesson) return null;
-    const qualified = instructor.QualifiedSubjects || [];
-    if (qualified.length === 0) return null; // no qualifications recorded = no warning
-    if (!qualified.includes(lesson.SubjectName)) {
-      return `⚠ Not qualified: ${lesson.SubjectName}`;
-    }
-    return null;
-  }
 
   const { data: existingEntries = [] } = useQuery({
     queryKey: ['schedule-date', formDate],
@@ -109,13 +126,35 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
     setEntries(map);
   }, [existingEntries]);
 
+  function isAvailableOnDate(pNumber) {
+    const rec = availability.find(a => a.EventDate === formDate && a.PNumber === pNumber);
+    return rec ? rec.IsAvailable : null;
+  }
+
+  function recentLessonWarning(lessonCode) {
+    if (!lessonCode) return null;
+    const twoMonthsAgo = subMonths(new Date(), 2);
+    const recent = recentSchedule.find(s =>
+      s.LessonCode === lessonCode && s.Date !== formDate && parseISO(s.Date) >= twoMonthsAgo
+    );
+    return recent ? `Last taught ${recent.Date}` : null;
+  }
+
+  function instructorQualWarning(pNumber, lessonCode) {
+    if (!pNumber || !lessonCode) return null;
+    const instructor = instructors.find(i => i.PNumber === pNumber);
+    if (!instructor) return null;
+    const lesson = allLessons.find(l => l.LessonCode === lessonCode);
+    if (!lesson) return null;
+    const qualified = instructor.QualifiedSubjects || [];
+    if (qualified.length === 0) return null;
+    if (!qualified.includes(lesson.SubjectName)) return `Not qualified: ${lesson.SubjectName}`;
+    return null;
+  }
+
   const saveMutation = useMutation({
     mutationFn: async () => {
-      // Delete existing entries for this date
-      for (const e of existingEntries) {
-        await base44.entities.NightlySchedule.delete(e.id);
-      }
-      // Create new entries
+      for (const e of existingEntries) await base44.entities.NightlySchedule.delete(e.id);
       const records = [];
       STAR_LEVELS.forEach(star => {
         PERIODS.forEach(period => {
@@ -124,145 +163,129 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
           if (entry && entry.LessonCode) {
             const lesson = allLessons.find(l => l.LessonCode === entry.LessonCode);
             records.push({
-              Date: formDate,
-              Period: period,
-              AssignedStarLevel: star,
+              Date: formDate, Period: period, AssignedStarLevel: star,
               InstructorPNumber: entry.InstructorPNumber,
               LessonCode: entry.LessonCode,
               LessonName: lesson?.LessonName || entry.LessonName || entry.LessonCode,
-              DressCode: entry.DressCode,
-              Location: entry.Location,
-              Notes: entry.Notes,
+              DressCode: entry.DressCode, Location: entry.Location, Notes: entry.Notes,
             });
           }
         });
       });
-      if (records.length > 0) {
-        await base44.entities.NightlySchedule.bulkCreate(records);
-      }
+      if (records.length > 0) await base44.entities.NightlySchedule.bulkCreate(records);
     },
-    onSuccess: () => {
-      toast.success('Schedule saved');
-      onSaved();
-    },
+    onSuccess: () => { toast.success('Schedule saved'); onSaved(); },
   });
 
   function updateEntry(key, field, value) {
-    setEntries(prev => ({
-      ...prev,
-      [key]: { ...prev[key], [field]: value },
-    }));
+    setEntries(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
+  }
+
+  function toggleStar(star) {
+    setExpandedStars(prev => ({ ...prev, [star]: !prev[star] }));
   }
 
   return (
     <Card className="mb-6 border-accent/30">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">Schedule Entry</CardTitle>
+        <CardTitle className="text-base">Schedule Entry</CardTitle>
         <div className="flex items-center gap-2">
-          <Input
-            type="date"
-            value={formDate}
-            onChange={(e) => setFormDate(e.target.value)}
-            className="w-44"
-          />
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-4 h-4" />
-          </Button>
+          <Input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="w-40 h-8 text-sm" />
+          <Button variant="ghost" size="icon" onClick={onClose}><X className="w-4 h-4" /></Button>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          {STAR_LEVELS.map(star => (
-            <div key={star}>
-              <h3 className="text-sm font-semibold text-primary mb-3 uppercase tracking-wider">{star}</h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {PERIODS.map(period => {
-                  const key = `${star}-${period}`;
-                  const entry = entries[key] || emptyEntry();
-                  return (
-                    <div key={key} className="p-4 rounded-lg border bg-muted/30 space-y-3">
-                     <p className="text-xs font-semibold text-muted-foreground">Period {period}</p>
-                     <div className="grid grid-cols-2 gap-2">
-                       <div>
-                         <Label className="text-xs">Lesson</Label>
-                         <LessonSelector
-                           value={entry.LessonCode}
-                           onChange={(val) => updateEntry(key, 'LessonCode', val)}
-                           starLevel={star}
-                         />
-                         {recentLessonWarning(entry.LessonCode) && (
-                           <p className="text-xs text-yellow-700 flex items-center gap-1 mt-1">
-                             <AlertTriangle className="w-3 h-3" />{recentLessonWarning(entry.LessonCode)}
-                           </p>
-                         )}
-                       </div>
-                       <div>
-                         <Label className="text-xs">Instructor</Label>
-                         <Select
-                           value={entry.InstructorPNumber}
-                           onValueChange={(val) => updateEntry(key, 'InstructorPNumber', val)}
-                         >
-                           <SelectTrigger>
-                             <SelectValue placeholder="Select" />
-                           </SelectTrigger>
-                           <SelectContent>
-                             {instructors.map(i => {
-                               const avail = isAvailableOnDate(i.PNumber);
-                               return (
-                                 <SelectItem key={i.PNumber} value={i.PNumber}>
-                                   {avail === true ? '✓ ' : avail === false ? '✗ ' : ''}{i.Rank ? `${i.Rank} ` : ''}{i.Surname} ({i.PNumber})
-                                 </SelectItem>
-                               );
-                             })}
-                           </SelectContent>
-                         </Select>
-                         {instructorQualWarning(entry.InstructorPNumber, entry.LessonCode) && (
-                           <p className="text-xs text-destructive flex items-center gap-1 mt-1">
-                             <AlertTriangle className="w-3 h-3" />{instructorQualWarning(entry.InstructorPNumber, entry.LessonCode)}
-                           </p>
-                         )}
-                       </div>
-                     </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-xs">Dress Code</Label>
-                          <SmartInput
-                            fieldKey="dress_code"
-                            value={entry.DressCode}
-                            onChange={(val) => updateEntry(key, 'DressCode', val)}
-                            placeholder="e.g. CS95"
-                          />
+        {/* Recent days summary */}
+        <RecentDaysSummary schedule={recentSchedule} personnel={allPersonnel} formDate={formDate} />
+
+        {/* Star level sections — collapsible */}
+        <div className="space-y-2">
+          {STAR_LEVELS.map(star => {
+            const isExpanded = expandedStars[star];
+            const hasEntries = PERIODS.some(p => entries[`${star}-${p}`]?.LessonCode);
+            return (
+              <div key={star} className="rounded-lg border overflow-hidden">
+                <button
+                  className={`w-full flex items-center justify-between px-3 py-2 text-sm font-semibold transition-colors ${isExpanded ? 'bg-primary/10 text-primary' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'}`}
+                  onClick={() => toggleStar(star)}
+                >
+                  <span className="flex items-center gap-2">
+                    {star}
+                    {hasEntries && <Badge className="text-xs py-0 h-4 bg-primary/20 text-primary border-0">Entries</Badge>}
+                  </span>
+                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+
+                {isExpanded && (
+                  <div className="p-3 grid grid-cols-1 lg:grid-cols-2 gap-3 bg-background">
+                    {PERIODS.map(period => {
+                      const key = `${star}-${period}`;
+                      const entry = entries[key] || emptyEntry();
+                      const lessonWarn = recentLessonWarning(entry.LessonCode);
+                      const qualWarn = instructorQualWarning(entry.InstructorPNumber, entry.LessonCode);
+                      return (
+                        <div key={key} className="p-3 rounded-lg border bg-muted/20 space-y-2">
+                          <p className="text-xs font-bold text-muted-foreground">Period {period}</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-xs">Lesson</Label>
+                              <LessonSelector
+                                value={entry.LessonCode}
+                                onChange={(val) => updateEntry(key, 'LessonCode', val)}
+                                starLevel={star}
+                              />
+                              {lessonWarn && (
+                                <p className="text-xs text-yellow-700 flex items-center gap-1 mt-0.5">
+                                  <AlertTriangle className="w-3 h-3 shrink-0" />{lessonWarn}
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <Label className="text-xs">Instructor</Label>
+                              <Select value={entry.InstructorPNumber} onValueChange={(val) => updateEntry(key, 'InstructorPNumber', val)}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select" /></SelectTrigger>
+                                <SelectContent>
+                                  {instructors.map(i => {
+                                    const avail = isAvailableOnDate(i.PNumber);
+                                    return (
+                                      <SelectItem key={i.PNumber} value={i.PNumber}>
+                                        {avail === true ? '✓ ' : avail === false ? '✗ ' : ''}{i.Rank ? `${i.Rank} ` : ''}{i.Surname}
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                              {qualWarn && (
+                                <p className="text-xs text-destructive flex items-center gap-1 mt-0.5">
+                                  <AlertTriangle className="w-3 h-3 shrink-0" />{qualWarn}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-xs">Dress</Label>
+                              <SmartInput fieldKey="dress_code" value={entry.DressCode} onChange={(val) => updateEntry(key, 'DressCode', val)} placeholder="e.g. CS95" className="h-8 text-xs" />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Location</Label>
+                              <SmartInput fieldKey="location" value={entry.Location} onChange={(val) => updateEntry(key, 'Location', val)} placeholder="e.g. Main Hall" className="h-8 text-xs" />
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <Label className="text-xs">Location</Label>
-                          <SmartInput
-                            fieldKey="location"
-                            value={entry.Location}
-                            onChange={(val) => updateEntry(key, 'Location', val)}
-                            placeholder="e.g. Main Hall"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-xs">Notes</Label>
-                        <Textarea
-                          value={entry.Notes}
-                          onChange={(e) => updateEntry(key, 'Notes', e.target.value)}
-                          rows={2}
-                          placeholder="Additional notes..."
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-        <div className="flex justify-end mt-6 gap-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-            <Save className="w-4 h-4 mr-2" />
+
+        <div className="flex justify-end mt-4 gap-2">
+          <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Save className="w-4 h-4 mr-1.5" />
             {saveMutation.isPending ? 'Saving...' : 'Save Schedule'}
           </Button>
         </div>
