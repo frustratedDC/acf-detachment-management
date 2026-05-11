@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
 import { checkAndPromoteCadet } from '@/lib/progressUtils';
 
-const STAR_LEVELS = ['Basic', '1 Star', '2 Star'];
+const STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
 
 function resolveTargetLessons(mode, starLevel, subject, lessonCode, syllabus) {
   if (mode === 'star') return syllabus.filter(l => l.StarLevel === starLevel);
@@ -153,13 +153,14 @@ export default function BulkProgressEntry() {
         for (const pnum of selectedCadets) {
           const cadet = personnel.find(p => p.PNumber === pnum);
           if (!cadet) continue;
-          const newLevel = await checkAndPromoteCadet(pnum, cadet.CurrentStarLevel, updatedSyllabus, updatedProgress);
-          if (newLevel) promotions.push({ cadet, newLevel });
+          const result = await checkAndPromoteCadet(pnum, cadet.CurrentStarLevel, updatedSyllabus, updatedProgress);
+          if (result) promotions.push({ cadet, result });
         }
         if (promotions.length > 0) {
           queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
-          promotions.forEach(({ cadet, newLevel }) => {
-            toast.success(`🎖 ${cadet.Surname} promoted to ${newLevel}!`);
+          promotions.forEach(({ cadet, result }) => {
+            if (result.newStarLevel) toast.success(`🎖 ${cadet.Surname} promoted to ${result.newStarLevel}!`);
+            if (result.newAccessLevel) toast.success(`⭐ ${cadet.Surname} is now a Cadet Instructor (${result.earnedQual})!`);
           });
         }
       }

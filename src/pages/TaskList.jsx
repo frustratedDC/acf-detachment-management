@@ -46,10 +46,11 @@ export default function TaskList() {
       const updatedProgress = await base44.entities.ProgressLedger.filter({});
       const cadet = personnelMap[entry.CadetPNumber];
       if (cadet) {
-        const newLevel = await checkAndPromoteCadet(entry.CadetPNumber, cadet.CurrentStarLevel, syllabus, updatedProgress);
-        if (newLevel) {
+        const result = await checkAndPromoteCadet(entry.CadetPNumber, cadet.CurrentStarLevel, syllabus, updatedProgress);
+        if (result) {
           queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
-          toast.success(`🎖 ${cadet.Surname} promoted to ${newLevel}!`);
+          if (result.newStarLevel) toast.success(`🎖 ${cadet.Surname} promoted to ${result.newStarLevel}!`);
+          if (result.newAccessLevel) toast.success(`⭐ ${cadet.Surname} is now a Cadet Instructor (${result.earnedQual})!`);
         }
       }
     },

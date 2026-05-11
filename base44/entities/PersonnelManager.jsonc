@@ -40,7 +40,9 @@
       "enum": [
         "Basic",
         "1 Star",
-        "2 Star"
+        "2 Star",
+        "3 Star",
+        "4 Star"
       ],
       "description": "Current star level (Cadets only)"
     },
@@ -54,7 +56,7 @@
         "Deceased"
       ],
       "default": "Active",
-      "description": "Current status of the personnel member \u2014 Suspended/Leaver visible to L4+ only"
+      "description": "Current status of the personnel member"
     },
     "StatusNotes": {
       "type": "string",
@@ -68,6 +70,13 @@
     "StatusChangedByPNumber": {
       "type": "string",
       "description": "PNumber of the commander who changed the status"
+    },
+    "QualifiedSubjects": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of subject names this instructor is qualified to teach/assess"
     },
     "IsLinked": {
       "type": "boolean",

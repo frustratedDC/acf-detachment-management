@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, BookOpen, Calendar, ClipboardList,
   FileCheck, Brain, CheckSquare, Settings, HelpCircle, Shield,
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
-  CalendarDays, ClipboardCheck, Megaphone, ShieldCheck
+  CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -44,6 +44,7 @@ const NAV_GROUPS = [
     label: 'Governance',
     items: [
       { path: '/cfav-governance', label: 'CFAV Governance', icon: ShieldCheck, level: 3 },
+      { path: '/wht', label: 'Weapon Handling Tests', icon: Crosshair, level: 0 },
       { path: '/training-manager', label: 'Training Manager', icon: Brain, level: 4 },
     ],
   },

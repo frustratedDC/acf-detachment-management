@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, Save } from 'lucide-react';
+import { X, Save, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { subMonths, parseISO } from 'date-fns';
 
 const STAR_LEVELS = ['Basic', '1 Star', '2 Star'];
 const PERIODS = [1, 2];
@@ -44,7 +45,39 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
 
   function isAvailableOnDate(pNumber) {
     const rec = availability.find(a => a.EventDate === formDate && a.PNumber === pNumber);
-    return rec ? rec.IsAvailable : null; // null = no response
+    return rec ? rec.IsAvailable : null;
+  }
+
+  const { data: recentSchedule = [] } = useQuery({
+    queryKey: ['schedule-recent'],
+    queryFn: () => base44.entities.NightlySchedule.filter({}),
+  });
+
+  // Returns a warning string if lesson was recently taught (within 2 months)
+  function recentLessonWarning(lessonCode) {
+    if (!lessonCode) return null;
+    const twoMonthsAgo = subMonths(new Date(), 2);
+    const recent = recentSchedule.find(s =>
+      s.LessonCode === lessonCode &&
+      s.Date !== formDate &&
+      parseISO(s.Date) >= twoMonthsAgo
+    );
+    return recent ? `⚠ Last taught ${recent.Date}` : null;
+  }
+
+  // Returns a warning string if instructor is not qualified for the lesson's subject
+  function instructorQualWarning(pNumber, lessonCode) {
+    if (!pNumber || !lessonCode) return null;
+    const instructor = instructors.find(i => i.PNumber === pNumber);
+    if (!instructor) return null;
+    const lesson = allLessons.find(l => l.LessonCode === lessonCode);
+    if (!lesson) return null;
+    const qualified = instructor.QualifiedSubjects || [];
+    if (qualified.length === 0) return null; // no qualifications recorded = no warning
+    if (!qualified.includes(lesson.SubjectName)) {
+      return `⚠ Not qualified: ${lesson.SubjectName}`;
+    }
+    return null;
   }
 
   const { data: existingEntries = [] } = useQuery({
@@ -148,38 +181,48 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
                   const entry = entries[key] || emptyEntry();
                   return (
                     <div key={key} className="p-4 rounded-lg border bg-muted/30 space-y-3">
-                      <p className="text-xs font-semibold text-muted-foreground">Period {period}</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-xs">Lesson</Label>
-                          <LessonSelector
-                            value={entry.LessonCode}
-                            onChange={(val) => updateEntry(key, 'LessonCode', val)}
-                            starLevel={star}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Instructor</Label>
-                          <Select
-                            value={entry.InstructorPNumber}
-                            onValueChange={(val) => updateEntry(key, 'InstructorPNumber', val)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {instructors.map(i => {
-                                const avail = isAvailableOnDate(i.PNumber);
-                                return (
-                                  <SelectItem key={i.PNumber} value={i.PNumber}>
-                                    {avail === true ? '✓ ' : avail === false ? '✗ ' : ''}{i.Rank ? `${i.Rank} ` : ''}{i.Surname} ({i.PNumber})
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+                     <p className="text-xs font-semibold text-muted-foreground">Period {period}</p>
+                     <div className="grid grid-cols-2 gap-2">
+                       <div>
+                         <Label className="text-xs">Lesson</Label>
+                         <LessonSelector
+                           value={entry.LessonCode}
+                           onChange={(val) => updateEntry(key, 'LessonCode', val)}
+                           starLevel={star}
+                         />
+                         {recentLessonWarning(entry.LessonCode) && (
+                           <p className="text-xs text-yellow-700 flex items-center gap-1 mt-1">
+                             <AlertTriangle className="w-3 h-3" />{recentLessonWarning(entry.LessonCode)}
+                           </p>
+                         )}
+                       </div>
+                       <div>
+                         <Label className="text-xs">Instructor</Label>
+                         <Select
+                           value={entry.InstructorPNumber}
+                           onValueChange={(val) => updateEntry(key, 'InstructorPNumber', val)}
+                         >
+                           <SelectTrigger>
+                             <SelectValue placeholder="Select" />
+                           </SelectTrigger>
+                           <SelectContent>
+                             {instructors.map(i => {
+                               const avail = isAvailableOnDate(i.PNumber);
+                               return (
+                                 <SelectItem key={i.PNumber} value={i.PNumber}>
+                                   {avail === true ? '✓ ' : avail === false ? '✗ ' : ''}{i.Rank ? `${i.Rank} ` : ''}{i.Surname} ({i.PNumber})
+                                 </SelectItem>
+                               );
+                             })}
+                           </SelectContent>
+                         </Select>
+                         {instructorQualWarning(entry.InstructorPNumber, entry.LessonCode) && (
+                           <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                             <AlertTriangle className="w-3 h-3" />{instructorQualWarning(entry.InstructorPNumber, entry.LessonCode)}
+                           </p>
+                         )}
+                       </div>
+                     </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <Label className="text-xs">Dress Code</Label>

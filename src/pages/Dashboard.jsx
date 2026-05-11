@@ -103,6 +103,20 @@ export default function Dashboard() {
       return (order[a.Priority] ?? 2) - (order[b.Priority] ?? 2);
     });
 
+  // My WHT records
+  const { data: myWHTs = [] } = useQuery({
+    queryKey: ['wht-mine', personnel?.PNumber],
+    queryFn: () => base44.entities.WeaponHandlingTest.filter({ PNumber: personnel?.PNumber }),
+    enabled: !!personnel?.PNumber,
+  });
+
+  const today2 = format(new Date(), 'yyyy-MM-dd');
+  const expiringWHTs = myWHTs.filter(w => {
+    if (!w.ExpiryDate) return false;
+    const daysLeft = Math.ceil((new Date(w.ExpiryDate) - new Date()) / 86400000);
+    return daysLeft <= 60;
+  });
+
   // My assigned lessons today (for instructors/cadets)
   const myLessonsToday = todaySchedule.filter(s =>
     isAdultInstructor(level)
@@ -194,6 +208,33 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* WHT Expiry Alert */}
+          {expiringWHTs.length > 0 && (
+            <Card className="border-yellow-400/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2 text-yellow-700">
+                  <AlertTriangle className="w-4 h-4" />WHT Expiry Warning
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                {expiringWHTs.map(w => {
+                  const daysLeft = Math.ceil((new Date(w.ExpiryDate) - new Date()) / 86400000);
+                  return (
+                    <div key={w.id} className="flex items-center justify-between text-sm p-2 rounded bg-yellow-50">
+                      <span className="font-medium">{w.WeaponType}</span>
+                      <span className={`text-xs font-semibold ${daysLeft < 0 ? 'text-destructive' : 'text-yellow-700'}`}>
+                        {daysLeft < 0 ? 'EXPIRED' : `${daysLeft}d remaining`}
+                      </span>
+                    </div>
+                  );
+                })}
+                <Link to="/wht" className="block">
+                  <Button variant="outline" size="sm" className="w-full mt-1 text-xs">View WHT Records</Button>
+                </Link>
               </CardContent>
             </Card>
           )}

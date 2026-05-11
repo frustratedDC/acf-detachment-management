@@ -29,6 +29,7 @@ import TrainingCalendar from '@/pages/TrainingCalendar';
 import BulkProgressEntry from '@/pages/BulkProgressEntry';
 import CFAVGovernance from '@/pages/CFAVGovernance';
 import ImportantNotices from '@/pages/ImportantNotices';
+import WeaponHandlingTests from '@/pages/WeaponHandlingTests';
 
 const AppContent = () => {
   const { personnel, loading, needsLinking } = usePersonnel();
@@ -64,6 +65,7 @@ const AppContent = () => {
         <Route path="/bulk-progress" element={<BulkProgressEntry />} />
         <Route path="/cfav-governance" element={<CFAVGovernance />} />
         <Route path="/notices" element={<ImportantNotices />} />
+        <Route path="/wht" element={<WeaponHandlingTests />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

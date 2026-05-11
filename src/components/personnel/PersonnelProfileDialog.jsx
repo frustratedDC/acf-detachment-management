@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import PersonnelStatusBadge from './PersonnelStatusBadge';
-import { ShieldAlert, User, Link, Star, Layers } from 'lucide-react';
+import { ShieldAlert, User, Link, Star, Layers, X, Plus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 
 const STATUSES = ['Active', 'Suspended', 'Leaver', 'Long-term Absence', 'Deceased'];
 
@@ -28,13 +30,49 @@ export default function PersonnelProfileDialog({ person, open, onClose }) {
   const [status, setStatus] = useState(person?.PersonnelStatus || 'Active');
   const [notes, setNotes] = useState(person?.StatusNotes || '');
   const [dirty, setDirty] = useState(false);
+  const [qualInput, setQualInput] = useState('');
+  const [qualsDirty, setQualsDirty] = useState(false);
+  const [qualsList, setQualsList] = useState(person?.QualifiedSubjects || []);
 
   // Reset state whenever the person changes
   useEffect(() => {
     setStatus(person?.PersonnelStatus || 'Active');
     setNotes(person?.StatusNotes || '');
+    setQualsList(person?.QualifiedSubjects || []);
     setDirty(false);
+    setQualsDirty(false);
   }, [person?.id]);
+
+  // Fetch syllabus subjects for autocomplete
+  const { data: syllabus = [] } = useQuery({
+    queryKey: ['syllabus-master-all'],
+    queryFn: () => base44.entities.SyllabusMaster.filter({}),
+    enabled: canViewSensitive && !isCadet(person?.AccessLevel ?? 0),
+  });
+  const allSubjects = [...new Set(syllabus.map(l => l.SubjectName))].sort();
+
+  const saveQualsMutation = useMutation({
+    mutationFn: () => base44.entities.PersonnelManager.update(person.id, { QualifiedSubjects: qualsList }),
+    onSuccess: () => {
+      toast.success('Qualifications updated');
+      queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
+      setQualsDirty(false);
+    },
+  });
+
+  function addQual(subj) {
+    const s = subj.trim();
+    if (s && !qualsList.includes(s)) {
+      setQualsList(prev => [...prev, s]);
+      setQualsDirty(true);
+    }
+    setQualInput('');
+  }
+
+  function removeQual(subj) {
+    setQualsList(prev => prev.filter(q => q !== subj));
+    setQualsDirty(true);
+  }
 
   const saveMutation = useMutation({
     mutationFn: () => base44.entities.PersonnelManager.update(person.id, {
@@ -87,6 +125,58 @@ export default function PersonnelProfileDialog({ person, open, onClose }) {
             </div>
           </div>
         </div>
+
+        {/* Qualified Subjects — instructors only, L4+ can edit */}
+        {canViewSensitive && !isCadet(person.AccessLevel) && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-primary" />
+                <p className="text-sm font-semibold">Qualified Subjects</p>
+                <span className="text-xs text-muted-foreground ml-auto">Subjects they can teach/assess</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 min-h-[28px]">
+                {qualsList.length === 0 && <span className="text-xs text-muted-foreground italic">None recorded</span>}
+                {qualsList.map(q => (
+                  <Badge key={q} variant="secondary" className="text-xs gap-1">
+                    {q}
+                    {canChangeStatus && (
+                      <button onClick={() => removeQual(q)} className="hover:text-destructive">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </Badge>
+                ))}
+              </div>
+              {canChangeStatus && (
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      value={qualInput}
+                      onChange={e => setQualInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addQual(qualInput); } }}
+                      placeholder="Type or select subject..."
+                      list="subj-list"
+                      className="text-xs h-8"
+                    />
+                    <datalist id="subj-list">
+                      {allSubjects.map(s => <option key={s} value={s} />)}
+                    </datalist>
+                  </div>
+                  <Button size="sm" variant="outline" className="h-8 shrink-0" onClick={() => addQual(qualInput)} disabled={!qualInput.trim()}>
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
+              {qualsDirty && canChangeStatus && (
+                <Button size="sm" className="w-full" onClick={() => saveQualsMutation.mutate()} disabled={saveQualsMutation.isPending}>
+                  Save Qualifications
+                </Button>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Status section — visible to L4+ only */}
         {canViewSensitive && (

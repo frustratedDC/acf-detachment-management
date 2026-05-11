@@ -1,0 +1,37 @@
+{
+  "name": "WeaponHandlingTest",
+  "type": "object",
+  "properties": {
+    "PNumber": {
+      "type": "string",
+      "description": "PNumber of the cadet or CFAV"
+    },
+    "WeaponType": {
+      "type": "string",
+      "description": "Weapon system tested e.g. L98A2, L85A2, etc."
+    },
+    "TestDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the WHT was passed"
+    },
+    "ExpiryDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the WHT expires (6 months from test date)"
+    },
+    "AssessorPNumber": {
+      "type": "string",
+      "description": "PNumber of the assessor"
+    },
+    "Notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "PNumber",
+    "WeaponType",
+    "TestDate",
+    "ExpiryDate"
+  ]
+}
