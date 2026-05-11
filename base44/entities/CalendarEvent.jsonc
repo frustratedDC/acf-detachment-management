@@ -46,6 +46,15 @@
     },
     "CreatedByPNumber": {
       "type": "string"
+    },
+    "ComplianceStatus": {
+      "type": "string",
+      "enum": [
+        "open",
+        "closed",
+        "amber"
+      ],
+      "description": "Manual override for compliance status (open=green, closed=red, amber=compliance not met)"
     }
   },
   "required": [

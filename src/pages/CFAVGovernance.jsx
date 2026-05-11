@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ShieldCheck, Plus, Pencil, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
@@ -29,6 +30,7 @@ const COURSE_TYPES = [
 const MANDATORY = ['First Aid', 'Data Protection', 'Safeguarding', 'Fire Safety'];
 
 function expiryStatus(expiryDate) {
+  if (!expiryDate) return { label: 'No expiry', color: 'bg-chart-2/10 text-chart-2 border-chart-2/30', urgent: false };
   const today = new Date();
   const exp = parseISO(expiryDate);
   const days = differenceInDays(exp, today);
@@ -61,7 +63,6 @@ export default function CFAVGovernance() {
     queryFn: () => base44.entities.CFAVGovernance.filter({}),
   });
 
-  // L3 can only see own; L4+ see all
   const instructors = allPersonnel.filter(p => isAdultInstructor(p.AccessLevel) && (p.PersonnelStatus || 'Active') === 'Active');
   const visibleInstructors = canCRUD ? instructors : instructors.filter(p => p.PNumber === me?.PNumber);
 
@@ -80,6 +81,23 @@ export default function CFAVGovernance() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['cfav-governance'] }); toast.success('Record deleted'); },
   });
 
+  // Quick-check: toggle completion for a course type with today's date
+  const quickCheckMutation = useMutation({
+    mutationFn: async ({ courseType, pNumber, existingRec }) => {
+      if (existingRec) {
+        await base44.entities.CFAVGovernance.delete(existingRec.id);
+      } else {
+        await base44.entities.CFAVGovernance.create({
+          PNumber: pNumber,
+          CourseType: courseType,
+          CompletionDate: format(new Date(), 'yyyy-MM-dd'),
+          ExpiryDate: '',
+        });
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cfav-governance'] }),
+  });
+
   function openCreate(pNumber) {
     setForm({ ...emptyForm, PNumber: pNumber || me?.PNumber });
     setEditingRec(null);
@@ -87,7 +105,14 @@ export default function CFAVGovernance() {
   }
 
   function openEdit(rec) {
-    setForm({ CourseType: rec.CourseType, CompletionDate: rec.CompletionDate, ExpiryDate: rec.ExpiryDate, CertificateRef: rec.CertificateRef || '', Notes: rec.Notes || '', PNumber: rec.PNumber });
+    setForm({
+      CourseType: rec.CourseType,
+      CompletionDate: rec.CompletionDate,
+      ExpiryDate: rec.ExpiryDate || '',
+      CertificateRef: rec.CertificateRef || '',
+      Notes: rec.Notes || '',
+      PNumber: rec.PNumber,
+    });
     setEditingRec(rec);
     setDialogOpen(true);
   }
@@ -95,7 +120,7 @@ export default function CFAVGovernance() {
   function closeDialog() { setDialogOpen(false); setEditingRec(null); setForm(emptyForm); }
 
   function save() {
-    if (!form.CourseType || !form.CompletionDate || !form.ExpiryDate) return;
+    if (!form.CourseType || !form.CompletionDate) return;
     if (editingRec) updateMutation.mutate({ id: editingRec.id, data: form });
     else createMutation.mutate(form);
   }
@@ -143,30 +168,52 @@ export default function CFAVGovernance() {
           const rec = myRecords.find(r => r.CourseType === courseType);
           const isMandatory = MANDATORY.includes(courseType);
           const status = rec ? expiryStatus(rec.ExpiryDate) : null;
+          const isCompleted = !!rec;
 
           return (
             <Card key={courseType} className={`${status?.urgent ? 'border-destructive/40' : ''}`}>
-              <CardHeader className="pb-2 flex flex-row items-start justify-between">
-                <div>
-                  <CardTitle className="text-sm">{courseType}</CardTitle>
-                  {isMandatory && <Badge variant="secondary" className="text-xs mt-1">Mandatory</Badge>}
+              <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
+                <div className="flex items-start gap-2 flex-1 min-w-0">
+                  {/* Quick checkbox toggle */}
+                  {canCRUD && (
+                    <Checkbox
+                      checked={isCompleted}
+                      onCheckedChange={() => quickCheckMutation.mutate({
+                        courseType,
+                        pNumber: viewPNumber,
+                        existingRec: rec,
+                      })}
+                      className="mt-0.5 shrink-0"
+                    />
+                  )}
+                  <div>
+                    <CardTitle className="text-sm">{courseType}</CardTitle>
+                    {isMandatory && <Badge variant="secondary" className="text-xs mt-1">Mandatory</Badge>}
+                  </div>
                 </div>
                 {rec ? (
                   status?.urgent
                     ? <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
                     : <CheckCircle2 className="w-4 h-4 text-chart-2 shrink-0" />
                 ) : (
-                  <AlertTriangle className={`w-4 h-4 shrink-0 ${isMandatory ? 'text-destructive' : 'text-muted-foreground'}`} />
+                  <AlertTriangle className={`w-4 h-4 shrink-0 ${isMandatory ? 'text-destructive' : 'text-muted-foreground opacity-40'}`} />
                 )}
               </CardHeader>
               <CardContent className="pt-0">
                 {rec ? (
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Completed: {format(parseISO(rec.CompletionDate), 'dd MMM yyyy')}</p>
-                    <p className="text-xs text-muted-foreground">Expires: {format(parseISO(rec.ExpiryDate), 'dd MMM yyyy')}</p>
-                    <Badge variant="outline" className={`text-xs ${status.color}`}>
-                      {status.label === 'Expired' ? 'Expired' : `${status.label} remaining`}
-                    </Badge>
+                    {rec.ExpiryDate && (
+                      <>
+                        <p className="text-xs text-muted-foreground">Expires: {format(parseISO(rec.ExpiryDate), 'dd MMM yyyy')}</p>
+                        <Badge variant="outline" className={`text-xs ${status.color}`}>
+                          {status.label === 'Expired' ? 'Expired' : `${status.label} remaining`}
+                        </Badge>
+                      </>
+                    )}
+                    {!rec.ExpiryDate && (
+                      <Badge variant="outline" className="text-xs bg-chart-2/10 text-chart-2 border-chart-2/30">Completed</Badge>
+                    )}
                     {canCRUD && (
                       <div className="flex gap-1 pt-1">
                         <Button size="sm" variant="outline" className="flex-1 h-7 text-xs" onClick={() => openEdit(rec)}>
@@ -183,7 +230,7 @@ export default function CFAVGovernance() {
                     <p className="text-xs text-muted-foreground italic">No record</p>
                     {canCRUD && (
                       <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={() => openCreate(viewPNumber)}>
-                        <Plus className="w-3 h-3 mr-1" />Add
+                        <Plus className="w-3 h-3 mr-1" />Add Details
                       </Button>
                     )}
                   </div>
@@ -216,12 +263,12 @@ export default function CFAVGovernance() {
                       <td className="p-2 font-medium">{[p.Rank, p.Surname].filter(Boolean).join(' ')}</td>
                       {COURSE_TYPES.map(c => {
                         const rec = recs.find(r => r.CourseType === c);
-                        if (!rec) return <td key={c} className="p-2 text-center text-destructive font-bold">—</td>;
-                        const s = expiryStatus(rec.ExpiryDate);
+                        if (!rec) return <td key={c} className="p-2 text-center text-muted-foreground">—</td>;
+                        const s = rec.ExpiryDate ? expiryStatus(rec.ExpiryDate) : null;
                         return (
                           <td key={c} className="p-2 text-center">
-                            <span className={`px-1.5 py-0.5 rounded text-xs ${s.color}`}>
-                              {s.label === 'Expired' ? 'EXP' : `✓ ${s.label}`}
+                            <span className={`px-1.5 py-0.5 rounded text-xs ${s ? s.color : 'bg-chart-2/10 text-chart-2'}`}>
+                              {s ? (s.label === 'Expired' ? 'EXP' : `✓ ${s.label}`) : '✓'}
                             </span>
                           </td>
                         );
@@ -270,17 +317,17 @@ export default function CFAVGovernance() {
                 <Input type="date" value={form.CompletionDate} onChange={e => setForm(p => ({ ...p, CompletionDate: e.target.value }))} className="mt-1" />
               </div>
               <div>
-                <Label>Expiry Date</Label>
+                <Label>Expiry Date <span className="text-muted-foreground font-normal">(optional)</span></Label>
                 <Input type="date" value={form.ExpiryDate} onChange={e => setForm(p => ({ ...p, ExpiryDate: e.target.value }))} className="mt-1" />
               </div>
             </div>
             <div>
-              <Label>Certificate Ref (optional)</Label>
+              <Label>Certificate Ref <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Input value={form.CertificateRef} onChange={e => setForm(p => ({ ...p, CertificateRef: e.target.value }))} className="mt-1" placeholder="e.g. ABC-12345" />
             </div>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" onClick={closeDialog}>Cancel</Button>
-              <Button onClick={save} disabled={!form.CourseType || !form.CompletionDate || !form.ExpiryDate}>
+              <Button onClick={save} disabled={!form.CourseType || !form.CompletionDate}>
                 {editingRec ? 'Update' : 'Save'}
               </Button>
             </div>

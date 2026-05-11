@@ -1,0 +1,39 @@
+{
+  "name": "DetachmentOpeningHours",
+  "type": "object",
+  "properties": {
+    "DayOfWeek": {
+      "type": "string",
+      "enum": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday"
+      ],
+      "description": "Day of the week"
+    },
+    "IsOpen": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the detachment is open on this day"
+    },
+    "OpenTime": {
+      "type": "string",
+      "description": "Opening time e.g. 19:00"
+    },
+    "CloseTime": {
+      "type": "string",
+      "description": "Closing time e.g. 21:30"
+    },
+    "Notes": {
+      "type": "string",
+      "description": "Additional notes e.g. Fortnightly"
+    }
+  },
+  "required": [
+    "DayOfWeek"
+  ]
+}
