@@ -27,6 +27,8 @@ import HelpWiki from '@/pages/HelpWiki';
 import TrainingPlanExport from '@/pages/TrainingPlanExport';
 import TrainingCalendar from '@/pages/TrainingCalendar';
 import BulkProgressEntry from '@/pages/BulkProgressEntry';
+import CFAVGovernance from '@/pages/CFAVGovernance';
+import ImportantNotices from '@/pages/ImportantNotices';
 
 const AppContent = () => {
   const { personnel, loading, needsLinking } = usePersonnel();
@@ -60,6 +62,8 @@ const AppContent = () => {
         <Route path="/training-plan-export" element={<TrainingPlanExport />} />
         <Route path="/calendar" element={<TrainingCalendar />} />
         <Route path="/bulk-progress" element={<BulkProgressEntry />} />
+        <Route path="/cfav-governance" element={<CFAVGovernance />} />
+        <Route path="/notices" element={<ImportantNotices />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

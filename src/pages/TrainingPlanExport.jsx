@@ -10,18 +10,42 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileDown, Printer, Calendar, Loader2 } from 'lucide-react';
-import { format, eachDayOfInterval, parseISO, startOfMonth, endOfMonth, addMonths } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, addMonths } from 'date-fns';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 import { jsPDF } from 'jspdf';
 
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+// ACF Brand Palette
+const ACF = {
+  darkGreen:  [8, 63, 48],      // #083F30
+  greenWash:  [101, 137, 124],  // #65897C
+  green:      [45, 142, 67],    // #2D8E43
+  lightGreen: [111, 176, 67],   // #6FB043
+  yellow:     [244, 233, 17],   // #F4E911
+  orange:     [236, 98, 35],    // #EC6223
+  red:        [230, 28, 59],    // #E61C3B
+  blue:       [21, 157, 196],   // #159DC4
+  white:      [255, 255, 255],
+  black:      [0, 0, 0],
+};
+
+const STAR_LEVEL_COLORS = {
+  'Basic':  ACF.darkGreen,
+  '1 Star': ACF.green,
+  '2 Star': ACF.blue,
+};
+
+const EVENT_TYPE_COLORS = {
+  'Camp':        ACF.orange,
+  'Competition': ACF.blue,
+  'Admin':       ACF.greenWash,
+  'Other':       ACF.greenWash,
+};
 
 export default function TrainingPlanExport() {
-  const [mode, setMode] = useState('month'); // 'month' | 'range'
+  const [mode, setMode] = useState('month');
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(addMonths(new Date(), 1), 'yyyy-MM-dd'));
-  const [orientation, setOrientation] = useState('landscape');
   const [generating, setGenerating] = useState(false);
 
   const { data: schedule = [] } = useQuery({
@@ -46,7 +70,6 @@ export default function TrainingPlanExport() {
 
   const personnelMap = {};
   personnel.forEach(p => { personnelMap[p.PNumber] = p; });
-
   const detName = settings.find(s => s.Key === 'detachment_name')?.Value || 'ACF DETACHMENT';
 
   function getDateRange() {
@@ -69,135 +92,158 @@ export default function TrainingPlanExport() {
     return schedDates.sort();
   }
 
-  function periodLabel(str) {
-    return str === 'landscape' ? 'Landscape' : 'Portrait';
-  }
-
   function getPeriodDescription() {
-    if (mode === 'month') {
-      const base = parseISO(selectedMonth + '-01');
-      return format(base, 'MMMM yyyy');
-    }
+    if (mode === 'month') return format(parseISO(selectedMonth + '-01'), 'MMMM yyyy');
     return `${format(parseISO(startDate + 'T00:00:00'), 'dd MMM yyyy')} – ${format(parseISO(endDate + 'T00:00:00'), 'dd MMM yyyy')}`;
   }
 
   async function generatePDF() {
     setGenerating(true);
-    const isLandscape = orientation === 'landscape';
-    const doc = new jsPDF({ orientation: isLandscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
-
-    const pageW = isLandscape ? 297 : 210;
-    const pageH = isLandscape ? 210 : 297;
-    const margin = 8;
+    // Always landscape A4 for maximum content per page
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = 297;
+    const pageH = 210;
+    const margin = 5; // narrow margins for shrink-to-fit
     const usableW = pageW - margin * 2;
-
     const periodDesc = getPeriodDescription();
     const trainingDates = getTrainingDates();
+    const { start, end } = getDateRange();
 
-    // ── HEADER BAND ──────────────────────────────────────────────
-    doc.setFillColor(30, 41, 59);
-    doc.roundedRect(0, 0, pageW, 26, 0, 0, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
+    // All calendar events in range (training nights + non-training)
+    const calEventsInRange = events.filter(ev => ev.Date >= start && ev.Date <= end).sort((a, b) => a.Date.localeCompare(b.Date));
+    const starLevels = ['Basic', '1 Star', '2 Star'];
+
+    // ── HEADER ──────────────────────────────────────────────────────
+    doc.setFillColor(...ACF.darkGreen);
+    doc.rect(0, 0, pageW, 20, 'F');
+
+    // Red accent bar
+    doc.setFillColor(...ACF.red);
+    doc.rect(0, 20, pageW, 3, 'F');
+
+    doc.setTextColor(...ACF.white);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('TRAINING PROGRAMME', pageW / 2, 11, { align: 'center' });
+    doc.text('TRAINING PROGRAMME', pageW / 2, 9, { align: 'center' });
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(`${detName.toUpperCase()}  ·  ${periodDesc.toUpperCase()}`, pageW / 2, 19, { align: 'center' });
+    doc.text(`${detName.toUpperCase()}  ·  ${periodDesc.toUpperCase()}`, pageW / 2, 16, { align: 'center' });
 
-    doc.setTextColor(0, 0, 0);
-    let y = 32;
+    doc.setTextColor(...ACF.black);
+    let y = 28;
 
-    if (trainingDates.length === 0) {
-      doc.setFontSize(10);
-      doc.setTextColor(120, 120, 120);
-      doc.text('No training scheduled for this period.', pageW / 2, y + 10, { align: 'center' });
+    // ── CALENDAR EVENTS SECTION (closures, camps, etc.) ──────────────
+    const nonTrainingEvents = calEventsInRange.filter(ev => !ev.IsTrainingNight);
+    if (nonTrainingEvents.length > 0) {
+      // Section header
+      doc.setFillColor(...ACF.greenWash);
+      doc.rect(margin, y, usableW, 6, 'F');
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...ACF.white);
+      doc.text('CALENDAR EVENTS & NOTICES', margin + 3, y + 4.2);
+      y += 7;
+
+      // Events in a compact horizontal strip
+      const evChunkSize = Math.floor(usableW / 65);
+      let ex = margin;
+      let evRowY = y;
+      nonTrainingEvents.forEach((ev, idx) => {
+        if (idx > 0 && idx % evChunkSize === 0) {
+          evRowY += 8;
+          ex = margin;
+          y = evRowY;
+        }
+        const evCol = EVENT_TYPE_COLORS[ev.EventType] || ACF.greenWash;
+        doc.setFillColor(...evCol);
+        doc.roundedRect(ex, evRowY, 62, 6, 2, 2, 'F');
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...ACF.white);
+        const evLabel = `${format(parseISO(ev.Date), 'dd MMM')}  ${ev.Title}`;
+        doc.text(evLabel.substring(0, 28), ex + 2, evRowY + 4.2);
+        ex += 64;
+      });
+      y = evRowY + 10;
     }
 
-    const starLevels = ['Basic', '1 Star', '2 Star'];
-    const starColors = { 'Basic': [59, 130, 246], '1 Star': [16, 185, 129], '2 Star': [245, 158, 11] };
+    if (trainingDates.length === 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text('No training nights scheduled for this period.', pageW / 2, y + 10, { align: 'center' });
+    }
 
     for (const date of trainingDates) {
       const dateStr = format(parseISO(date), 'EEEE dd MMMM yyyy').toUpperCase();
       const daySchedule = schedule.filter(s => s.Date === date).sort((a, b) => a.Period - b.Period);
-      const calEvents = events.filter(e => e.Date === date && !e.IsTrainingNight);
 
-      // Check if we need a new page (rough estimate)
-      const estimatedHeight = 12 + starLevels.reduce((acc, sl) => {
+      // Estimate height
+      let estimatedH = 10;
+      for (const sl of starLevels) {
         const rows = daySchedule.filter(s => s.AssignedStarLevel === sl);
-        return acc + (rows.length > 0 ? 8 + rows.length * 8 : 0);
-      }, 0);
+        if (rows.length > 0) estimatedH += 7 + 6 + rows.length * 7;
+      }
 
-      if (y + estimatedHeight > pageH - 12) {
+      if (y + estimatedH > pageH - 8) {
         doc.addPage();
         // Repeat header
-        doc.setFillColor(30, 41, 59);
-        doc.roundedRect(0, 0, pageW, 26, 0, 0, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(18);
+        doc.setFillColor(...ACF.darkGreen);
+        doc.rect(0, 0, pageW, 20, 'F');
+        doc.setFillColor(...ACF.red);
+        doc.rect(0, 20, pageW, 3, 'F');
+        doc.setTextColor(...ACF.white);
+        doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.text('TRAINING PROGRAMME', pageW / 2, 11, { align: 'center' });
+        doc.text('TRAINING PROGRAMME', pageW / 2, 9, { align: 'center' });
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.text(`${detName.toUpperCase()}  ·  ${periodDesc.toUpperCase()}`, pageW / 2, 19, { align: 'center' });
-        doc.setTextColor(0, 0, 0);
-        y = 32;
+        doc.text(`${detName.toUpperCase()}  ·  ${periodDesc.toUpperCase()} (cont.)`, pageW / 2, 16, { align: 'center' });
+        doc.setTextColor(...ACF.black);
+        y = 28;
       }
 
-      // Date banner - pill shape
-      doc.setFillColor(243, 244, 246);
-      doc.roundedRect(margin, y, usableW, 9, 4, 4, 'F');
-      doc.setFontSize(9);
+      // Date banner — ACF light green background, dark green text
+      doc.setFillColor(...ACF.lightGreen);
+      doc.roundedRect(margin, y, usableW, 8, 3, 3, 'F');
+      doc.setFontSize(8.5);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(30, 41, 59);
-      doc.text(dateStr, margin + 4, y + 6);
-      y += 12;
-
-      // Calendar events for this day (non-training)
-      for (const ev of calEvents) {
-        doc.setFillColor(250, 250, 250);
-        doc.roundedRect(margin, y, usableW, 7, 3, 3, 'F');
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(100, 100, 100);
-        const evText = `📌 ${ev.Title}${ev.Notes ? '  —  ' + ev.Notes : ''}`;
-        doc.text(evText.substring(0, 100), margin + 3, y + 4.8);
-        y += 9;
-      }
+      doc.setTextColor(...ACF.darkGreen);
+      doc.text(dateStr, margin + 4, y + 5.5);
+      y += 10;
 
       for (const sl of starLevels) {
         const rows = daySchedule.filter(s => s.AssignedStarLevel === sl);
         if (rows.length === 0) continue;
 
-        const [r, g, b] = starColors[sl];
-        // Star level pill header
-        doc.setFillColor(r, g, b);
-        doc.roundedRect(margin, y, usableW, 7, 3, 3, 'F');
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(255, 255, 255);
-        doc.text(`${sl.toUpperCase()} STAR`, margin + 4, y + 5);
-        y += 8;
+        const slColor = STAR_LEVEL_COLORS[sl] || ACF.darkGreen;
 
-        // Column widths
-        const cols = isLandscape ? [14, 20, 70, 45, 40, 30, 58] : [14, 18, 55, 38, 30, 25, 38];
-        const headers = ['Period', 'Code', 'Lesson', 'Instructor', 'Location', 'Dress', 'Notes'];
-        const rowH = 7;
+        // Star level pill
+        doc.setFillColor(...slColor);
+        doc.roundedRect(margin, y, usableW, 6, 2, 2, 'F');
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...ACF.white);
+        doc.text(`${sl.toUpperCase()}`, margin + 3, y + 4.2);
+        y += 7;
+
+        // Column widths — optimised for landscape A4 with narrow margins
+        const cols = [10, 18, 80, 42, 38, 28, 71];
+        const headers = ['Per.', 'Code', 'Lesson', 'Instructor', 'Location', 'Dress', 'Notes'];
+        const rowH = 6;
 
         // Header row
-        doc.setFillColor(248, 250, 252);
-        doc.roundedRect(margin, y, usableW, rowH, 2, 2, 'F');
+        doc.setFillColor(240, 244, 240);
+        doc.roundedRect(margin, y, usableW, rowH, 1, 1, 'F');
         let cx = margin;
         headers.forEach((h, i) => {
-          doc.setFontSize(7);
+          doc.setFontSize(6.5);
           doc.setFont('helvetica', 'bold');
-          doc.setTextColor(60, 60, 80);
-          doc.text(h, cx + 2, y + 4.8);
+          doc.setTextColor(...ACF.darkGreen);
+          doc.text(h, cx + 1.5, y + 4.2);
           cx += cols[i];
         });
         y += rowH;
 
-        // Data rows
         rows.forEach((row, ri) => {
           const cells = [
             `P${row.Period}`,
@@ -206,50 +252,54 @@ export default function TrainingPlanExport() {
             getInstructorDisplay(row.InstructorPNumber),
             row.Location || '—',
             row.DressCode || '—',
-            row.Notes || '—',
+            row.Notes || '',
           ];
 
-          // Determine row height based on longest content
-          doc.setFontSize(8);
-          const noteLines = doc.splitTextToSize(cells[6], cols[6] - 4);
-          const lessonLines = doc.splitTextToSize(cells[2], cols[2] - 4);
+          doc.setFontSize(7);
+          const noteLines = doc.splitTextToSize(cells[6], cols[6] - 3);
+          const lessonLines = doc.splitTextToSize(cells[2], cols[2] - 3);
           const lines = Math.max(noteLines.length, lessonLines.length, 1);
-          const rh = Math.max(rowH, lines * 4.5 + 3);
+          const rh = Math.max(rowH, lines * 4.2 + 2.5);
 
-          // Alternating row bg
           if (ri % 2 === 0) {
-            doc.setFillColor(252, 252, 253);
-            doc.roundedRect(margin, y, usableW, rh, 2, 2, 'F');
+            doc.setFillColor(250, 253, 250);
+            doc.roundedRect(margin, y, usableW, rh, 1, 1, 'F');
           }
 
           cx = margin;
           cells.forEach((cell, i) => {
             doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8);
-            doc.setTextColor(30, 30, 30);
-            const txt = doc.splitTextToSize(String(cell || '—'), cols[i] - 4);
-            doc.text(txt, cx + 2, y + 4.8);
+            doc.setFontSize(7);
+            doc.setTextColor(...ACF.darkGreen);
+            const txt = doc.splitTextToSize(String(cell || ''), cols[i] - 3);
+            doc.text(txt, cx + 1.5, y + 4.2);
             cx += cols[i];
           });
 
-          // Subtle row divider
-          doc.setDrawColor(230, 230, 235);
-          doc.setLineWidth(0.2);
+          doc.setDrawColor(200, 220, 210);
+          doc.setLineWidth(0.15);
           doc.line(margin, y + rh, margin + usableW, y + rh);
           y += rh;
         });
-        y += 3;
+        y += 2;
       }
-      y += 4;
+      y += 3;
     }
 
-    // Footer
-    doc.setFontSize(7);
-    doc.setTextColor(160, 160, 160);
-    doc.text(
-      `Generated ${format(new Date(), 'dd/MM/yyyy HH:mm')}  ·  ${detName}  ·  OFFICIAL`,
-      pageW / 2, pageH - 4, { align: 'center' }
-    );
+    // ── FOOTER ──────────────────────────────────────────────────────
+    const totalPages = doc.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      doc.setFillColor(...ACF.darkGreen);
+      doc.rect(0, pageH - 7, pageW, 7, 'F');
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...ACF.lightGreen);
+      doc.text(
+        `Generated ${format(new Date(), 'dd/MM/yyyy HH:mm')}  ·  ${detName}  ·  OFFICIAL  ·  Page ${p} of ${totalPages}`,
+        pageW / 2, pageH - 2.5, { align: 'center' }
+      );
+    }
 
     doc.save(`Training_Programme_${periodDesc.replace(/\s+/g, '_').replace(/–/g, '-')}.pdf`);
     setGenerating(false);
@@ -258,6 +308,7 @@ export default function TrainingPlanExport() {
   const trainingDates = getTrainingDates();
   const { start, end } = getDateRange();
   const previewSchedule = schedule.filter(s => s.Date >= start && s.Date <= end);
+  const previewEvents = events.filter(ev => ev.Date >= start && ev.Date <= end);
 
   return (
     <AccessGate level={ACCESS_LEVELS.DET_INSTRUCTOR}>
@@ -277,7 +328,7 @@ export default function TrainingPlanExport() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-accent" />
+              <Calendar className="w-4 h-4 text-primary" />
               Export Settings
             </CardTitle>
           </CardHeader>
@@ -309,17 +360,11 @@ export default function TrainingPlanExport() {
                 </div>
               </>
             )}
-            <div>
-              <Label>Orientation</Label>
-              <Select value={orientation} onValueChange={setOrientation}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="landscape">Landscape (recommended)</SelectItem>
-                  <SelectItem value="portrait">Portrait</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="text-xs text-muted-foreground space-y-0.5">
+              <p>{trainingDates.length} training night{trainingDates.length !== 1 ? 's' : ''} in period</p>
+              <p>{previewEvents.filter(e => !e.IsTrainingNight).length} other calendar events</p>
+              <p className="text-primary font-medium">Output: Landscape A4 · ACF branding</p>
             </div>
-            <p className="text-xs text-muted-foreground">{trainingDates.length} training night{trainingDates.length !== 1 ? 's' : ''} in period</p>
           </CardContent>
         </Card>
 
@@ -328,8 +373,21 @@ export default function TrainingPlanExport() {
             <CardTitle className="text-sm">Preview — {getPeriodDescription()}</CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Calendar events preview */}
+            {previewEvents.filter(e => !e.IsTrainingNight).length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-bold text-muted-foreground uppercase mb-2">Calendar Events</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {previewEvents.filter(e => !e.IsTrainingNight).map(ev => (
+                    <Badge key={ev.id} variant="outline" className="text-xs">
+                      {format(parseISO(ev.Date), 'dd MMM')} · {ev.Title}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
             {trainingDates.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">No training nights scheduled for this period.</p>
+              <p className="text-sm text-muted-foreground text-center py-6">No training nights scheduled.</p>
             ) : (
               <div className="space-y-4">
                 {trainingDates.map(date => {
@@ -341,11 +399,11 @@ export default function TrainingPlanExport() {
                       </p>
                       <div className="space-y-1">
                         {daySchedule.map(row => (
-                          <div key={row.id} className="flex items-center gap-3 p-2 rounded-full bg-muted/50 text-sm px-4">
-                            <Badge variant="outline" className="text-xs rounded-full shrink-0">P{row.Period}</Badge>
-                            <Badge variant="secondary" className="text-xs rounded-full shrink-0">{row.AssignedStarLevel}</Badge>
+                          <div key={row.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 text-sm px-3">
+                            <Badge variant="outline" className="text-xs shrink-0">P{row.Period}</Badge>
+                            <Badge variant="secondary" className="text-xs shrink-0">{row.AssignedStarLevel}</Badge>
                             <span className="font-mono text-xs text-muted-foreground">{row.LessonCode}</span>
-                            <span className="flex-1 truncate">{row.LessonName}</span>
+                            <span className="flex-1 truncate text-xs">{row.LessonName}</span>
                             <span className="text-xs text-muted-foreground shrink-0">{getInstructorDisplay(row.InstructorPNumber)}</span>
                           </div>
                         ))}

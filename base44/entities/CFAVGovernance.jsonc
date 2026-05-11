@@ -1,0 +1,47 @@
+{
+  "name": "CFAVGovernance",
+  "type": "object",
+  "properties": {
+    "PNumber": {
+      "type": "string",
+      "description": "PNumber of the adult instructor"
+    },
+    "CourseType": {
+      "type": "string",
+      "enum": [
+        "First Aid",
+        "Data Protection",
+        "Safeguarding",
+        "Fire Safety",
+        "Medication Management",
+        "Cold Injury and Heat Illness",
+        "Mental Health Awareness"
+      ],
+      "description": "Type of governance course"
+    },
+    "CompletionDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date completed"
+    },
+    "ExpiryDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the qualification expires"
+    },
+    "CertificateRef": {
+      "type": "string",
+      "description": "Certificate reference number (optional)"
+    },
+    "Notes": {
+      "type": "string",
+      "description": "Additional notes"
+    }
+  },
+  "required": [
+    "PNumber",
+    "CourseType",
+    "CompletionDate",
+    "ExpiryDate"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "name": "ImportantNotice",
+  "type": "object",
+  "properties": {
+    "Title": {
+      "type": "string",
+      "description": "Notice title"
+    },
+    "Body": {
+      "type": "string",
+      "description": "Full notice body"
+    },
+    "Priority": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Normal",
+        "High",
+        "Urgent"
+      ],
+      "default": "Normal",
+      "description": "Priority level"
+    },
+    "PublishedByPNumber": {
+      "type": "string",
+      "description": "PNumber of the person who published"
+    },
+    "ExpiryDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date after which this notice is hidden"
+    },
+    "IsActive": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the notice is currently active"
+    }
+  },
+  "required": [
+    "Title",
+    "Body"
+  ]
+}
