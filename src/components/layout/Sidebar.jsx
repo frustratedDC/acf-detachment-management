@@ -7,7 +7,7 @@ import {
   FileCheck, Brain, CheckSquare, Settings, HelpCircle, Shield,
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
   CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown,
-  CalendarCheck, GraduationCap
+  CalendarCheck, GraduationCap, BarChart2
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,7 @@ const NAV_GROUPS = [
   {
     label: 'Training',
     items: [
-      { path: '/parade', label: 'Parade State', icon: ClipboardList, level: 1 },
+      { path: '/parade', label: 'Parade State', icon: ClipboardList, level: 0 },
       { path: '/attendance', label: 'Lesson Attendance', icon: FileCheck, level: 2 },
       { path: '/schedule', label: 'Training Plan', icon: Calendar, level: 2 },
       { path: '/training-manager', label: 'Training Manager', icon: Brain, level: 4 },
@@ -48,6 +48,12 @@ const NAV_GROUPS = [
       { path: '/wht', label: 'Weapon Handling Tests', icon: Crosshair, level: 0 },
       { path: '/staff-availability', label: 'My Availability', icon: CalendarCheck, level: 3 },
       { path: '/instructor-quals', label: 'Instructor Quals', icon: GraduationCap, level: 3 },
+    ],
+  },
+  {
+    label: 'Analytics',
+    items: [
+      { path: '/analytics', label: 'Analytics', icon: BarChart2, level: 4 },
     ],
   },
   {

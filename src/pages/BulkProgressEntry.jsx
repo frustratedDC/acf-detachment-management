@@ -221,6 +221,26 @@ export default function BulkProgressEntry() {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input placeholder="Search cadets..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 w-40 text-xs" />
         </div>
+        {subjectFilter !== 'all' && (
+          <Button size="sm" variant="outline" onClick={() => {
+            // Tick all incomplete lessons for subject across all cadets
+            setPending(prev => {
+              const next = { ...prev };
+              cadets.forEach(c => {
+                const row = { ...(next[c.PNumber] || {}) };
+                displayLessons.forEach(l => {
+                  if (!approvedSet.has(`${c.PNumber}::${l.LessonCode}`) && !pendingDbSet.has(`${c.PNumber}::${l.LessonCode}`)) {
+                    row[l.LessonCode] = true;
+                  }
+                });
+                next[c.PNumber] = row;
+              });
+              return next;
+            });
+          }}>
+            ✓ Complete Whole Subject
+          </Button>
+        )}
         <div className="ml-auto">
           <Button
             onClick={() => submitMutation.mutate()}

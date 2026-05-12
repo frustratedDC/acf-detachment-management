@@ -10,7 +10,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ClipboardList, Save, Search, UserCheck, UserX, UserMinus } from 'lucide-react';
+import { ClipboardList, Save, Search, UserCheck, UserX, UserMinus, Printer, Download } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
@@ -90,19 +91,103 @@ export default function ParadeState() {
     }));
   }
 
+  const { data: detSettings = [] } = useQuery({
+    queryKey: ['det-settings'],
+    queryFn: () => base44.entities.DetachmentSettings.filter({}),
+  });
+  const detName = detSettings.find(s => s.Key === 'detachment_name')?.Value || 'ACF DETACHMENT';
+  const canEdit = (me?.AccessLevel ?? 0) >= ACCESS_LEVELS.CADET_NCO;
+
+  function exportCSV() {
+    const rows = [['Rank','Surname','First Name','PNumber','Type','Status']];
+    filtered.forEach(p => rows.push([p.Rank || '', p.Surname || '', p.FirstName || '', p.PNumber, p.Type || '', localStatuses[p.PNumber] || 'Absent']));
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `ParadeState_${date}.csv`; a.click();
+  }
+
+  function exportPDF() {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = 210;
+    const margin = 15;
+    const usableW = pageW - margin * 2;
+
+    // Header
+    doc.setFillColor(8, 63, 48);
+    doc.rect(0, 0, pageW, 28, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+    doc.text(detName.toUpperCase(), pageW / 2, 10, { align: 'center' });
+    doc.setFontSize(11); doc.setFont('helvetica', 'normal');
+    doc.text('PARADE NIGHT NOMINAL ROLL', pageW / 2, 17, { align: 'center' });
+    doc.setFontSize(9);
+    doc.text(format(new Date(date + 'T00:00:00'), 'MMMM yyyy').toUpperCase(), pageW / 2, 24, { align: 'center' });
+
+    doc.setTextColor(0, 0, 0);
+    let y = 36;
+    const rowH = 7;
+
+    // Summary
+    doc.setFontSize(8);
+    doc.text(`Present: ${presentCount}   Absent: ${absentCount}   Excused: ${excusedCount}   Total: ${filtered.length}`, margin, y);
+    y += 8;
+
+    // Table header
+    const cols = [30, 30, 25, 40, 25];
+    const headers = ['Rank', 'Surname', 'First Name', 'PNumber', 'Status'];
+    doc.setFillColor(220, 235, 225);
+    doc.rect(margin, y, usableW, rowH, 'F');
+    let cx = margin;
+    headers.forEach((h, i) => {
+      doc.setFontSize(7.5); doc.setFont('helvetica', 'bold');
+      doc.text(h, cx + 2, y + 5);
+      cx += cols[i];
+    });
+    y += rowH;
+
+    filtered.forEach((p, ri) => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      const status = localStatuses[p.PNumber] || 'Absent';
+      if (ri % 2 === 0) { doc.setFillColor(248, 252, 250); doc.rect(margin, y, usableW, rowH, 'F'); }
+      const cells = [p.Rank || '', p.Surname || '', p.FirstName || '', p.PNumber, status];
+      cx = margin;
+      cells.forEach((cell, i) => {
+        doc.setFontSize(7); doc.setFont('helvetica', status === 'Present' ? 'bold' : 'normal');
+        doc.setTextColor(status === 'Absent' ? 100 : status === 'Excused' ? 80 : 8, status === 'Absent' ? 100 : status === 'Excused' ? 110 : 63, status === 'Absent' ? 100 : status === 'Excused' ? 80 : 48);
+        doc.text(String(cell), cx + 2, y + 5);
+        cx += cols[i];
+      });
+      doc.setDrawColor(210, 225, 215); doc.setLineWidth(0.1);
+      doc.line(margin, y + rowH, margin + usableW, y + rowH);
+      y += rowH;
+    });
+
+    doc.setFillColor(8, 63, 48);
+    doc.rect(0, 287, pageW, 10, 'F');
+    doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(180, 220, 190);
+    doc.text(`Generated ${format(new Date(), 'dd/MM/yyyy HH:mm')} · OFFICIAL`, pageW / 2, 293, { align: 'center' });
+
+    doc.save(`ParadeState_${date}.pdf`);
+  }
+
   return (
-    <AccessGate level={ACCESS_LEVELS.CADET_NCO}>
+    <AccessGate level={ACCESS_LEVELS.GENERAL}>
       <PageHeader
         title="Parade State"
         description="Daily Nominal Roll — tick Present for First Parade"
         icon={ClipboardList}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-44" />
-            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-              <Save className="w-4 h-4 mr-2" />
-              {saveMutation.isPending ? 'Saving...' : 'Save'}
-            </Button>
+            <Button variant="outline" size="sm" onClick={exportPDF}><Printer className="w-4 h-4 mr-1.5" />PDF</Button>
+            <Button variant="outline" size="sm" onClick={exportCSV}><Download className="w-4 h-4 mr-1.5" />CSV</Button>
+            {canEdit && (
+              <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+                <Save className="w-4 h-4 mr-2" />
+                {saveMutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
+            )}
           </div>
         }
       />
@@ -154,7 +239,8 @@ export default function ParadeState() {
                   <div className="flex items-center gap-3">
                     <Checkbox
                       checked={status === 'Present'}
-                      onCheckedChange={() => togglePresent(p.PNumber)}
+                      onCheckedChange={() => canEdit && togglePresent(p.PNumber)}
+                      disabled={!canEdit}
                       className="data-[state=checked]:bg-chart-2 data-[state=checked]:border-chart-2"
                     />
                     <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
@@ -172,12 +258,14 @@ export default function ParadeState() {
                     >
                       {status}
                     </Badge>
-                    <button
-                      onClick={() => setExcused(p.PNumber)}
-                      className="text-xs px-2 py-1 rounded text-muted-foreground hover:bg-accent/20 hover:text-accent-foreground transition-colors"
-                    >
-                      {status === 'Excused' ? 'Unexcuse' : 'Excuse'}
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => setExcused(p.PNumber)}
+                        className="text-xs px-2 py-1 rounded text-muted-foreground hover:bg-accent/20 hover:text-accent-foreground transition-colors"
+                      >
+                        {status === 'Excused' ? 'Unexcuse' : 'Excuse'}
+                      </button>
+                    )}
                   </div>
                 </div>
               );

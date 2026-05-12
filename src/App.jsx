@@ -32,6 +32,7 @@ import ImportantNotices from '@/pages/ImportantNotices';
 import WeaponHandlingTests from '@/pages/WeaponHandlingTests';
 import StaffAvailability from '@/pages/StaffAvailability';
 import InstructorQualMatrix from '@/pages/InstructorQualMatrix';
+import AnalyticsDashboard from '@/pages/AnalyticsDashboard';
 
 const AppContent = () => {
   const { personnel, loading, needsLinking } = usePersonnel();
@@ -70,6 +71,7 @@ const AppContent = () => {
         <Route path="/wht" element={<WeaponHandlingTests />} />
         <Route path="/staff-availability" element={<StaffAvailability />} />
         <Route path="/instructor-quals" element={<InstructorQualMatrix />} />
+        <Route path="/analytics" element={<AnalyticsDashboard />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

@@ -21,6 +21,7 @@ import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   addDays, addMonths, subMonths, isSameMonth, isSameDay, parseISO
 } from 'date-fns';
+import TrainingNightPanel from '@/components/calendar/TrainingNightPanel';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, isAdultInstructor } from '@/lib/accessLevels';
 
@@ -242,6 +243,9 @@ export default function TrainingCalendar() {
   const myAvail = availEvent ? availability.find(a => a.EventDate === availEvent.Date && a.PNumber === me?.PNumber) : null;
   const openDays = openingHours.filter(h => h.IsOpen);
 
+  // Training night panel
+  const [nightPanelEvent, setNightPanelEvent] = useState(null);
+
   return (
     <div>
       <PageHeader
@@ -332,7 +336,12 @@ export default function TrainingCalendar() {
                         <div
                           key={ev.id}
                           className={`text-xs px-1.5 py-0.5 rounded-full truncate cursor-pointer flex items-center gap-1 ${EVENT_COLORS[ev.EventType] || 'bg-muted'}`}
-                          onClick={(e) => { e.stopPropagation(); canEdit ? openEdit(ev) : openAvailability(ev); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (ev.IsTrainingNight) { setNightPanelEvent(ev); }
+                            else if (canEdit) { openEdit(ev); }
+                            else { openAvailability(ev); }
+                          }}
                           title={compIcon?.title}
                         >
                           {compIcon && (
@@ -514,6 +523,13 @@ export default function TrainingCalendar() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Training Night Plan Panel */}
+      <TrainingNightPanel
+        event={nightPanelEvent}
+        open={!!nightPanelEvent}
+        onClose={() => setNightPanelEvent(null)}
+      />
 
       {/* Opening Hours Dialog */}
       <Dialog open={openingHoursDialogOpen} onOpenChange={setOpeningHoursDialogOpen}>

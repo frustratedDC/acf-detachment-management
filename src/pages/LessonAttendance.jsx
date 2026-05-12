@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { FileCheck, Send, Search, Users } from 'lucide-react';
+import { isCadet } from '@/lib/accessLevels';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
@@ -41,11 +42,22 @@ export default function LessonAttendance() {
   const [activeLessonIdx, setActiveLessonIdx] = useState(0);
   const activeLesson = myLessons[activeLessonIdx];
 
-  // Filter cadets: match star level + present (any personnel status allowed)
+  // Eligible = present on parade state, matching star level, haven't already completed the lesson
   const presentPNumbers = new Set(paradeState.filter(p => p.AttendanceStatus === 'Present').map(p => p.UserPNumber));
+
+  const { data: existingProgress = [] } = useQuery({
+    queryKey: ['progress-for-lesson', activeLesson?.LessonCode],
+    queryFn: () => base44.entities.ProgressLedger.filter({ LessonCode: activeLesson?.LessonCode }),
+    enabled: !!activeLesson?.LessonCode,
+  });
+  const alreadyCompletedPNumbers = new Set(existingProgress.filter(p => p.Status === 'Approved').map(p => p.CadetPNumber));
+
   const eligibleCadets = allPersonnel.filter(p =>
+    isCadet(p.AccessLevel) &&
+    (p.PersonnelStatus || 'Active') === 'Active' &&
     p.CurrentStarLevel === activeLesson?.AssignedStarLevel &&
-    presentPNumbers.has(p.PNumber)
+    presentPNumbers.has(p.PNumber) &&
+    !alreadyCompletedPNumbers.has(p.PNumber)
   );
 
   const filteredCadets = eligibleCadets.filter(c =>
