@@ -25,5 +25,29 @@
     "Date",
     "UserPNumber",
     "AttendanceStatus"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 1
+        }
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 1
+        }
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 1
+        }
+      }
+    }
+  }
 }
