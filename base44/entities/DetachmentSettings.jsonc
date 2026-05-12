@@ -17,5 +17,29 @@
   "required": [
     "Key",
     "Value"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 5
+        }
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 5
+        }
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 5
+        }
+      }
+    }
+  }
 }
