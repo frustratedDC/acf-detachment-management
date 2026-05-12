@@ -66,5 +66,42 @@
     "Title",
     "Date",
     "EventType"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 4
+        }
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.StaffOnly": false
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": {
+              "$gte": 3
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 4
+        }
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 4
+        }
+      }
+    }
+  }
 }
