@@ -50,5 +50,45 @@
     "Date",
     "CurrentLessonCode",
     "RequestedChange"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "data.RequestedByPNumber": "{{user.data.PNumber}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.RequestedByPNumber": "{{user.data.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": {
+              "$gte": 4
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 4
+        }
+      }
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.RequestedByPNumber": "{{user.data.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": {
+              "$gte": 4
+            }
+          }
+        }
+      ]
+    }
+  }
 }
