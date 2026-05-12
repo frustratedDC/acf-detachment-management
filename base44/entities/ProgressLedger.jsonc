@@ -34,5 +34,49 @@
     "LessonCode",
     "CompletionDate",
     "InstructorPNumber"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.InstructorPNumber": "{{user.data.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": {
+              "$gte": 4
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.CadetPNumber": "{{user.data.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": {
+              "$gte": 3
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 4
+        }
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 4
+        }
+      }
+    }
+  }
 }
