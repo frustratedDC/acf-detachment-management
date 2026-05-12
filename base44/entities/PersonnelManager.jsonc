@@ -97,9 +97,7 @@
   "rls": {
     "create": {
       "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 5
-        }
+        "role": "admin"
       }
     },
     "read": {
