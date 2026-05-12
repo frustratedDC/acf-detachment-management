@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 
 const PersonnelContext = createContext(null);
@@ -7,6 +7,7 @@ export function PersonnelProvider({ children }) {
   const [personnel, setPersonnel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [needsLinking, setNeedsLinking] = useState(false);
+  const [viewAs, setViewAsState] = useState(null);
 
   useEffect(() => {
     checkPersonnel();
@@ -55,8 +56,11 @@ export function PersonnelProvider({ children }) {
     return updated[0];
   }
 
+  const setViewAs = useCallback((person) => { setViewAsState(person); }, []);
+  const effectivePersonnel = viewAs || personnel;
+
   return (
-    <PersonnelContext.Provider value={{ personnel, loading, needsLinking, linkAccount, refresh: checkPersonnel }}>
+    <PersonnelContext.Provider value={{ personnel: effectivePersonnel, realPersonnel: personnel, viewAs, setViewAs, loading, needsLinking, linkAccount, refresh: checkPersonnel }}>
       {children}
     </PersonnelContext.Provider>
   );

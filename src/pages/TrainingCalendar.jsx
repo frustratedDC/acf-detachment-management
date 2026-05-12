@@ -37,7 +37,7 @@ const DAYS_OF_WEEK = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturd
 
 const emptyEvent = {
   Title: '', Date: '', EndDate: '', EventType: 'Training Night',
-  Notes: '', IsTrainingNight: false, AvailabilityDeadline: '', Location: '', ComplianceStatus: null
+  Notes: '', IsTrainingNight: false, AvailabilityDeadline: '', Location: '', ComplianceStatus: null, StaffOnly: false
 };
 
 // Calculate automated compliance for a date
@@ -181,6 +181,7 @@ export default function TrainingCalendar() {
       AvailabilityDeadline: ev.AvailabilityDeadline || '',
       Location: ev.Location || '',
       ComplianceStatus: ev.ComplianceStatus || null,
+      StaffOnly: ev.StaffOnly || false,
     });
     setEditingEvent(ev);
     setDialogOpen(true);
@@ -204,7 +205,11 @@ export default function TrainingCalendar() {
 
   function eventsForDay(day) {
     const ds = format(day, 'yyyy-MM-dd');
-    return events.filter(ev => ev.Date === ds || (ev.EndDate && ds >= ev.Date && ds <= ev.EndDate));
+    const myLevel = me?.AccessLevel ?? 0;
+    return events.filter(ev => {
+      if (ev.StaffOnly && myLevel < ACCESS_LEVELS.DET_INSTRUCTOR) return false;
+      return ev.Date === ds || (ev.EndDate && ds >= ev.Date && ds <= ev.EndDate);
+    });
   }
 
   function getComplianceForEvent(ev) {
@@ -475,6 +480,10 @@ export default function TrainingCalendar() {
                 <Input type="date" value={form.AvailabilityDeadline} onChange={e => setForm(p => ({ ...p, AvailabilityDeadline: e.target.value }))} />
               </div>
             )}
+            <div className="flex items-center gap-3 p-2 rounded-lg border bg-muted/20">
+              <Checkbox id="staffOnly" checked={form.StaffOnly} onCheckedChange={v => setForm(p => ({ ...p, StaffOnly: v }))} />
+              <Label htmlFor="staffOnly" className="cursor-pointer">Staff only — hide from cadets (L0–L2)</Label>
+            </div>
             <div>
               <Label>Notes</Label>
               <Textarea value={form.Notes} onChange={e => setForm(p => ({ ...p, Notes: e.target.value }))} rows={2} placeholder="Optional notes..." />

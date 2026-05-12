@@ -15,6 +15,7 @@ import { ClipboardCheck, Search, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
+import { sortLessons } from '@/lib/lessonSort';
 import { checkAndPromoteCadet } from '@/lib/progressUtils';
 
 const STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
@@ -63,10 +64,10 @@ export default function BulkProgressEntry() {
     [syllabus, starLevel]
   );
   const displayLessons = useMemo(() =>
-    syllabus.filter(l =>
+    sortLessons(syllabus.filter(l =>
       l.StarLevel === starLevel &&
       (subjectFilter === 'all' || l.SubjectName === subjectFilter)
-    ),
+    )),
     [syllabus, starLevel, subjectFilter]
   );
 

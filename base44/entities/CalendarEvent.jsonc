@@ -54,7 +54,12 @@
         "closed",
         "amber"
       ],
-      "description": "Manual override for compliance status (open=green, closed=red, amber=compliance not met)"
+      "description": "Manual override for compliance status"
+    },
+    "StaffOnly": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, only Adult Instructors (L3+) can see this event"
     }
   },
   "required": [

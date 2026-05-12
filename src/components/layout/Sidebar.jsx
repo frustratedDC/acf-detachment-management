@@ -7,7 +7,7 @@ import {
   FileCheck, Brain, CheckSquare, Settings, HelpCircle, Shield,
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
   CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown,
-  CalendarCheck, GraduationCap, BarChart2
+  CalendarCheck, GraduationCap, BarChart2, Wand2
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -54,6 +54,7 @@ const NAV_GROUPS = [
     label: 'Analytics',
     items: [
       { path: '/analytics', label: 'Analytics', icon: BarChart2, level: 4 },
+      { path: '/plan-generator', label: 'Plan Generator', icon: Wand2, level: 4 },
     ],
   },
   {
@@ -71,7 +72,7 @@ const NAV_GROUPS = [
   },
 ];
 
-export default function Sidebar({ collapsed, onToggle }) {
+export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
   const location = useLocation();
   const { personnel } = usePersonnel();
   const accessLevel = personnel?.AccessLevel ?? 0;
@@ -86,8 +87,13 @@ export default function Sidebar({ collapsed, onToggle }) {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 h-screen bg-sidebar text-sidebar-foreground flex flex-col z-50 transition-all duration-300 border-r border-sidebar-border",
-        collapsed ? "w-16" : "w-64"
+        "fixed left-0 top-0 h-screen bg-sidebar text-sidebar-foreground flex flex-col z-[60] transition-all duration-300 border-r border-sidebar-border",
+        // Mobile: slide in/out
+        "max-md:transition-transform max-md:duration-300",
+        mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full",
+        // Desktop: collapse
+        collapsed ? "md:w-16" : "md:w-64",
+        "w-64"
       )}
     >
       {/* Header */}
@@ -176,7 +182,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         <div className="flex items-center gap-1">
           <button
             onClick={onToggle}
-            className="p-2 rounded-lg hover:bg-sidebar-accent/50 text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
+            className="p-2 rounded-lg hover:bg-sidebar-accent/50 text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors hidden md:block"
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>

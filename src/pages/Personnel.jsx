@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Plus, Pencil, Trash2, Search, AlertCircle } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, Search, AlertCircle, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, LEVEL_NAMES } from '@/lib/accessLevels';
 
@@ -40,6 +40,8 @@ export default function Personnel() {
   const isSysAdmin = myLevel >= ACCESS_LEVELS.SYSTEM_ADMIN;
   const isCommander = myLevel >= ACCESS_LEVELS.DET_COMMANDER;
   const canViewSensitive = myLevel >= ACCESS_LEVELS.DET_2IC; // L4+ can see Suspended/Leavers
+  const canViewAs = myLevel >= ACCESS_LEVELS.DET_2IC;
+  const { setViewAs } = usePersonnel();
 
   const { data: personnel = [] } = useQuery({
     queryKey: ['all-personnel'],
@@ -299,6 +301,11 @@ export default function Personnel() {
                     <Badge className="text-xs">L{p.AccessLevel}</Badge>
                     {p.IsLinked && <Badge variant="outline" className="text-xs text-chart-2 border-chart-2/30">Linked</Badge>}
                     {canViewSensitive && <PersonnelStatusBadge status={status} />}
+                    {canViewAs && (
+                      <Button variant="ghost" size="sm" title={`View as ${p.Surname}`} onClick={(e) => { e.stopPropagation(); setViewAs(p); toast.success(`Now viewing as ${[p.Rank, p.FirstName, p.Surname].filter(Boolean).join(' ')}`); }}>
+                        <Eye className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="sm" onClick={(e) => openEdit(p, e)}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>

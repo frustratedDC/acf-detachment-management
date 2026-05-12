@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { FileCheck, Send, Search, Users } from 'lucide-react';
-import { isCadet } from '@/lib/accessLevels';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FileCheck, Send, Search, Users, Pencil } from 'lucide-react';
+import { isCadet, ACCESS_LEVELS } from '@/lib/accessLevels';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { ACCESS_LEVELS } from '@/lib/accessLevels';
 
 export default function LessonAttendance() {
   const { personnel: me } = usePersonnel();
@@ -22,10 +23,18 @@ export default function LessonAttendance() {
   const [date, setDate] = useState(today);
   const [selectedCadets, setSelectedCadets] = useState([]);
   const [search, setSearch] = useState('');
+  const [changeRequestOpen, setChangeRequestOpen] = useState(false);
+  const [changeRequestLesson, setChangeRequestLesson] = useState(null);
+  const [changeRequestText, setChangeRequestText] = useState('');
+  const [changeRequestReason, setChangeRequestReason] = useState('');
+  const isL4 = (me?.AccessLevel ?? 0) >= ACCESS_LEVELS.DET_2IC;
 
+  // L4+ see all lessons for the night; others see only their own
   const { data: myLessons = [] } = useQuery({
-    queryKey: ['my-schedule', me?.PNumber, date],
-    queryFn: () => base44.entities.NightlySchedule.filter({ InstructorPNumber: me?.PNumber, Date: date }),
+    queryKey: ['my-schedule', isL4 ? 'all' : me?.PNumber, date],
+    queryFn: () => isL4
+      ? base44.entities.NightlySchedule.filter({ Date: date })
+      : base44.entities.NightlySchedule.filter({ InstructorPNumber: me?.PNumber, Date: date }),
     enabled: !!me?.PNumber,
   });
 
@@ -42,7 +51,6 @@ export default function LessonAttendance() {
   const [activeLessonIdx, setActiveLessonIdx] = useState(0);
   const activeLesson = myLessons[activeLessonIdx];
 
-  // Eligible = present on parade state, matching star level, haven't already completed the lesson
   const presentPNumbers = new Set(paradeState.filter(p => p.AttendanceStatus === 'Present').map(p => p.UserPNumber));
 
   const { data: existingProgress = [] } = useQuery({
@@ -84,6 +92,16 @@ export default function LessonAttendance() {
     },
   });
 
+  const changeRequestMutation = useMutation({
+    mutationFn: (data) => base44.entities.LessonChangeRequest.create(data),
+    onSuccess: () => {
+      toast.success('Change request submitted to L4+ task list');
+      setChangeRequestOpen(false);
+      setChangeRequestText('');
+      setChangeRequestReason('');
+    },
+  });
+
   function toggleCadet(pnum) {
     setSelectedCadets(prev =>
       prev.includes(pnum) ? prev.filter(p => p !== pnum) : [...prev, pnum]
@@ -117,16 +135,26 @@ export default function LessonAttendance() {
       ) : (
         <>
           {/* Lesson Tabs */}
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-1 flex-wrap">
             {myLessons.map((lesson, idx) => (
-              <Button
-                key={lesson.id}
-                variant={idx === activeLessonIdx ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => { setActiveLessonIdx(idx); setSelectedCadets([]); }}
-              >
-                P{lesson.Period} · {lesson.AssignedStarLevel} · {lesson.LessonCode}
-              </Button>
+              <div key={lesson.id} className="flex items-center gap-1">
+                <Button
+                  variant={idx === activeLessonIdx ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => { setActiveLessonIdx(idx); setSelectedCadets([]); }}
+                >
+                  P{lesson.Period} · {lesson.AssignedStarLevel} · {lesson.LessonCode}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                  title="Request lesson change"
+                  onClick={() => { setChangeRequestLesson(lesson); setChangeRequestText(''); setChangeRequestReason(''); setChangeRequestOpen(true); }}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
+              </div>
             ))}
           </div>
 
@@ -195,6 +223,54 @@ export default function LessonAttendance() {
           </Card>
         </>
       )}
+
+      {/* Change Request Dialog */}
+      <Dialog open={changeRequestOpen} onOpenChange={setChangeRequestOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Request Lesson Change</DialogTitle></DialogHeader>
+          {changeRequestLesson && (
+            <div className="space-y-3 mt-2">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold">{changeRequestLesson.LessonCode}</span> — {changeRequestLesson.LessonName || 'Lesson'}
+              </p>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Requested Change</label>
+                <Input
+                  value={changeRequestText}
+                  onChange={e => setChangeRequestText(e.target.value)}
+                  placeholder="e.g. Change to MAP-201 Navigation"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Reason</label>
+                <Textarea
+                  value={changeRequestReason}
+                  onChange={e => setChangeRequestReason(e.target.value)}
+                  placeholder="Explain why the change is needed..."
+                  rows={3}
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setChangeRequestOpen(false)}>Cancel</Button>
+                <Button
+                  disabled={!changeRequestText}
+                  onClick={() => changeRequestMutation.mutate({
+                    RequestedByPNumber: me?.PNumber,
+                    Date: date,
+                    CurrentLessonCode: changeRequestLesson.LessonCode,
+                    CurrentLessonName: changeRequestLesson.LessonName || '',
+                    RequestedChange: changeRequestText,
+                    Reason: changeRequestReason,
+                    Status: 'Pending',
+                  })}
+                >
+                  Submit Request
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AccessGate>
   );
 }

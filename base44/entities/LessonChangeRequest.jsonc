@@ -1,0 +1,54 @@
+{
+  "name": "LessonChangeRequest",
+  "type": "object",
+  "properties": {
+    "RequestedByPNumber": {
+      "type": "string",
+      "description": "PNumber of the person requesting the change"
+    },
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Training night date"
+    },
+    "CurrentLessonCode": {
+      "type": "string",
+      "description": "Current assigned lesson code"
+    },
+    "CurrentLessonName": {
+      "type": "string",
+      "description": "Current assigned lesson name"
+    },
+    "RequestedChange": {
+      "type": "string",
+      "description": "Description of the requested change"
+    },
+    "Reason": {
+      "type": "string",
+      "description": "Reason for requesting the change"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Pending"
+    },
+    "ResponseNotes": {
+      "type": "string",
+      "description": "L4+ response notes"
+    },
+    "RespondedByPNumber": {
+      "type": "string",
+      "description": "PNumber of the responder"
+    }
+  },
+  "required": [
+    "RequestedByPNumber",
+    "Date",
+    "CurrentLessonCode",
+    "RequestedChange"
+  ]
+}

@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckSquare, Check, X, Clock, CheckCircle2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 import { checkAndPromoteCadet } from '@/lib/progressUtils';
 
@@ -35,6 +35,21 @@ export default function TaskList() {
   const { data: syllabus = [] } = useQuery({
     queryKey: ['syllabus-master-all'],
     queryFn: () => base44.entities.SyllabusMaster.filter({}),
+  });
+
+  const { data: changeRequests = [] } = useQuery({
+    queryKey: ['lesson-change-requests'],
+    queryFn: () => base44.entities.LessonChangeRequest.list('-created_date', 200),
+  });
+
+  const pendingChangeRequests = changeRequests.filter(r => r.Status === 'Pending');
+
+  const resolveChangeRequestMutation = useMutation({
+    mutationFn: ({ id, status, notes }) => base44.entities.LessonChangeRequest.update(id, { Status: status, ResponseNotes: notes, RespondedByPNumber: '' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lesson-change-requests'] });
+      toast.success('Change request updated');
+    },
   });
 
   const approveMutation = useMutation({
@@ -120,6 +135,10 @@ export default function TaskList() {
             <CheckCircle2 className="w-3.5 h-3.5" />
             Approved ({approved.length})
           </TabsTrigger>
+          <TabsTrigger value="change-requests" className="gap-1">
+            <Pencil className="w-3.5 h-3.5" />
+            Changes ({pendingChangeRequests.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending">
@@ -144,6 +163,50 @@ export default function TaskList() {
               ) : (
                 <div className="space-y-1">
                   {approved.map(entry => <ProgressRow key={entry.id} entry={entry} showActions={false} />)}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="change-requests">
+          <Card>
+            <CardContent className="p-2">
+              {changeRequests.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground text-sm">No lesson change requests.</p>
+              ) : (
+                <div className="space-y-2">
+                  {changeRequests.map(req => {
+                    const requester = personnelMap[req.RequestedByPNumber];
+                    return (
+                      <div key={req.id} className="p-3 rounded-lg border hover:bg-muted/30 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold">{req.CurrentLessonCode} — {req.CurrentLessonName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              From: {requester ? `${requester.Rank || ''} ${requester.Surname}`.trim() : req.RequestedByPNumber} · {req.Date}
+                            </p>
+                            <p className="text-xs mt-1"><span className="font-medium">Request:</span> {req.RequestedChange}</p>
+                            {req.Reason && <p className="text-xs text-muted-foreground">{req.Reason}</p>}
+                          </div>
+                          <Badge variant={req.Status === 'Approved' ? 'default' : req.Status === 'Rejected' ? 'destructive' : 'outline'} className="text-xs shrink-0">
+                            {req.Status}
+                          </Badge>
+                        </div>
+                        {req.Status === 'Pending' && (
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="text-chart-2 hover:text-chart-2" onClick={() => resolveChangeRequestMutation.mutate({ id: req.id, status: 'Approved', notes: '' })}>
+                              <Check className="w-3.5 h-3.5 mr-1" />Approve
+                            </Button>
+                            <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => resolveChangeRequestMutation.mutate({ id: req.id, status: 'Rejected', notes: '' })}>
+                              <X className="w-3.5 h-3.5 mr-1" />Reject
+                            </Button>
+                          </div>
+                        )}
+                        {req.ResponseNotes && <p className="text-xs text-muted-foreground italic">Response: {req.ResponseNotes}</p>}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
