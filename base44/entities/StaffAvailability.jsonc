@@ -33,7 +33,9 @@
         },
         {
           "user_condition": {
-            "role": "admin"
+            "data.AccessLevel": {
+              "$gte": 4
+            }
           }
         }
       ]
@@ -56,9 +58,6 @@
       "data.PNumber": "{{user.data.PNumber}}"
     },
     "delete": {
-      "data.PNumber": "{{user.data.PNumber}}"
-    },
-    "write": {
       "data.PNumber": "{{user.data.PNumber}}"
     }
   }
