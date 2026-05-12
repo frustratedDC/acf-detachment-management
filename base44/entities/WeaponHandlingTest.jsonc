@@ -57,7 +57,11 @@
       ]
     },
     "update": {
-      "data.PNumber": "{{user.data.PNumber}}"
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 4
+        }
+      }
     },
     "delete": {
       "user_condition": {
