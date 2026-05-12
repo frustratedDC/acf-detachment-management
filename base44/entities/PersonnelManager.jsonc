@@ -93,42 +93,5 @@
     "Surname",
     "AccessLevel",
     "RoleName"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 5
-        }
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "data.LinkedEmailUID": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "data.AccessLevel": {
-              "$gte": 3
-            }
-          }
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 5
-        }
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 6
-        }
-      }
-    }
-  }
+  ]
 }

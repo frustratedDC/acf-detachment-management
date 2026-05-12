@@ -51,29 +51,5 @@
     "InstructorPNumber",
     "LessonCode",
     "AssignedStarLevel"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 3
-        }
-      }
-    },
-    "read": {},
-    "update": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 3
-        }
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 3
-        }
-      }
-    }
-  }
+  ]
 }

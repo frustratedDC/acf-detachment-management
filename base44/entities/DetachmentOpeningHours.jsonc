@@ -35,29 +35,5 @@
   },
   "required": [
     "DayOfWeek"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 4
-        }
-      }
-    },
-    "read": {},
-    "update": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 4
-        }
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 4
-        }
-      }
-    }
-  }
+  ]
 }

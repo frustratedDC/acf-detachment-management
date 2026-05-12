@@ -22,35 +22,5 @@
   "required": [
     "Code",
     "Name"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 6
-        }
-      }
-    },
-    "read": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 3
-        }
-      }
-    },
-    "update": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 6
-        }
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "data.AccessLevel": {
-          "$gte": 6
-        }
-      }
-    }
-  }
+  ]
 }

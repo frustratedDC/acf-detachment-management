@@ -24,41 +24,5 @@
   "required": [
     "EventDate",
     "PNumber"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "data.PNumber": "{{user.data.PNumber}}"
-        },
-        {
-          "user_condition": {
-            "data.AccessLevel": {
-              "$gte": 4
-            }
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "data.PNumber": "{{user.data.PNumber}}"
-        },
-        {
-          "user_condition": {
-            "data.AccessLevel": {
-              "$gte": 4
-            }
-          }
-        }
-      ]
-    },
-    "update": {
-      "data.PNumber": "{{user.data.PNumber}}"
-    },
-    "delete": {
-      "data.PNumber": "{{user.data.PNumber}}"
-    }
-  }
+  ]
 }
