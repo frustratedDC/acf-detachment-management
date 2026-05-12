@@ -22,5 +22,29 @@
   "required": [
     "PNumber",
     "QualCode"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 4
+        }
+      }
+    },
+    "read": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 3
+        }
+      }
+    },
+    "update": null,
+    "delete": {
+      "user_condition": {
+        "data.AccessLevel": {
+          "$gte": 4
+        }
+      }
+    }
+  }
 }
