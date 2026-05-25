@@ -93,5 +93,42 @@
     "Surname",
     "AccessLevel",
     "RoleName"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "AccessLevel": {
+          "$gte": 5
+        }
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.PNumber": "{{user.data.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "AccessLevel": {
+              "$gte": 4
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "AccessLevel": {
+          "$gte": 5
+        }
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "AccessLevel": {
+          "$gte": 5
+        }
+      }
+    }
+  }
 }
