@@ -212,14 +212,17 @@ function DetCommanderPanel({ queryClient }) {
   }
 
   async function purgePersonnel() {
-    if (!window.confirm('This will permanently delete ALL personnel records. Are you sure?')) return;
+    if (!window.confirm('This will permanently delete ALL personnel records (except your own). Are you sure?')) return;
     setPurgingPersonnel(true);
+    const user = await base44.auth.me();
     const all = await base44.entities.PersonnelManager.filter({});
-    for (const record of all) {
+    // Never delete the currently linked admin's own record
+    const toDelete = all.filter(r => r.LinkedEmailUID !== user?.email);
+    for (const record of toDelete) {
       await base44.entities.PersonnelManager.delete(record.id);
     }
     queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
-    toast.success(`Purged ${all.length} personnel records`);
+    toast.success(`Purged ${toDelete.length} personnel records (your own record was preserved)`);
     setPurgingPersonnel(false);
   }
 
