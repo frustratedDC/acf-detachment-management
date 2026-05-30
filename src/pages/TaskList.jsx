@@ -1,5 +1,6 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { usePersonnel } from '@/lib/usePersonnel';
 import { base44 } from '@/api/base44Client';
 import AccessGate from '@/components/shared/AccessGate';
 import PageHeader from '@/components/shared/PageHeader';
@@ -15,6 +16,7 @@ import { checkAndPromoteCadet } from '@/lib/progressUtils';
 
 export default function TaskList() {
   const queryClient = useQueryClient();
+  const { personnel: me } = usePersonnel();
 
   const { data: allProgress = [], isLoading } = useQuery({
     queryKey: ['all-progress'],
@@ -45,7 +47,7 @@ export default function TaskList() {
   const pendingChangeRequests = changeRequests.filter(r => r.Status === 'Pending');
 
   const resolveChangeRequestMutation = useMutation({
-    mutationFn: ({ id, status, notes }) => base44.entities.LessonChangeRequest.update(id, { Status: status, ResponseNotes: notes, RespondedByPNumber: '' }),
+    mutationFn: ({ id, status, notes }) => base44.entities.LessonChangeRequest.update(id, { Status: status, ResponseNotes: notes, RespondedByPNumber: me?.PNumber || '' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lesson-change-requests'] });
       toast.success('Change request updated');

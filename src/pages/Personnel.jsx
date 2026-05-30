@@ -75,11 +75,18 @@ export default function Personnel() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.PersonnelManager.delete(id),
+    mutationFn: async (record) => {
+      // Never allow deletion of your own linked record
+      if (record.LinkedEmailUID && record.LinkedEmailUID === currentUser?.LinkedEmailUID) {
+        throw new Error('You cannot delete your own linked personnel record.');
+      }
+      return base44.entities.PersonnelManager.delete(record.id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
       toast.success('Personnel record deleted');
     },
+    onError: (err) => toast.error(err.message),
   });
 
   function closeDialog() {
@@ -310,7 +317,7 @@ export default function Personnel() {
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
                     {isSysAdmin && (
-                      <Button variant="ghost" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(p.id); }}>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(p); }}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     )}

@@ -396,7 +396,7 @@ export default function TrainingCalendar() {
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
                       {/* Manual compliance override */}
                       {canEdit && compliance && (
-                        <Select value={ev.ComplianceStatus || ''} onValueChange={val => complianceOverrideMutation.mutate({ id: ev.id, status: val || null })}>
+                        <Select value={ev.ComplianceStatus ?? ''} onValueChange={val => complianceOverrideMutation.mutate({ id: ev.id, status: val === '' ? null : val })}>
                           <SelectTrigger className="h-7 w-28 text-xs">
                             <SelectValue placeholder="Auto" />
                           </SelectTrigger>
