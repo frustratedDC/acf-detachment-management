@@ -34,5 +34,19 @@
     "SubjectName",
     "LessonCode",
     "LessonName"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "data.UserPNumber": "{{user.data.PNumber}}"
+    },
+    "read": {
+      "data.UserPNumber": "{{user.data.PNumber}}"
+    },
+    "update": {
+      "data.UserPNumber": "{{user.data.PNumber}}"
+    },
+    "delete": {
+      "data.UserPNumber": "{{user.data.PNumber}}"
+    }
+  }
 }
