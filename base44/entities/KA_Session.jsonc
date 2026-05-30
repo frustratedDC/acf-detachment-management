@@ -1,0 +1,65 @@
+{
+  "name": "KA_Session",
+  "type": "object",
+  "properties": {
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Session date"
+    },
+    "Name": {
+      "type": "string",
+      "description": "Cadet name / PNumber"
+    },
+    "Det": {
+      "type": "string",
+      "description": "Detachment"
+    },
+    "Session_Status": {
+      "type": "string",
+      "enum": [
+        "Open",
+        "Completed"
+      ],
+      "default": "Open"
+    },
+    "Duration_Minutes": {
+      "type": "number",
+      "description": "Session duration in minutes"
+    },
+    "BJ1": {
+      "type": "number",
+      "description": "Broad Jump attempt 1 (cm)"
+    },
+    "BJ2": {
+      "type": "number",
+      "description": "Broad Jump attempt 2 (cm)"
+    },
+    "BJ3": {
+      "type": "number",
+      "description": "Broad Jump attempt 3 (cm)"
+    },
+    "Squats": {
+      "type": "number",
+      "description": "Squat count"
+    },
+    "PressUps": {
+      "type": "number",
+      "description": "Press-up count"
+    },
+    "Shuttle": {
+      "type": "number",
+      "description": "Shuttle run time (seconds \u2013 lower is better)"
+    },
+    "MSFT": {
+      "type": "number",
+      "description": "Multi-Stage Fitness Test level"
+    }
+  },
+  "required": [
+    "Date",
+    "Name",
+    "Det",
+    "Duration_Minutes"
+  ]
+}

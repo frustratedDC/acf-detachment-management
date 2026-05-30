@@ -1,0 +1,32 @@
+{
+  "name": "KA_LogBook",
+  "type": "object",
+  "properties": {
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Entry date"
+    },
+    "Name": {
+      "type": "string",
+      "description": "Cadet name / PNumber"
+    },
+    "Points": {
+      "type": "number",
+      "description": "Points awarded (recommended max 10)"
+    },
+    "Notes": {
+      "type": "string",
+      "description": "Optional notes"
+    },
+    "Entered_By": {
+      "type": "string",
+      "description": "PNumber of L4+ who entered this"
+    }
+  },
+  "required": [
+    "Date",
+    "Name",
+    "Points"
+  ]
+}

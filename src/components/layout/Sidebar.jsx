@@ -7,7 +7,7 @@ import {
   FileCheck, Brain, CheckSquare, Settings, HelpCircle, Shield,
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
   CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown,
-  CalendarCheck, GraduationCap, BarChart2, Wand2
+  CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, Trophy
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -48,6 +48,13 @@ const NAV_GROUPS = [
       { path: '/wht', label: 'Weapon Handling Tests', icon: Crosshair, level: 0 },
       { path: '/staff-availability', label: 'My Availability', icon: CalendarCheck, level: 3 },
       { path: '/instructor-quals', label: 'Instructor Quals', icon: GraduationCap, level: 3 },
+    ],
+  },
+  {
+    label: 'Keeping Active',
+    items: [
+      { path: '/ka-sessions', label: 'KA Sessions', icon: Dumbbell, level: 2 },
+      { path: '/ka-leaderboard', label: 'KA Leaderboard', icon: Trophy, level: 2 },
     ],
   },
   {

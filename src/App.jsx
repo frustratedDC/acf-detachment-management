@@ -34,6 +34,9 @@ import StaffAvailability from '@/pages/StaffAvailability';
 import InstructorQualMatrix from '@/pages/InstructorQualMatrix';
 import AnalyticsDashboard from '@/pages/AnalyticsDashboard';
 import TrainingPlanGenerator from '@/pages/TrainingPlanGenerator';
+import KASessions from '@/pages/KASessions';
+import KASessionForm from '@/pages/KASessionForm';
+import KALeaderboard from '@/pages/KALeaderboard';
 
 const AppContent = () => {
   const { personnel, loading, needsLinking } = usePersonnel();
@@ -74,6 +77,9 @@ const AppContent = () => {
         <Route path="/instructor-quals" element={<InstructorQualMatrix />} />
         <Route path="/analytics" element={<AnalyticsDashboard />} />
         <Route path="/plan-generator" element={<TrainingPlanGenerator />} />
+        <Route path="/ka-sessions" element={<KASessions />} />
+        <Route path="/ka-session-new" element={<KASessionForm />} />
+        <Route path="/ka-leaderboard" element={<KALeaderboard />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
