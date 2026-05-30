@@ -40,5 +40,29 @@
     "StarLevel",
     "SubjectName",
     "LessonName"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "AccessLevel": {
+          "$gte": 6
+        }
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "AccessLevel": {
+          "$gte": 6
+        }
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "AccessLevel": {
+          "$gte": 6
+        }
+      }
+    }
+  }
 }
