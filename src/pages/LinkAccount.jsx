@@ -44,20 +44,15 @@ export default function LinkAccount() {
   async function handleBootstrap(e) {
     e.preventDefault();
     setBsLoading(true);
+    setError('');
     try {
-      const user = await base44.auth.me();
-      await base44.entities.PersonnelManager.create({
+      const res = await base44.functions.invoke('bootstrapAdmin', {
         PNumber: bsForm.PNumber.trim(),
         FirstName: bsForm.FirstName.trim(),
         Surname: bsForm.Surname.trim(),
         Rank: bsForm.Rank.trim(),
-        Type: 'Adult Instructor',
-        AccessLevel: 6,
-        RoleName: 'System Administrator',
-        PersonnelStatus: 'Active',
-        IsLinked: true,
-        LinkedEmailUID: user.email,
       });
+      if (res.data?.error) throw new Error(res.data.error);
       await refresh();
     } catch (err) {
       setError(err.message);
