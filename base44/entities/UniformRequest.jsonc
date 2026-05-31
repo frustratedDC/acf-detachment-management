@@ -1,0 +1,53 @@
+{
+  "name": "UniformRequest",
+  "type": "object",
+  "properties": {
+    "PNumber": {
+      "type": "string",
+      "description": "Personnel number making the request"
+    },
+    "RequestType": {
+      "type": "string",
+      "enum": [
+        "Indent",
+        "Exchange"
+      ],
+      "description": "Type of uniform request"
+    },
+    "IsBootOrder": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is a boot order"
+    },
+    "ItemName": {
+      "type": "string",
+      "description": "Name of the uniform item being requested"
+    },
+    "SizeReturning": {
+      "type": "string",
+      "description": "Size of item being returned (for exchanges)"
+    },
+    "ReasonForReturn": {
+      "type": "string",
+      "description": "Reason for return or exchange"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Approved",
+        "Ordered",
+        "Received",
+        "Rejected"
+      ],
+      "default": "Pending",
+      "description": "Current status of the request"
+    }
+  },
+  "required": [
+    "PNumber",
+    "RequestType",
+    "ItemName",
+    "Status"
+  ]
+}

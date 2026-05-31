@@ -1,0 +1,75 @@
+{
+  "name": "KAFitnessSession",
+  "type": "object",
+  "properties": {
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the fitness session"
+    },
+    "StartTime": {
+      "type": "string",
+      "description": "Session start time (HH:MM format)"
+    },
+    "EndTime": {
+      "type": "string",
+      "description": "Session end time (HH:MM format)"
+    },
+    "DurationMinutes": {
+      "type": "number",
+      "description": "Total session duration in minutes"
+    },
+    "Location": {
+      "type": "string",
+      "description": "Location of the fitness session"
+    },
+    "Detachment": {
+      "type": "string",
+      "description": "Detachment conducting the session"
+    },
+    "AttendeeScores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "PNumber": {
+            "type": "string",
+            "description": "Cadet personnel number"
+          },
+          "BroadJump1": {
+            "type": "number",
+            "description": "Broad jump attempt 1 (cm)"
+          },
+          "BroadJump2": {
+            "type": "number",
+            "description": "Broad jump attempt 2 (cm)"
+          },
+          "BroadJump3": {
+            "type": "number",
+            "description": "Broad jump attempt 3 (cm)"
+          },
+          "Squats": {
+            "type": "number",
+            "description": "Squat count"
+          },
+          "PressUps": {
+            "type": "number",
+            "description": "Press-up count"
+          },
+          "ShuttleRun": {
+            "type": "number",
+            "description": "Shuttle run time (seconds)"
+          }
+        },
+        "required": [
+          "PNumber"
+        ]
+      },
+      "description": "Array of individual cadet fitness scores"
+    }
+  },
+  "required": [
+    "Date",
+    "DurationMinutes"
+  ]
+}

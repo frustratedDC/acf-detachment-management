@@ -1,0 +1,79 @@
+{
+  "name": "UniformInspection",
+  "type": "object",
+  "properties": {
+    "PNumber": {
+      "type": "string",
+      "description": "Personnel number being inspected"
+    },
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of inspection"
+    },
+    "BeretRating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Beret condition rating (1-5)"
+    },
+    "BeretComment": {
+      "type": "string",
+      "description": "Optional comment on beret condition"
+    },
+    "ShirtSmockRating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Shirt/smock condition rating (1-5)"
+    },
+    "ShirtSmockComment": {
+      "type": "string",
+      "description": "Optional comment on shirt/smock condition"
+    },
+    "TrousersRating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Trousers condition rating (1-5)"
+    },
+    "TrousersComment": {
+      "type": "string",
+      "description": "Optional comment on trousers condition"
+    },
+    "BootsRating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Boots condition rating (1-5)"
+    },
+    "BootsComment": {
+      "type": "string",
+      "description": "Optional comment on boots condition"
+    },
+    "AccessoriesRating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Accessories condition rating (1-5)"
+    },
+    "AccessoriesComment": {
+      "type": "string",
+      "description": "Optional comment on accessories condition"
+    },
+    "GeneralAppearanceRating": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "General appearance rating (1-5)"
+    },
+    "GeneralAppearanceComment": {
+      "type": "string",
+      "description": "Optional comment on general appearance"
+    }
+  },
+  "required": [
+    "PNumber",
+    "Date"
+  ]
+}

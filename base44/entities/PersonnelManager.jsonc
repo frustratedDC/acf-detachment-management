@@ -86,6 +86,34 @@
     "LinkedEmailUID": {
       "type": "string",
       "description": "Email UID from Base44 Auth"
+    },
+    "HeadCircumference": {
+      "type": "number",
+      "description": "Head circumference in cm"
+    },
+    "Height": {
+      "type": "number",
+      "description": "Height in cm"
+    },
+    "Chest": {
+      "type": "number",
+      "description": "Chest measurement in cm"
+    },
+    "Waist": {
+      "type": "number",
+      "description": "Waist measurement in cm"
+    },
+    "SeatHips": {
+      "type": "number",
+      "description": "Seat/hips measurement in cm"
+    },
+    "InnerLeg": {
+      "type": "number",
+      "description": "Inner leg measurement in cm"
+    },
+    "BootSize": {
+      "type": "number",
+      "description": "Boot size (UK)"
     }
   },
   "required": [
