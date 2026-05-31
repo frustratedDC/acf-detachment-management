@@ -134,8 +134,8 @@ function SysAdminPanel({ queryClient }) {
   }
 
   async function purgeByDataDensity(executeDelete = false) {
-    console.log("🚀 Initializing Elevated Service-Role Data Density Scan...");
-    const response = await base44.asServiceRole.entities.PersonnelManager.list();
+    console.log("🚀 Starting Safe Client-Side Base44 Scan...");
+    const response = await base44.entities.PersonnelManager.list();
     const allRecords = Array.isArray(response) ? response : (response?.data || []);
     
     if (!allRecords || allRecords.length === 0) {
@@ -188,13 +188,15 @@ function SysAdminPanel({ queryClient }) {
       }
     });
 
+    console.log(`🔍 Analysis Complete. Found ${recordsToPurge.length} duplicate rows.`);
+
     if (recordsToPurge.length === 0) {
       toast.success("No data density duplicates found");
       return null;
     }
 
     if (!executeDelete) {
-      console.log(`🔍 Found ${recordsToPurge.length} duplicates (RLS-bypass scan complete). Run with executeDelete=true to purge.`);
+      console.log("⚠️ DRY RUN MODE. Check browser console logs for the table map.");
       console.table(recordsToPurge.map(item => ({
         "PNumber": item.duplicate.PNumber,
         "Name": `${item.duplicate.FirstName} ${item.duplicate.Surname}`,
@@ -208,14 +210,35 @@ function SysAdminPanel({ queryClient }) {
 
     setPurging(true);
     try {
+      console.log(`🔥 Commencing deletion sequence on ${recordsToPurge.length} records...`);
+      let successCount = 0;
+      
       for (const item of recordsToPurge) {
-        await base44.asServiceRole.entities.PersonnelManager.delete(item.duplicate.id);
+        const targetId = item.duplicate.id;
+        console.log(`Attempting removal for Ghost ID: ${targetId}`);
+        
+        try {
+          const result = await base44.entities.PersonnelManager.delete(targetId);
+          console.log(`Target ID [${targetId}] deletion response:`, result);
+          successCount++;
+        } catch (innerErr) {
+          console.warn(`Standard delete failed for ID ${targetId}, trying object-payload fallback...`);
+          try {
+            const fallbackResult = await base44.entities.PersonnelManager.delete({ id: targetId });
+            console.log(`Fallback target ID [${targetId}] response:`, fallbackResult);
+            successCount++;
+          } catch (fallbackErr) {
+            console.error(`❌ Both deletion formats failed for ID ${targetId}:`, fallbackErr);
+          }
+        }
       }
+
       queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
-      toast.success(`Purged ${recordsToPurge.length} low-density duplicates (admin bypass)`);
+      toast.success(`Purged ${successCount}/${recordsToPurge.length} low-density duplicates`);
       return null;
     } catch (e) {
       toast.error(`Density purge failed: ${e.message}`);
+      console.error("❌ Global script execution error:", e);
       return null;
     } finally {
       setPurging(false);
