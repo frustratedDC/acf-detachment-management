@@ -389,11 +389,11 @@ function SysAdminPanel({ queryClient }) {
               </div>
             </CardContent>
           </Card>
-        )}
-        </div>
-        </div>
-        );
-}
+          )}
+          </div>
+          </div>
+          );
+          }
 
 // ─── Detachment Commander Section (L5+) ────────────────────────────────────
 function DetCommanderPanel({ queryClient }) {
