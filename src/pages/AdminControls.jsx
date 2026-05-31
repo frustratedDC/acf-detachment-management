@@ -603,53 +603,6 @@ function DetCommanderPanel({ queryClient }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Export Subject Completions */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Download className="w-4 h-4 text-chart-2" />
-              Export Subject Completions
-            </CardTitle>
-            <CardDescription>
-              Download all approved lesson completions as a CSV with columns: SURNAME, INITIAL, RANK, STAR LEVEL, SUBJECT, DATE COMPLETED
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full max-w-xs" onClick={async () => {
-              const [progress, personnel, syllabus] = await Promise.all([
-                base44.entities.ProgressLedger.filter({ Status: 'Approved' }),
-                base44.entities.PersonnelManager.filter({}),
-                base44.entities.SyllabusMaster.filter({}),
-              ]);
-              const personnelMap = Object.fromEntries(personnel.map(p => [p.PNumber, p]));
-              const syllabusMap = Object.fromEntries(syllabus.map(s => [s.LessonCode, s]));
-              if (!progress.length) { toast.info('No approved completions found'); return; }
-              const headers = ['SURNAME', 'INITIAL', 'RANK', 'STAR LEVEL', 'SUBJECT', 'DATE COMPLETED'];
-              const rows = progress.map(r => {
-                const p = personnelMap[r.CadetPNumber] || {};
-                const s = syllabusMap[r.LessonCode] || {};
-                return [
-                  p.Surname || r.CadetPNumber,
-                  p.FirstName?.[0] || '',
-                  p.Rank || '',
-                  p.CurrentStarLevel || s.StarLevel || '',
-                  s.SubjectName || r.LessonCode,
-                  r.CompletionDate || '',
-                ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
-              });
-              const csv = [headers.join(','), ...rows].join('\n');
-              const blob = new Blob([csv], { type: 'text/csv' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a'); a.href = url; a.download = 'subject_completions.csv'; a.click();
-              URL.revokeObjectURL(url);
-              toast.success(`Exported ${progress.length} completion records`);
-            }}>
-              <Download className="w-4 h-4 mr-2" />
-              Export Subject Completions to CSV
-            </Button>
-          </CardContent>
-        </Card>
-
         {/* Detachment Name */}
         <Card className="md:col-span-2">
           <CardHeader>
@@ -687,6 +640,88 @@ function DetCommanderPanel({ queryClient }) {
             <input type="file" accept=".csv,.xlsx" ref={fileRef} onChange={handlePersonnelCsvUpload} className="hidden" />
             <Button onClick={() => fileRef.current?.click()} disabled={uploading} className="w-full" variant="outline">
               {uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</> : <><FileUp className="w-4 h-4 mr-2" />Choose File</>}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Inject Community Engagement */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" />
+              Inject Community Engagement Subject
+            </CardTitle>
+            <CardDescription>
+              Add "Community Engagement" lessons to 1 Star, 2 Star, 3 Star and 4 Star syllabus profiles
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" className="w-full" onClick={async () => {
+              const CE_LESSONS = [
+                { LessonCode: 'CE-1-01', StarLevel: '1 Star', SubjectName: 'Community Engagement', LessonName: 'Introduction to Community Engagement', IsMandatory: true },
+                { LessonCode: 'CE-1-02', StarLevel: '1 Star', SubjectName: 'Community Engagement', LessonName: 'Local Community Projects', IsMandatory: false },
+                { LessonCode: 'CE-2-01', StarLevel: '2 Star', SubjectName: 'Community Engagement', LessonName: 'Volunteering and Service', IsMandatory: true },
+                { LessonCode: 'CE-2-02', StarLevel: '2 Star', SubjectName: 'Community Engagement', LessonName: 'Community Impact Assessment', IsMandatory: false },
+                { LessonCode: 'CE-3-01', StarLevel: '3 Star', SubjectName: 'Community Engagement', LessonName: 'Leading Community Initiatives', IsMandatory: true },
+                { LessonCode: 'CE-3-02', StarLevel: '3 Star', SubjectName: 'Community Engagement', LessonName: 'Partnership and Stakeholder Engagement', IsMandatory: false },
+                { LessonCode: 'CE-4-01', StarLevel: '4 Star', SubjectName: 'Community Engagement', LessonName: 'Strategic Community Leadership', IsMandatory: true },
+                { LessonCode: 'CE-4-02', StarLevel: '4 Star', SubjectName: 'Community Engagement', LessonName: 'Legacy Planning and Sustainability', IsMandatory: false },
+              ];
+              const existing = await base44.entities.SyllabusMaster.filter({});
+              const existingCodes = new Set(existing.map(r => r.LessonCode));
+              const toAdd = CE_LESSONS.filter(l => !existingCodes.has(l.LessonCode));
+              if (toAdd.length === 0) { toast.info('Community Engagement lessons already exist'); return; }
+              await base44.entities.SyllabusMaster.bulkCreate(toAdd);
+              queryClient.invalidateQueries({ queryKey: ['syllabus-master-all'] });
+              toast.success(`Injected ${toAdd.length} Community Engagement lessons`);
+            }}>
+              <Users className="w-4 h-4 mr-2" />Inject Community Engagement Lessons
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Export Subject Completions */}
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Download className="w-4 h-4 text-chart-2" />
+              Export Subject Completions to CSV
+            </CardTitle>
+            <CardDescription>
+              Download all approved lesson completions with headers: SURNAME, INITIAL, RANK, STAR LEVEL, SUBJECT, DATE COMPLETED
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" className="w-full" onClick={async () => {
+              const [progress, personnel, syllabus] = await Promise.all([
+                base44.entities.ProgressLedger.filter({ Status: 'Approved' }),
+                base44.entities.PersonnelManager.filter({}),
+                base44.entities.SyllabusMaster.filter({}),
+              ]);
+              const personnelMap = Object.fromEntries(personnel.map(p => [p.PNumber, p]));
+              const syllabusMap = Object.fromEntries(syllabus.map(s => [s.LessonCode, s]));
+              const headers = ['SURNAME', 'INITIAL', 'RANK', 'STAR LEVEL', 'SUBJECT', 'DATE COMPLETED'];
+              const rows = progress.map(r => {
+                const p = personnelMap[r.CadetPNumber] || {};
+                const s = syllabusMap[r.LessonCode] || {};
+                return [
+                  `"${p.Surname || r.CadetPNumber}"`,
+                  `"${(p.FirstName || '').charAt(0)}"`,
+                  `"${p.Rank || ''}"`,
+                  `"${p.CurrentStarLevel || s.StarLevel || ''}"`,
+                  `"${s.SubjectName || ''}"`,
+                  `"${r.CompletionDate || ''}"`,
+                ].join(',');
+              });
+              const csv = [headers.join(','), ...rows].join('\n');
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = 'subject_completions.csv'; a.click();
+              URL.revokeObjectURL(url);
+              toast.success(`Exported ${rows.length} completion records`);
+            }}>
+              <Download className="w-4 h-4 mr-2" />Export Subject Completions to CSV
             </Button>
           </CardContent>
         </Card>
