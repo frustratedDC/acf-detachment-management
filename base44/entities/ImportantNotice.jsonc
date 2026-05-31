@@ -34,6 +34,14 @@
       "type": "boolean",
       "default": true,
       "description": "Whether the notice is currently active"
+    },
+    "AcknowledgedBy": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of PNumbers who have acknowledged this notice",
+      "default": []
     }
   },
   "required": [

@@ -7,7 +7,7 @@ import {
   FileCheck, Brain, CheckSquare, Settings, HelpCircle, Shield,
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
   CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown,
-  CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, Trophy
+  CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, Trophy, TrendingUp, FolderOpen
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,7 @@ const NAV_GROUPS = [
   {
     label: 'My Progress',
     items: [
-      { path: '/progress', label: 'My Progress', icon: Brain, level: 0 },
+      { path: '/my-progress', label: 'My Progress', icon: TrendingUp, level: 0 },
     ],
   },
   {
@@ -81,6 +81,12 @@ const NAV_GROUPS = [
       { path: '/cfav-governance-all', label: 'CFAV Governance', icon: ShieldCheck, level: 4 },
       { path: '/instructor-quals', label: 'Instructor Qualifications', icon: GraduationCap, level: 4 },
       { path: '/admin', label: 'Admin Controls', icon: Settings, level: 4 },
+    ],
+  },
+  {
+    label: 'Forms & Resources',
+    items: [
+      { path: '/forms-resources', label: 'Forms & Resources', icon: FolderOpen, level: 0 },
     ],
   },
   {

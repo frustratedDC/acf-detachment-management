@@ -37,6 +37,8 @@ import TrainingPlanGenerator from '@/pages/TrainingPlanGenerator';
 import KASessions from '@/pages/KASessions';
 import KASessionForm from '@/pages/KASessionForm';
 import KALeaderboard from '@/pages/KALeaderboard';
+import MyProgress from '@/pages/MyProgress';
+import FormsResources from '@/pages/FormsResources';
 
 const AppContent = () => {
   const { personnel, loading, needsLinking } = usePersonnel();
@@ -80,6 +82,8 @@ const AppContent = () => {
         <Route path="/ka-sessions" element={<KASessions />} />
         <Route path="/ka-session-new" element={<KASessionForm />} />
         <Route path="/ka-leaderboard" element={<KALeaderboard />} />
+        <Route path="/my-progress" element={<MyProgress />} />
+        <Route path="/forms-resources" element={<FormsResources />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

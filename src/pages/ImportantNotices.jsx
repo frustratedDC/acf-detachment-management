@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
-import AccessGate from '@/components/shared/AccessGate';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -69,16 +68,20 @@ export default function ImportantNotices() {
     return (order[a.Priority] ?? 2) - (order[b.Priority] ?? 2);
   });
 
+  const canManage = (me?.AccessLevel ?? 0) >= ACCESS_LEVELS.DET_2IC;
+
   return (
-    <AccessGate level={ACCESS_LEVELS.DET_2IC}>
+    <div>
       <PageHeader
         title="Important Notices"
-        description="Manage detachment-wide announcements"
+        description="Detachment announcements"
         icon={Megaphone}
         actions={
-          <Button onClick={openCreate}>
-            <Plus className="w-4 h-4 mr-2" />New Notice
-          </Button>
+          canManage && (
+            <Button onClick={openCreate}>
+              <Plus className="w-4 h-4 mr-2" />New Notice
+            </Button>
+          )
         }
       />
 
@@ -100,17 +103,19 @@ export default function ImportantNotices() {
                   <p className="text-sm text-muted-foreground">{n.Body}</p>
                   <p className="text-xs text-muted-foreground mt-1">Created {format(parseISO(n.created_date), 'dd MMM yyyy')}</p>
                 </div>
-                <div className="flex gap-1 shrink-0">
-                  <Button size="icon" variant="ghost" onClick={() => openEdit(n)}><Pencil className="w-3.5 h-3.5" /></Button>
-                  <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteMutation.mutate(n.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                </div>
+                {canManage && (
+                  <div className="flex gap-1 shrink-0">
+                    <Button size="icon" variant="ghost" onClick={() => openEdit(n)}><Pencil className="w-3.5 h-3.5" /></Button>
+                    <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteMutation.mutate(n.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={v => { if (!v) closeDialog(); }}>
+      {canManage && <Dialog open={dialogOpen} onOpenChange={v => { if (!v) closeDialog(); }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{editingRec ? 'Edit Notice' : 'New Notice'}</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
@@ -147,7 +152,7 @@ export default function ImportantNotices() {
             </div>
           </div>
         </DialogContent>
-      </Dialog>
-    </AccessGate>
+      </Dialog>}
+    </div>
   );
 }

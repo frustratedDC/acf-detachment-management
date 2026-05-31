@@ -9,10 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard, Users, Calendar, ClipboardList, BookOpen,
-  AlertTriangle, CheckCircle2, Megaphone, CalendarDays, ArrowRight
+  AlertTriangle, CheckCircle2, Megaphone, CalendarDays, ArrowRight, Check
 } from 'lucide-react';
 import { format, parseISO, addDays } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const PRIORITY_COLORS = {
   Urgent: 'border-l-4 border-destructive bg-destructive/5',
@@ -50,6 +51,7 @@ function StatCard({ title, value, icon: Icon, color, to }) {
 export default function Dashboard() {
   const { personnel } = usePersonnel();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const level = personnel?.AccessLevel ?? 0;
   const today = format(new Date(), 'yyyy-MM-dd');
   const in60Days = format(addDays(new Date(), 60), 'yyyy-MM-dd');
@@ -102,6 +104,20 @@ export default function Dashboard() {
       const order = { Urgent: 0, High: 1, Normal: 2, Low: 3 };
       return (order[a.Priority] ?? 2) - (order[b.Priority] ?? 2);
     });
+
+  const acknowledgeMutation = useMutation({
+    mutationFn: ({ notice }) => {
+      const current = notice.AcknowledgedBy || [];
+      if (current.includes(personnel?.PNumber)) return Promise.resolve();
+      return base44.entities.ImportantNotice.update(notice.id, {
+        AcknowledgedBy: [...current, personnel?.PNumber],
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['important-notices'] }),
+  });
+
+  const isAcknowledged = (notice) =>
+    (notice.AcknowledgedBy || []).includes(personnel?.PNumber);
 
   // My WHT records
   const { data: myWHTs = [] } = useQuery({
@@ -290,15 +306,30 @@ export default function Dashboard() {
                 <p className="text-sm text-muted-foreground text-center py-3">No active notices.</p>
               ) : (
                 <div className="space-y-2">
-                  {activeNotices.slice(0, 5).map(n => (
-                    <div key={n.id} className={`p-2.5 rounded-lg ${PRIORITY_COLORS[n.Priority] || PRIORITY_COLORS.Normal}`}>
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold">{n.Title}</p>
-                        <Badge className={`text-xs shrink-0 ${PRIORITY_BADGE[n.Priority]}`}>{n.Priority}</Badge>
+                  {activeNotices.slice(0, 5).map(n => {
+                    const acked = isAcknowledged(n);
+                    return (
+                      <div key={n.id} className={`p-2.5 rounded-lg ${PRIORITY_COLORS[n.Priority] || PRIORITY_COLORS.Normal} ${acked ? 'opacity-60' : ''}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className={`text-sm ${acked ? '' : 'font-semibold'}`}>{n.Title}</p>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Badge className={`text-xs ${PRIORITY_BADGE[n.Priority]}`}>{n.Priority}</Badge>
+                            {!acked && (
+                              <button
+                                onClick={() => acknowledgeMutation.mutate({ notice: n })}
+                                className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center hover:bg-black/10 transition-colors"
+                                title="Acknowledge"
+                              >
+                                <Check className="w-2.5 h-2.5" />
+                              </button>
+                            )}
+                            {acked && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.Body}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.Body}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

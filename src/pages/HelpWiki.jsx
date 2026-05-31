@@ -24,19 +24,19 @@ Once linked, the app will load your profile, access level, and personalised dash
     id: 'access-levels',
     title: 'Access Levels Explained',
     level: null,
-    content: `The app uses 7 access levels (L0–L6) to control what each user can see and do:
+    content: `The Army Cadet Force (ACF) Training Manager uses 7 access levels (L0–L6) to control what each user can see and do:
 
 | Level | Name | Description |
 |---|---|---|
-| L0 | General | View Dashboard, Notices, Calendar, Parade State (read only), Syllabus |
-| L1 | Cadet NCO | L0 + can edit Parade State |
-| L2 | Cadet Instructor | L1 + Lesson Attendance, Training Plan (view) |
-| L3 | Detachment Instructor | L2 + Training Plan (edit), Export PDF, CFAV Governance, Staff Availability, Qualifications |
-| L4 | Detachment 2IC | L3 + Bulk Progress Entry, Analytics, all attendance/availability oversight, View As any user, approve lesson change requests |
-| L5 | Detachment Commander | L4 + Personnel Manager, Admin Controls |
-| L6 | System Administrator | L5 + Syllabus upload/purge, system-wide settings |
+| L0 | General | Dashboard, Notices, Calendar, Training Plan (view), Syllabus, Forms & Resources, My Progress |
+| L1 | Cadet NCO | L0 + can edit Parade Nominal Roll |
+| L2 | Cadet Instructor | L1 + Lesson Nominal Roll, Staffing (Governance, Availability, Quals), KA Sessions, Syllabus (read) |
+| L3 | Detachment Instructor | L2 + Training Plan (edit), Export PDF |
+| L4 | Detachment 2IC | L3 + Training Planning suite, Bulk Progress, Analytics, Personnel, Admin Controls, approve all records |
+| L5 | Detachment Commander | L4 + Personnel create/delete, system-wide oversight |
+| L6 | System Administrator | L5 + Syllabus upload/purge, system settings |
 
-Access levels are set on each personnel record by L5+ users.`
+Access levels are set on each personnel record by L5+ users. ACF = Army Cadet Force.`
   },
   {
     id: 'dashboard',
@@ -400,7 +400,7 @@ export default function HelpWiki() {
     <div>
       <PageHeader
         title="Help & Wiki"
-        description="Complete guide to using the ACF Training Manager"
+        description="Complete guide to using the Army Cadet Force (ACF) Training Manager"
         icon={HelpCircle}
       />
 
