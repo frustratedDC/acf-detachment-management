@@ -133,6 +133,40 @@ function SysAdminPanel({ queryClient }) {
     setPurging(false);
   }
 
+  async function purgeAllDataExceptAdmin(executeDelete = false) {
+    const user = await base44.auth.me();
+    if (user?.role !== 'admin') {
+      toast.error('Only L6 System Admins can execute this operation');
+      return;
+    }
+
+    setPurging(true);
+    try {
+      const allPersonnel = await base44.entities.PersonnelManager.filter({});
+      const myRecord = allPersonnel.find(p => p.LinkedEmailUID === user.email);
+      const toDelete = allPersonnel.filter(p => p.LinkedEmailUID !== user.email);
+
+      if (!executeDelete) {
+        console.log(`🔍 Dry run: Would purge ${toDelete.length} personnel records (keeping your account)`);
+        toast.info(`Found ${toDelete.length} records to purge. Run with confirmation to execute.`);
+        return;
+      }
+
+      console.log(`🔥 PURGING ${toDelete.length} personnel records...`);
+      for (const record of toDelete) {
+        await base44.entities.PersonnelManager.delete(record.id);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
+      toast.success(`Purged ${toDelete.length} personnel records. Your account (${myRecord?.PNumber}) preserved.`);
+    } catch (e) {
+      toast.error(`Purge failed: ${e.message}`);
+      console.error("❌ Admin purge error:", e);
+    } finally {
+      setPurging(false);
+    }
+  }
+
   async function purgeByDataDensity(executeDelete = false) {
     console.log("🚀 Starting Safe Client-Side Base44 Scan...");
     const response = await base44.entities.PersonnelManager.list();
@@ -340,6 +374,49 @@ function SysAdminPanel({ queryClient }) {
           </CardContent>
         </Card>
 
+        {/* Nuclear Option: Purge All Except Admin */}
+        <Card className="border-red-400/50 bg-red-50/30 md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              Nuclear Option: Reset Everything
+            </CardTitle>
+            <CardDescription>Permanently purge all personnel except your L6 account. Cannot be undone.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-red-700">
+              ⚠️ This will delete every personnel record in the system except your own account. All associated data (inspections, qualifications, sessions, etc.) will be orphaned.
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => purgeAllDataExceptAdmin(false)} 
+                disabled={purging}
+                className="flex-1"
+              >
+                {purging ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Checking...</> : <>📋 Audit Only</>}
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => {
+                  if (window.confirm('FINAL WARNING: This will DELETE ALL personnel except your account. Type "PURGE ALL" to confirm.')) {
+                    const response = prompt('Type PURGE ALL to confirm:');
+                    if (response === 'PURGE ALL') {
+                      purgeAllDataExceptAdmin(true);
+                    } else {
+                      toast.error('Confirmation text did not match. Operation cancelled.');
+                    }
+                  }
+                }} 
+                disabled={purging}
+                className="flex-1"
+              >
+                {purging ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Purging...</> : <>🔥 PURGE ALL</>}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Data Density Deduplication */}
         {!densityResults ? (
           <Card className="border-blue-300/50 bg-blue-50/30">
@@ -389,7 +466,7 @@ function SysAdminPanel({ queryClient }) {
               </div>
             </CardContent>
           </Card>
-          )}
+        )}
           </div>
           </div>
           );
