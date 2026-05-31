@@ -10,11 +10,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ClipboardList, Save, Search, UserCheck, UserX, UserMinus, Printer, Download } from 'lucide-react';
+import { ClipboardList, Save, Search, UserCheck, UserX, UserMinus, Printer, Download, Shirt } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
+import UniformInspectionForm from '@/components/inspection/UniformInspectionForm';
 
 export default function ParadeState() {
   const queryClient = useQueryClient();
@@ -23,6 +24,7 @@ export default function ParadeState() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [localStatuses, setLocalStatuses] = useState({});
+  const [showInspectionForm, setShowInspectionForm] = useState(false);
 
   const { data: allPersonnel = [] } = useQuery({
     queryKey: ['all-personnel'],
@@ -182,6 +184,11 @@ export default function ParadeState() {
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-44" />
             <Button variant="outline" size="sm" onClick={exportPDF}><Printer className="w-4 h-4 mr-1.5" />PDF</Button>
             <Button variant="outline" size="sm" onClick={exportCSV}><Download className="w-4 h-4 mr-1.5" />CSV</Button>
+            {(me?.AccessLevel ?? 0) >= ACCESS_LEVELS.DET_2IC && (
+              <Button variant="outline" size="sm" onClick={() => setShowInspectionForm(true)}>
+                <Shirt className="w-4 h-4 mr-1.5" />Inspect
+              </Button>
+            )}
             {canEdit && (
               <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
                 <Save className="w-4 h-4 mr-2" />
@@ -276,6 +283,13 @@ export default function ParadeState() {
           </div>
         </CardContent>
       </Card>
+
+      {showInspectionForm && (
+        <UniformInspectionForm
+          onClose={() => setShowInspectionForm(false)}
+          onSuccess={() => setShowInspectionForm(false)}
+        />
+      )}
     </AccessGate>
   );
 }

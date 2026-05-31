@@ -14,6 +14,7 @@ import {
 import { format, parseISO, addDays } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import MyInspections from '@/components/dashboard/MyInspections';
 
 const PRIORITY_COLORS = {
   Urgent: 'border-l-4 border-destructive bg-destructive/5',
@@ -227,6 +228,9 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           )}
+
+          {/* My Inspections (Cadets only) */}
+          {isCadet(level) && <MyInspections />}
 
           {/* WHT Expiry Alert */}
           {expiringWHTs.length > 0 && (
