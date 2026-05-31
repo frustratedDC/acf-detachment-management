@@ -45,6 +45,10 @@ import MyQualifications from '@/pages/MyQualifications';
 import Accounts from '@/pages/Accounts';
 import AllAvailability from '@/pages/AllAvailability';
 import FormCreator from '@/pages/FormCreator';
+import UniformExchange from '@/pages/UniformExchange';
+import CourseRequest from '@/pages/CourseRequest';
+import ReportIssue from '@/pages/ReportIssue';
+import HealthyMinds from '@/pages/HealthyMinds';
 
 const AppContent = () => {
   const { personnel, loading, needsLinking } = usePersonnel();
@@ -96,6 +100,10 @@ const AppContent = () => {
         <Route path="/accounts" element={<Accounts />} />
         <Route path="/all-availability" element={<AllAvailability />} />
         <Route path="/form-creator" element={<FormCreator />} />
+        <Route path="/uniform-exchange" element={<UniformExchange />} />
+        <Route path="/course-request" element={<CourseRequest />} />
+        <Route path="/report-issue" element={<ReportIssue />} />
+        <Route path="/healthy-minds" element={<HealthyMinds />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

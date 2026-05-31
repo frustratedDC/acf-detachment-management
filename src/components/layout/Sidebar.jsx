@@ -7,7 +7,8 @@ import {
   FileCheck, Brain, CheckSquare, Settings, HelpCircle, Shield,
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
   CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown,
-  CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, Trophy, TrendingUp, FolderOpen
+  CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, Trophy, TrendingUp, FolderOpen,
+  AlertCircle, Shirt
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -24,7 +25,7 @@ const NAV_GROUPS = [
     items: [
       { path: '/my-progress', label: 'My Progress', icon: TrendingUp, level: 0 },
     ],
-    hideIfAdult: true, // Hide for L3+
+    hideIfAdult: true,
   },
   {
     label: 'Detachment Training',
@@ -66,7 +67,15 @@ const NAV_GROUPS = [
       { path: '/my-availability', label: 'My Availability', icon: CalendarCheck, level: 2 },
       { path: '/my-qualifications', label: 'My Qualifications', icon: GraduationCap, level: 2 },
     ],
-    hideIfAdult: false,
+  },
+  {
+    label: 'Forms & Resources',
+    items: [
+      { path: '/uniform-exchange', label: 'Uniform Exchange', icon: Shirt, level: 0 },
+      { path: '/course-request', label: 'Course Request', icon: BookOpen, level: 0 },
+      { path: '/report-issue', label: 'Report Issue to DC', icon: AlertCircle, level: 0 },
+      { path: '/healthy-minds', label: 'Healthy Minds', icon: Brain, level: 0 },
+    ],
   },
   {
     label: 'Detachment Management',
@@ -79,12 +88,6 @@ const NAV_GROUPS = [
       { path: '/all-availability', label: 'All Instructor Availability', icon: CalendarCheck, level: 4 },
       { path: '/form-creator', label: 'Form & Resource Creator', icon: FolderOpen, level: 4 },
       { path: '/admin', label: 'Admin Controls', icon: Settings, level: 4 },
-    ],
-  },
-  {
-    label: 'Forms & Resources',
-    items: [
-      { path: '/forms-resources', label: 'Forms & Resources', icon: FolderOpen, level: 0 },
     ],
   },
   {
@@ -199,7 +202,9 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
       <div className="p-3 border-t border-sidebar-border shrink-0">
         {!collapsed && personnel && (
           <div className="mb-2 px-2">
-            <p className="text-xs font-semibold text-sidebar-foreground truncate">{personnel.Surname}</p>
+            <p className="text-xs font-semibold text-sidebar-foreground truncate">
+              {personnel.Rank && `${personnel.Rank} `}{personnel.FirstName} {personnel.Surname}
+            </p>
             <p className="text-xs text-sidebar-foreground/50">{LEVEL_NAMES[accessLevel]}</p>
           </div>
         )}
