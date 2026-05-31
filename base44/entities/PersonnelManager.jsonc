@@ -105,6 +105,9 @@
     "read": {
       "$or": [
         {
+          "data.LinkedEmailUID": "{{user.email}}"
+        },
+        {
           "data.PNumber": "{{user.data.PNumber}}"
         },
         {
