@@ -114,6 +114,20 @@
     "IsBootOrder": {
       "type": "boolean",
       "default": false
+    },
+    "NonAttenderWorkflow": {
+      "type": "object",
+      "description": "Timestamps for each non-attender outreach step",
+      "additionalProperties": true
+    },
+    "IsArchived": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this record has been struck off strength"
+    },
+    "ArchivedAt": {
+      "type": "string",
+      "description": "ISO timestamp when struck off"
     }
   },
   "required": [

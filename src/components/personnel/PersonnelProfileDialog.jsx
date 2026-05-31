@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 
-const STATUSES = ['Active', 'Suspended', 'Leaver', 'Long-term Absence', 'Deceased'];
+const STATUSES = ['Active', 'Suspended', 'Leaver', 'Long-term Absence', 'Non-Attender'];
 
 export default function PersonnelProfileDialog({ person, open, onClose }) {
   const { personnel: me } = usePersonnel();

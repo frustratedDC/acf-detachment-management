@@ -13,9 +13,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Plus, Pencil, Trash2, Search, AlertCircle, Eye, ArrowUpDown, Download } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, Search, AlertCircle, Eye, ArrowUpDown, Download, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, LEVEL_NAMES } from '@/lib/accessLevels';
+import NonAttenderWorkflow from '@/components/personnel/NonAttenderWorkflow';
+import LeaverPipeline from '@/components/personnel/LeaverPipeline';
 
 const emptyForm = {
   PNumber: '', Rank: '', FirstName: '', Surname: '', Type: 'Cadet',
@@ -37,6 +39,8 @@ export default function Personnel() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [profilePerson, setProfilePerson] = useState(null);
+  const [leaverPerson, setLeaverPerson] = useState(null);
+  const [showArchive, setShowArchive] = useState(false);
 
   const isSysAdmin = myLevel >= ACCESS_LEVELS.SYSTEM_ADMIN;
   const isCommander = myLevel >= ACCESS_LEVELS.DET_COMMANDER;
@@ -107,6 +111,7 @@ export default function Personnel() {
       AccessLevel: String(record.AccessLevel),
       RoleName: record.RoleName || '',
       CurrentStarLevel: record.CurrentStarLevel || 'Basic',
+      PersonnelStatus: record.PersonnelStatus || 'Active',
     });
     setEditingId(record.id);
     setOpen(true);
@@ -114,8 +119,17 @@ export default function Personnel() {
 
   const STAR_ORDER = { 'Basic': 0, '1 Star': 1, '2 Star': 2, '3 Star': 3, '4 Star': 4 };
 
+  // Archived cadets (struck off strength)
+  const archivedCadets = personnel.filter(p => p.IsArchived === true);
+
+  // Non-attenders needing workflow tracking
+  const nonAttenders = personnel.filter(p =>
+    (p.PersonnelStatus || 'Active') === 'Non-Attender' && !p.IsArchived
+  );
+
   const filtered = personnel
     .filter(p => {
+      if (p.IsArchived) return false; // archived always excluded from main list
       const status = p.PersonnelStatus || 'Active';
       if (!canViewSensitive && status !== 'Active') return false;
       const matchSearch = !search ||
@@ -132,6 +146,12 @@ export default function Personnel() {
     })
     .sort((a, b) => {
       if (sortBy === 'star') {
+        const aOrder = STAR_ORDER[a.CurrentStarLevel] ?? 99;
+        const bOrder = STAR_ORDER[b.CurrentStarLevel] ?? 99;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+      }
+      if (sortBy === 'star-incomplete') {
+        // Sort by lowest star level that still has incomplete training
         const aOrder = STAR_ORDER[a.CurrentStarLevel] ?? 99;
         const bOrder = STAR_ORDER[b.CurrentStarLevel] ?? 99;
         if (aOrder !== bOrder) return aOrder - bOrder;
@@ -229,17 +249,40 @@ export default function Personnel() {
                       <Input value={form.RoleName} onChange={(e) => setForm(p => ({ ...p, RoleName: e.target.value }))} placeholder="e.g. Sergeant, Officer" />
                     </div>
                     <div>
-                      <Label>Star Level (Cadets)</Label>
-                      <Select value={form.CurrentStarLevel} onValueChange={(v) => setForm(p => ({ ...p, CurrentStarLevel: v }))}>
+                       <Label>Star Level (Cadets)</Label>
+                       <Select value={form.CurrentStarLevel} onValueChange={(v) => setForm(p => ({ ...p, CurrentStarLevel: v }))}>
+                         <SelectTrigger><SelectValue /></SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="Basic">Basic</SelectItem>
+                           <SelectItem value="1 Star">1 Star</SelectItem>
+                           <SelectItem value="2 Star">2 Star</SelectItem>
+                           <SelectItem value="3 Star">3 Star</SelectItem>
+                           <SelectItem value="4 Star">4 Star</SelectItem>
+                         </SelectContent>
+                       </Select>
+                     </div>
+                  </div>
+                  {editingId && (
+                    <div>
+                      <Label>Status</Label>
+                      <Select value={form.PersonnelStatus || 'Active'} onValueChange={(v) => {
+                        if (v === 'Leaver') {
+                          const record = personnel.find(p => p.id === editingId);
+                          if (record) { setLeaverPerson(record); closeDialog(); return; }
+                        }
+                        setForm(p => ({ ...p, PersonnelStatus: v }));
+                      }}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Basic">Basic</SelectItem>
-                          <SelectItem value="1 Star">1 Star</SelectItem>
-                          <SelectItem value="2 Star">2 Star</SelectItem>
+                          <SelectItem value="Active">Active</SelectItem>
+                          <SelectItem value="Suspended">Suspended</SelectItem>
+                          <SelectItem value="Leaver">Leaver</SelectItem>
+                          <SelectItem value="Long-term Absence">Long-term Absence</SelectItem>
+                          <SelectItem value="Non-Attender">Non-Attender</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
+                  )}
                   <Button
                     className="w-full"
                     disabled={!form.PNumber || !form.Surname}
@@ -315,6 +358,7 @@ export default function Personnel() {
               <SelectContent>
                 <SelectItem value="surname">Sort: Surname</SelectItem>
                 <SelectItem value="star">Sort: Star Level ↑</SelectItem>
+                <SelectItem value="star-incomplete">Sort: Lowest Incomplete Star</SelectItem>
                 <SelectItem value="rank">Sort: Rank</SelectItem>
               </SelectContent>
             </Select>
@@ -373,12 +417,67 @@ export default function Personnel() {
         </CardContent>
       </Card>
 
+      {/* Non-Attender Workflow Panel */}
+      {nonAttenders.length > 0 && (
+        <div className="mt-4 space-y-3">
+          <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5" />
+            Non-Attender Outreach Tracking ({nonAttenders.length})
+          </p>
+          {nonAttenders.map(p => (
+            <NonAttenderWorkflow
+              key={p.id}
+              person={p}
+              onUpdated={() => queryClient.invalidateQueries({ queryKey: ['all-personnel'] })}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Archived Cadets Section */}
+      {isSysAdmin && archivedCadets.length > 0 && (
+        <div className="mt-4">
+          <button
+            className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 hover:text-foreground transition-colors mb-2"
+            onClick={() => setShowArchive(v => !v)}
+          >
+            <Archive className="w-3.5 h-3.5" />
+            Archived / Struck Off Strength ({archivedCadets.length})
+            <span className="ml-1">{showArchive ? '▲' : '▼'}</span>
+          </button>
+          {showArchive && (
+            <Card className="border-muted">
+              <CardContent className="p-3 space-y-1">
+                {archivedCadets.map(p => (
+                  <div key={p.id} className="flex items-center justify-between p-2 rounded text-sm opacity-60">
+                    <span>{[p.Rank, p.FirstName, p.Surname].filter(Boolean).join(' ')} — {p.PNumber}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {p.ArchivedAt ? new Date(p.ArchivedAt).toLocaleDateString('en-GB') : 'Archived'}
+                    </span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
       {/* Profile dialog — opened by clicking a row */}
       <PersonnelProfileDialog
         person={profilePerson}
         open={!!profilePerson}
         onClose={() => setProfilePerson(null)}
       />
+
+      {/* Leaver Pipeline modal */}
+      {leaverPerson && (
+        <LeaverPipeline
+          person={leaverPerson}
+          open={!!leaverPerson}
+          onClose={() => setLeaverPerson(null)}
+          onConfirmed={() => queryClient.invalidateQueries({ queryKey: ['all-personnel'] })}
+        />
+      )}
     </AccessGate>
   );
 }
