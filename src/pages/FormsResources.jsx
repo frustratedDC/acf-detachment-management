@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
 import PageHeader from '@/components/shared/PageHeader';
@@ -12,8 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { FolderOpen, FileText, ExternalLink, Heart, Send, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-const today = () => new Date().toISOString().split('T')[0];
 
 const FORMS = [
   {
@@ -69,18 +66,9 @@ const RESOURCES = [
 ];
 
 function FormDialog({ form, personnel, onClose }) {
-  const queryClient = useQueryClient();
   const [values, setValues] = useState({});
   const [submitted, setSubmitted] = useState(false);
 
-  const createTask = useMutation({
-    mutationFn: (data) => base44.entities.ProgressLedger
-      ? base44.entities.ImportantNotice.create(data)
-      : Promise.resolve(),
-  });
-
-  // We create a notice/task entry as a Task-like record using ImportantNotice for now
-  // Proper Task entity integration would go here
   const handleSubmit = async (e) => {
     e.preventDefault();
     const requiredFields = form.fields.filter(f => f.required);

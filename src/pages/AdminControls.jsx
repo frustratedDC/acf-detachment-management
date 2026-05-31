@@ -305,7 +305,7 @@ export default function AdminControls() {
   const isSysAdmin = myLevel >= ACCESS_LEVELS.SYSTEM_ADMIN;
 
   return (
-    <AccessGate level={ACCESS_LEVELS.DET_COMMANDER}>
+    <AccessGate level={ACCESS_LEVELS.DET_2IC}>
       <PageHeader
         title="Admin Controls"
         description={isSysAdmin ? 'System Administrator & Detachment Commander' : 'Detachment Commander'}
