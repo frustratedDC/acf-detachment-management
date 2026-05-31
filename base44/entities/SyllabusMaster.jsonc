@@ -14,25 +14,20 @@
         "2 Star",
         "3 Star",
         "4 Star"
-      ],
-      "description": "Star level for the lesson"
+      ]
     },
     "SubjectName": {
-      "type": "string",
-      "description": "Subject category"
+      "type": "string"
     },
     "LessonName": {
-      "type": "string",
-      "description": "Name of the lesson"
+      "type": "string"
     },
     "IsMandatory": {
       "type": "boolean",
-      "default": false,
-      "description": "Whether the lesson is mandatory"
+      "default": false
     },
     "GrantsQualification": {
-      "type": "string",
-      "description": "Optional: qualification granted on completion e.g. JCIC, SCIC"
+      "type": "string"
     }
   },
   "required": [
@@ -40,29 +35,5 @@
     "StarLevel",
     "SubjectName",
     "LessonName"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "AccessLevel": {
-          "$gte": 6
-        }
-      }
-    },
-    "read": {},
-    "update": {
-      "user_condition": {
-        "AccessLevel": {
-          "$gte": 6
-        }
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "AccessLevel": {
-          "$gte": 6
-        }
-      }
-    }
-  }
+  ]
 }

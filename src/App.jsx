@@ -11,7 +11,6 @@ import { PersonnelProvider, usePersonnel } from '@/lib/usePersonnel';
 import AppLayout from '@/components/layout/AppLayout';
 
 // Pages
-import LinkAccount from '@/pages/LinkAccount';
 import Dashboard from '@/pages/Dashboard';
 import ParadeState from '@/pages/ParadeState';
 import LessonAttendance from '@/pages/LessonAttendance';
@@ -51,7 +50,7 @@ import ReportIssue from '@/pages/ReportIssue';
 import HealthyMinds from '@/pages/HealthyMinds';
 
 const AppContent = () => {
-  const { personnel, loading, needsLinking } = usePersonnel();
+  const { personnel, loading } = usePersonnel();
 
   if (loading) {
     return (
@@ -59,10 +58,6 @@ const AppContent = () => {
         <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
       </div>
     );
-  }
-
-  if (needsLinking) {
-    return <LinkAccount />;
   }
 
   return (

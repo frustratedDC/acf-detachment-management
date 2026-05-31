@@ -3,8 +3,7 @@
   "type": "object",
   "properties": {
     "UserPNumber": {
-      "type": "string",
-      "description": "PNumber of the user who created this entry"
+      "type": "string"
     },
     "StarLevel": {
       "type": "string",
@@ -14,20 +13,16 @@
         "2 Star",
         "3 Star",
         "4 Star"
-      ],
-      "description": "Star level"
+      ]
     },
     "SubjectName": {
-      "type": "string",
-      "description": "Subject category"
+      "type": "string"
     },
     "LessonCode": {
-      "type": "string",
-      "description": "Custom lesson code"
+      "type": "string"
     },
     "LessonName": {
-      "type": "string",
-      "description": "Name of the lesson"
+      "type": "string"
     }
   },
   "required": [
@@ -36,19 +31,5 @@
     "SubjectName",
     "LessonCode",
     "LessonName"
-  ],
-  "rls": {
-    "create": {
-      "data.UserPNumber": "{{user.data.PNumber}}"
-    },
-    "read": {
-      "data.UserPNumber": "{{user.data.PNumber}}"
-    },
-    "update": {
-      "data.UserPNumber": "{{user.data.PNumber}}"
-    },
-    "delete": {
-      "data.UserPNumber": "{{user.data.PNumber}}"
-    }
-  }
+  ]
 }
