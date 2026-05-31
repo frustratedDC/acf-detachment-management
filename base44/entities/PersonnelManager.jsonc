@@ -108,7 +108,7 @@
           "data.LinkedEmailUID": "{{user.email}}"
         },
         {
-          "data.PNumber": "{{user.data.PNumber}}"
+          "data.IsLinked": false
         },
         {
           "user_condition": {
@@ -120,11 +120,18 @@
       ]
     },
     "update": {
-      "user_condition": {
-        "AccessLevel": {
-          "$gte": 5
+      "$or": [
+        {
+          "data.LinkedEmailUID": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "AccessLevel": {
+              "$gte": 5
+            }
+          }
         }
-      }
+      ]
     },
     "delete": {
       "user_condition": {
