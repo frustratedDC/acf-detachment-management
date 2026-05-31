@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Upload, Trash2, AlertTriangle, Loader2, FileUp, Users, Save, Shield, ShieldCheck } from 'lucide-react';
+import { Settings, Upload, Trash2, AlertTriangle, Loader2, FileUp, Users, Save, Shield, ShieldCheck, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 
@@ -20,6 +20,7 @@ function SysAdminPanel({ queryClient }) {
   const [purging, setPurging] = useState(false);
   const [auditResults, setAuditResults] = useState(null);
   const [auditMode, setAuditMode] = useState(true);
+  const [densityResults, setDensityResults] = useState(null);
 
   async function handleSyllabusCsvUpload(e) {
     const file = e.target.files?.[0];
@@ -132,6 +133,94 @@ function SysAdminPanel({ queryClient }) {
     setPurging(false);
   }
 
+  async function purgeByDataDensity(executeDelete = false) {
+    console.log("🚀 Initializing Content-Aware Data Density Scan...");
+    const allRecords = await base44.entities.PersonnelManager.list();
+    
+    if (!allRecords || allRecords.length === 0) {
+      toast.info("No personnel records found");
+      return null;
+    }
+
+    const calculateDataWeight = (record) => {
+      let score = 0;
+      if (record.StatusNotes && record.StatusNotes.trim() !== "") score += 20;
+      if (Array.isArray(record.QualifiedSubjects) && record.QualifiedSubjects.length > 0) {
+        score += (record.QualifiedSubjects.length * 10);
+      }
+      if (record.PersonnelStatus && record.PersonnelStatus !== "Active") score += 15;
+      Object.keys(record).forEach(key => {
+        const val = record[key];
+        if (val !== null && val !== undefined && val !== "" && val !== false) {
+          score += 1;
+        }
+      });
+      return score;
+    };
+
+    const groups = {};
+    allRecords.forEach(record => {
+      if (!record.PNumber) return;
+      if (!groups[record.PNumber]) groups[record.PNumber] = [];
+      groups[record.PNumber].push({
+        raw: record,
+        weight: calculateDataWeight(record)
+      });
+    });
+
+    const recordsToPurge = [];
+    Object.keys(groups).forEach(pNumber => {
+      const group = groups[pNumber];
+      if (group.length > 1) {
+        group.sort((a, b) => {
+          if (b.weight !== a.weight) return b.weight - a.weight;
+          return (a.raw.id || 0) - (b.raw.id || 0);
+        });
+        for (let i = 1; i < group.length; i++) {
+          recordsToPurge.push({
+            duplicate: group[i].raw,
+            masterId: group[0].raw.id,
+            masterWeight: group[0].weight,
+            dupWeight: group[i].weight
+          });
+        }
+      }
+    });
+
+    if (recordsToPurge.length === 0) {
+      toast.success("No data density duplicates found");
+      return null;
+    }
+
+    if (!executeDelete) {
+      console.log(`🔍 Found ${recordsToPurge.length} duplicates. Run with executeDelete=true to purge.`);
+      console.table(recordsToPurge.map(item => ({
+        "PNumber": item.duplicate.PNumber,
+        "Name": `${item.duplicate.FirstName} ${item.duplicate.Surname}`,
+        "Tossed ID": item.duplicate.id,
+        "Tossed Score": item.dupWeight,
+        "Preserved ID": item.masterId,
+        "Preserved Score": item.masterWeight
+      })));
+      return recordsToPurge;
+    }
+
+    setPurging(true);
+    try {
+      for (const item of recordsToPurge) {
+        await base44.entities.PersonnelManager.delete(item.duplicate.id);
+      }
+      queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
+      toast.success(`Purged ${recordsToPurge.length} low-density duplicates`);
+      return null;
+    } catch (e) {
+      toast.error(`Density purge failed: ${e.message}`);
+      return null;
+    } finally {
+      setPurging(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
@@ -226,9 +315,60 @@ function SysAdminPanel({ queryClient }) {
             </Button>
           </CardContent>
         </Card>
-      </div>
-    </div>
-  );
+
+        {/* Data Density Deduplication */}
+        {!densityResults ? (
+          <Card className="border-blue-300/50 bg-blue-50/30">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Zap className="w-4 h-4 text-blue-600" />
+                Smart Deduplication
+              </CardTitle>
+              <CardDescription>Find duplicates by data density & quality (safe audit mode)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => purgeByDataDensity(false).then(setDensityResults)} disabled={purging} className="w-full" variant="outline">
+                {purging ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Scanning...</> : <>🔍 Scan Duplicates</>}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-blue-300/50 md:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Zap className="w-4 h-4 text-blue-600" />
+                {densityResults?.length > 0 ? `${densityResults.length} Low-Density Duplicates` : 'No Duplicates Found'}
+              </CardTitle>
+              <CardDescription>Preserve high-data-weight records, remove low-density shells</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {densityResults && densityResults.length > 0 && (
+                <div className="max-h-48 overflow-y-auto bg-muted/30 rounded p-3 border border-blue-300/30 text-xs">
+                  <ul className="space-y-1">
+                    {densityResults.slice(0, 20).map(r => (
+                      <li key={r.duplicate.id} className="text-muted-foreground">
+                        {r.duplicate.PNumber} — {r.duplicate.Rank} {r.duplicate.FirstName} {r.duplicate.Surname}
+                        <span className="text-xs ml-2">(ID:{r.duplicate.id} Score:{r.dupWeight} → Keep ID:{r.masterId} Score:{r.masterWeight})</span>
+                      </li>
+                    ))}
+                    {densityResults.length > 20 && <li className="text-muted-foreground italic">+{densityResults.length - 20} more...</li>}
+                  </ul>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setDensityResults(null)} disabled={purging}>
+                  Back to Scan
+                </Button>
+                <Button variant="destructive" onClick={() => purgeByDataDensity(true)} disabled={purging || !densityResults?.length}>
+                  {purging ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Purging...</> : <>🔥 Execute Purge</>}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        </div>
+        </div>
+        );
 }
 
 // ─── Detachment Commander Section (L5+) ────────────────────────────────────
