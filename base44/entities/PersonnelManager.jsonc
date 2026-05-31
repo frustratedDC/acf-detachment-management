@@ -117,7 +117,8 @@
     },
     "IsBootOrder": {
       "type": "boolean",
-      "default": false
+      "default": false,
+      "description": "Indicates if a boot order is required"
     }
   },
   "required": [

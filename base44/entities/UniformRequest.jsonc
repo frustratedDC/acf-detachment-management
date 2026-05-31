@@ -20,11 +20,11 @@
     },
     "SizeReturning": {
       "type": "string",
-      "description": "Size of item being returned (optional)"
+      "description": "Size of item being returned (for exchanges)"
     },
     "ReasonForReturn": {
       "type": "string",
-      "description": "Reason for return or exchange (optional)"
+      "description": "Reason for return or exchange"
     },
     "Status": {
       "type": "string",
