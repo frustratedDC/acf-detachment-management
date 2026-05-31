@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Plus, Pencil, Trash2, Search, AlertCircle, Eye, ArrowUpDown } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, Search, AlertCircle, Eye, ArrowUpDown, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, LEVEL_NAMES } from '@/lib/accessLevels';
 
@@ -153,6 +153,22 @@ export default function Personnel() {
         icon={Users}
         actions={
           <div className="flex items-center gap-2">
+            {myLevel >= ACCESS_LEVELS.DET_2IC && (
+              <Button variant="outline" size="sm" onClick={async () => {
+                const requests = await base44.entities.UniformRequest.filter({});
+                if (!requests.length) { toast.info('No uniform requests found'); return; }
+                const headers = ['PNumber', 'RequestType', 'ItemName', 'SizeReturning', 'ReasonForReturn', 'Status', 'DateSubmitted'];
+                const rows = requests.map(r => headers.map(h => `"${(r[h] || '').toString().replace(/"/g, '""')}"`).join(','));
+                const csv = [headers.join(','), ...rows].join('\n');
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'uniform_requests.csv'; a.click();
+                URL.revokeObjectURL(url);
+                toast.success(`Exported ${requests.length} uniform requests`);
+              }}>
+                <Download className="w-4 h-4 mr-1" />Export Uniform Requests
+              </Button>
+            )}
             <Dialog open={open} onOpenChange={(v) => { if (!v) closeDialog(); else setOpen(true); }}>
               <DialogTrigger asChild>
                 <Button disabled={atLimit && !editingId} onClick={() => { setForm(emptyForm); setEditingId(null); }}>

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil } from 'lucide-react';
+import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil, Shirt } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
@@ -45,6 +45,21 @@ export default function TaskList() {
   });
 
   const pendingChangeRequests = changeRequests.filter(r => r.Status === 'Pending');
+
+  const { data: uniformRequests = [] } = useQuery({
+    queryKey: ['uniform-requests'],
+    queryFn: () => base44.entities.UniformRequest.list('-created_date', 200),
+  });
+
+  const pendingUniformRequests = uniformRequests.filter(r => r.Status === 'Pending');
+
+  const resolveUniformMutation = useMutation({
+    mutationFn: ({ id, status }) => base44.entities.UniformRequest.update(id, { Status: status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['uniform-requests'] });
+      toast.success('Uniform request updated');
+    },
+  });
 
   const resolveChangeRequestMutation = useMutation({
     mutationFn: ({ id, status, notes }) => base44.entities.LessonChangeRequest.update(id, { Status: status, ResponseNotes: notes, RespondedByPNumber: me?.PNumber || '' }),
@@ -141,6 +156,10 @@ export default function TaskList() {
             <Pencil className="w-3.5 h-3.5" />
             Changes ({pendingChangeRequests.length})
           </TabsTrigger>
+          <TabsTrigger value="uniform-requests" className="gap-1">
+            <Shirt className="w-3.5 h-3.5" />
+            Uniform ({pendingUniformRequests.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending">
@@ -206,6 +225,48 @@ export default function TaskList() {
                           </div>
                         )}
                         {req.ResponseNotes && <p className="text-xs text-muted-foreground italic">Response: {req.ResponseNotes}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="uniform-requests">
+          <Card>
+            <CardContent className="p-2">
+              {uniformRequests.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground text-sm">No uniform requests.</p>
+              ) : (
+                <div className="space-y-2">
+                  {uniformRequests.map(req => {
+                    const requester = personnelMap[req.PNumber];
+                    const statusColor = req.Status === 'Completed' ? 'default' : req.Status === 'Approved' ? 'secondary' : 'outline';
+                    return (
+                      <div key={req.id} className="p-3 rounded-lg border hover:bg-muted/30 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold">
+                              {requester ? `${requester.Rank || ''} ${requester.FirstName || ''} ${requester.Surname}`.trim() : req.PNumber}
+                              {' — '}{req.RequestType}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{req.PNumber} · {req.DateSubmitted} · {req.ItemName}</p>
+                            {req.SizeReturning && <p className="text-xs mt-0.5">Returning: {req.SizeReturning}</p>}
+                            {req.ReasonForReturn && <p className="text-xs text-muted-foreground">{req.ReasonForReturn}</p>}
+                          </div>
+                          <Badge variant={statusColor} className="text-xs shrink-0">{req.Status}</Badge>
+                        </div>
+                        {req.Status === 'Pending' && (
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="text-chart-2 hover:text-chart-2" onClick={() => resolveUniformMutation.mutate({ id: req.id, status: 'Approved' })}>
+                              <Check className="w-3.5 h-3.5 mr-1" />Approve
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => resolveUniformMutation.mutate({ id: req.id, status: 'Completed' })}>
+                              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />Complete
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

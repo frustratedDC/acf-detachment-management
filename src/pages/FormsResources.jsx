@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
 import PageHeader from '@/components/shared/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { FolderOpen, FileText, ExternalLink, Heart, Send, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import UniformRequestForm from '@/components/forms/UniformRequestForm';
 
 const FORMS = [
   {
@@ -140,6 +141,10 @@ function FormDialog({ form, personnel, onClose }) {
 export default function FormsResources() {
   const { personnel } = usePersonnel();
   const [activeForm, setActiveForm] = useState(null);
+  const [uniformOpen, setUniformOpen] = useState(false);
+
+  // Non-uniform forms (exclude uniform-exchange, handled separately)
+  const otherForms = FORMS.filter(f => f.id !== 'uniform-exchange');
 
   return (
     <div className="space-y-8 p-6">
@@ -155,7 +160,17 @@ export default function FormsResources() {
           <FileText className="w-4 h-4" /> Forms
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {FORMS.map(f => (
+          {/* Uniform Exchange — uses dedicated smart form */}
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setUniformOpen(true)}>
+            <CardContent className="p-5">
+              <div className="text-3xl mb-3">👕</div>
+              <h3 className="font-semibold text-sm mb-1">Request a Uniform Exchange</h3>
+              <p className="text-xs text-muted-foreground mb-4">Submit an initial indent or item exchange request.</p>
+              <Button size="sm" className="w-full">Open Form</Button>
+            </CardContent>
+          </Card>
+
+          {otherForms.map(f => (
             <Card key={f.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setActiveForm(f)}>
               <CardContent className="p-5">
                 <div className="text-3xl mb-3">{f.icon}</div>
@@ -196,6 +211,8 @@ export default function FormsResources() {
       {activeForm && (
         <FormDialog form={activeForm} personnel={personnel} onClose={() => setActiveForm(null)} />
       )}
+
+      <UniformRequestForm open={uniformOpen} onClose={() => setUniformOpen(false)} />
     </div>
   );
 }
