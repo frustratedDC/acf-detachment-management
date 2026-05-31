@@ -195,11 +195,34 @@ function DetCommanderPanel({ queryClient }) {
         PersonnelStatus: 'Active',
         IsLinked: false,
       }));
+      
       if (batch.length > 0) {
-        for (let i = 0; i < batch.length; i += 50) {
-          await base44.entities.PersonnelManager.bulkCreate(batch.slice(i, i + 50));
+        // DEFENSIVE FIX: Check for existing PNumbers to prevent duplicate imports
+        const existing = await base44.entities.PersonnelManager.filter({});
+        const existingPNumbers = new Set(existing.map(r => r.PNumber));
+        const uniqueRecords = batch.filter(r => {
+          if (existingPNumbers.has(r.PNumber)) {
+            console.warn(`Skipping duplicate PNumber: ${r.PNumber}`);
+            return false;
+          }
+          return true;
+        });
+        
+        if (uniqueRecords.length === 0) {
+          toast.error('All records in this CSV already exist in the database');
+          setUploading(false);
+          if (fileRef.current) fileRef.current.value = '';
+          return;
         }
-        toast.success(`Imported ${batch.length} personnel records`);
+        
+        for (let i = 0; i < uniqueRecords.length; i += 50) {
+          await base44.entities.PersonnelManager.bulkCreate(uniqueRecords.slice(i, i + 50));
+        }
+        const skipped = batch.length - uniqueRecords.length;
+        const msg = skipped > 0 
+          ? `Imported ${uniqueRecords.length} records (${skipped} duplicates skipped)`
+          : `Imported ${uniqueRecords.length} personnel records`;
+        toast.success(msg);
         queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
       } else {
         toast.error('No valid records found');
