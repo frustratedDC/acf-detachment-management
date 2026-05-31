@@ -65,6 +65,7 @@ const NAV_GROUPS = [
       { path: '/staff-availability', label: 'My Availability', icon: CalendarCheck, level: 2 },
       { path: '/instructor-quals', label: 'My Qualifications', icon: GraduationCap, level: 2 },
     ],
+    hideIfLevel: 4,
   },
   {
     label: 'Keeping Active',
@@ -78,7 +79,7 @@ const NAV_GROUPS = [
     items: [
       { path: '/analytics', label: 'Analytics', icon: BarChart2, level: 4 },
       { path: '/personnel', label: 'Personnel', icon: Users, level: 4 },
-      { path: '/cfav-governance-all', label: 'CFAV Governance', icon: ShieldCheck, level: 4 },
+      { path: '/cfav-governance', label: 'CFAV Governance', icon: ShieldCheck, level: 4 },
       { path: '/instructor-quals', label: 'Instructor Qualifications', icon: GraduationCap, level: 4 },
       { path: '/admin', label: 'Admin Controls', icon: Settings, level: 4 },
     ],
@@ -141,6 +142,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         {NAV_GROUPS.map(group => {
           const visibleItems = group.items.filter(item => hasAccess(accessLevel, item.level));
           if (visibleItems.length === 0) return null;
+          if (group.hideIfLevel !== undefined && hasAccess(accessLevel, group.hideIfLevel)) return null;
           const isGroupCollapsed = !!collapsedGroups[group.label];
           const hasActiveItem = visibleItems.some(item => location.pathname === item.path);
 
