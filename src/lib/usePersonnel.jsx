@@ -21,9 +21,21 @@ export function PersonnelProvider({ children }) {
       return;
     }
     const records = await base44.entities.PersonnelManager.filter({ LinkedEmailUID: user.email });
-    if (records.length > 0 && records[0].IsLinked) {
-      setPersonnel(records[0]);
-      setNeedsLinking(false);
+    if (records.length > 0) {
+      // DEFENSIVE FIX: Sort by created_date ascending (oldest first)
+      // Ensures the original May 10 record is always selected, not the May 31 duplicate
+      const sorted = records.sort((a, b) => {
+        const dateA = new Date(a.created_date || 0);
+        const dateB = new Date(b.created_date || 0);
+        return dateA - dateB;
+      });
+      const authoritative = sorted[0];
+      if (authoritative.IsLinked) {
+        setPersonnel(authoritative);
+        setNeedsLinking(false);
+      } else {
+        setNeedsLinking(true);
+      }
     } else {
       setNeedsLinking(true);
     }
