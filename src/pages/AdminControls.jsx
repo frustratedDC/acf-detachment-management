@@ -134,8 +134,9 @@ function SysAdminPanel({ queryClient }) {
   }
 
   async function purgeByDataDensity(executeDelete = false) {
-    console.log("🚀 Initializing Content-Aware Data Density Scan...");
-    const allRecords = await base44.entities.PersonnelManager.list();
+    console.log("🚀 Initializing Elevated Service-Role Data Density Scan...");
+    const response = await base44.asServiceRole.entities.PersonnelManager.list();
+    const allRecords = Array.isArray(response) ? response : (response?.data || []);
     
     if (!allRecords || allRecords.length === 0) {
       toast.info("No personnel records found");
@@ -193,7 +194,7 @@ function SysAdminPanel({ queryClient }) {
     }
 
     if (!executeDelete) {
-      console.log(`🔍 Found ${recordsToPurge.length} duplicates. Run with executeDelete=true to purge.`);
+      console.log(`🔍 Found ${recordsToPurge.length} duplicates (RLS-bypass scan complete). Run with executeDelete=true to purge.`);
       console.table(recordsToPurge.map(item => ({
         "PNumber": item.duplicate.PNumber,
         "Name": `${item.duplicate.FirstName} ${item.duplicate.Surname}`,
@@ -208,10 +209,10 @@ function SysAdminPanel({ queryClient }) {
     setPurging(true);
     try {
       for (const item of recordsToPurge) {
-        await base44.entities.PersonnelManager.delete(item.duplicate.id);
+        await base44.asServiceRole.entities.PersonnelManager.delete(item.duplicate.id);
       }
       queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
-      toast.success(`Purged ${recordsToPurge.length} low-density duplicates`);
+      toast.success(`Purged ${recordsToPurge.length} low-density duplicates (admin bypass)`);
       return null;
     } catch (e) {
       toast.error(`Density purge failed: ${e.message}`);
