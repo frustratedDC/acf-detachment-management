@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Clock } from "lucide-react";
 
 export default function KAStepBriefing({ sessionStartTime, onConfirm }) {
   const [confirmed, setConfirmed] = useState(false);
   const [confirmedAt, setConfirmedAt] = useState(null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   function handleConfirm() {
     const ts = new Date();
@@ -14,7 +20,7 @@ export default function KAStepBriefing({ sessionStartTime, onConfirm }) {
   }
 
   const elapsed = sessionStartTime
-    ? Math.floor((Date.now() - sessionStartTime.getTime()) / 1000)
+    ? Math.floor((now - sessionStartTime.getTime()) / 1000)
     : 0;
 
   return (

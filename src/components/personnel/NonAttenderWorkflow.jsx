@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertCircle, Clock } from 'lucide-react';
+import { AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const STEPS = [
@@ -30,6 +31,18 @@ export default function NonAttenderWorkflow({ person, onUpdated }) {
   }
 
   const completedCount = STEPS.filter(s => workflow[s.key]).length;
+  const allComplete = completedCount === STEPS.length;
+
+  async function handleResolved() {
+    setSaving('resolved');
+    await base44.entities.PersonnelManager.update(person.id, {
+      PersonnelStatus: 'Active',
+      NonAttenderWorkflow: {},
+    });
+    toast.success(`${person.Surname} returned to Active status`);
+    setSaving(null);
+    onUpdated?.();
+  }
 
   return (
     <Card className="border-amber-400/30 bg-amber-50/20">
@@ -43,6 +56,15 @@ export default function NonAttenderWorkflow({ person, onUpdated }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-3 space-y-2">
+        {allComplete && (
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 mb-2">
+            <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+            <span className="text-xs text-green-700 flex-1 font-medium">All outreach steps complete — response received.</span>
+            <Button size="sm" variant="outline" className="text-xs h-7 border-green-500/40 text-green-700 hover:bg-green-50" onClick={handleResolved} disabled={saving === 'resolved'}>
+              {saving === 'resolved' ? 'Saving...' : 'Mark Resolved'}
+            </Button>
+          </div>
+        )}
         {STEPS.map(step => {
           const done = !!workflow[step.key];
           const ts = workflow[step.key];

@@ -16,9 +16,10 @@ export default function KAStopwatch() {
       intervalRef.current = setInterval(() => {
         setElapsed(baseRef.current + (Date.now() - startRef.current));
       }, 50);
-    } else {
-      clearInterval(intervalRef.current);
-      baseRef.current = elapsed;
+      return () => {
+        clearInterval(intervalRef.current);
+        baseRef.current = baseRef.current + (Date.now() - startRef.current);
+      };
     }
     return () => clearInterval(intervalRef.current);
   }, [running]);

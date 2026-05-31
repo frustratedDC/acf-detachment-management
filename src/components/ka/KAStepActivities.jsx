@@ -76,7 +76,7 @@ export default function KAStepActivities({ selectedActivities, setSelectedActivi
         </div>
       </div>
 
-      <Button className="w-full gap-2" onClick={onStart} disabled={optionalSelected.length === 0 && selectedActivities.filter(k => !ALL_ACTIVITIES.find(a => a.key === k)?.mandatory).length === 0}>
+      <Button className="w-full gap-2" onClick={onStart}>
         <Play className="w-4 h-4" /> Start Session
       </Button>
     </div>
