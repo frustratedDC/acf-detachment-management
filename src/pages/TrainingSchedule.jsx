@@ -40,10 +40,10 @@ export default function TrainingSchedule() {
     },
   });
 
-  const canEdit = hasAccess(level, ACCESS_LEVELS.DET_INSTRUCTOR);
+  const canEdit = hasAccess(level, ACCESS_LEVELS.DET_2IC);
 
   return (
-    <AccessGate level={ACCESS_LEVELS.DET_INSTRUCTOR}>
+    <AccessGate level={0}>
       <PageHeader
         title="Training Plan"
         description="Nightly schedule management"

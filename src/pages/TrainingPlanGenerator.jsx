@@ -130,6 +130,7 @@ export default function TrainingPlanGenerator() {
               <Select value={duration} onValueChange={v => { setDuration(v); setGenerated(false); }}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="1">1 Month</SelectItem>
                   <SelectItem value="3">3 Months</SelectItem>
                   <SelectItem value="6">6 Months</SelectItem>
                   <SelectItem value="12">12 Months</SelectItem>

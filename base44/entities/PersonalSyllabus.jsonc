@@ -11,7 +11,9 @@
       "enum": [
         "Basic",
         "1 Star",
-        "2 Star"
+        "2 Star",
+        "3 Star",
+        "4 Star"
       ],
       "description": "Star level"
     },

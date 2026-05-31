@@ -53,7 +53,7 @@
         "Suspended",
         "Leaver",
         "Long-term Absence",
-        "Deceased"
+        "Non-Attender"
       ],
       "default": "Active",
       "description": "Current status of the personnel member"

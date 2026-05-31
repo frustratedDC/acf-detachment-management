@@ -6,53 +6,60 @@ export function bjMax(s) {
 }
 
 export function bjPoints(bj) {
-  if (bj == null) return 0;
+  if (bj == null || bj < 100) return 0;
   if (bj >= 200) return 5;
-  if (bj >= 160) return 4;
-  if (bj >= 130) return 3;
-  if (bj >= 100) return 2;
-  return 1;
+  if (bj >= 170) return 4;
+  if (bj >= 150) return 3;
+  if (bj >= 130) return 2;
+  return 1; // 100-129
 }
 
 export function squatPoints(v) {
-  if (v == null) return 0;
-  if (v >= 40) return 5;
-  if (v >= 30) return 4;
-  if (v >= 20) return 3;
+  if (v == null || v < 5) return 0;
+  if (v >= 28) return 5;
+  if (v >= 21) return 4;
+  if (v >= 15) return 3;
   if (v >= 10) return 2;
-  return 1;
+  return 1; // 5-9
 }
 
 export function pressUpPoints(v) {
-  if (v == null) return 0;
-  if (v >= 20) return 5;
-  if (v >= 15) return 4;
-  if (v >= 10) return 3;
-  if (v >= 5) return 2;
-  return 1;
+  if (v == null || v < 5) return 0;
+  if (v >= 28) return 5;
+  if (v >= 20) return 4;
+  if (v >= 17) return 3;
+  if (v >= 11) return 2;
+  return 1; // 5-10
 }
 
 export function shuttlePoints(v) {
-  if (v == null) return 0;
-  if (v <= 18) return 5;
-  if (v <= 22) return 4;
-  if (v <= 26) return 3;
-  if (v <= 32) return 2;
-  return 1;
+  if (v == null || v >= 46) return 0;
+  if (v <= 23) return 5;
+  if (v <= 25) return 4;
+  if (v <= 29) return 3;
+  if (v <= 35) return 2;
+  return 1; // 36-45
 }
 
 export function msftPoints(v) {
-  if (v == null) return 0;
-  if (v >= 10) return 5;
-  if (v >= 8) return 4;
-  if (v >= 6) return 3;
-  if (v >= 4) return 2;
-  return 1;
+  if (v == null || v < 5.0) return 0;
+  if (v >= 10.1) return 5;
+  if (v >= 9.0) return 4;
+  if (v >= 8.1) return 3;
+  if (v >= 7.0) return 2;
+  return 1; // 5.0-6.10
 }
 
 export function participationPoints(durationMinutes) {
   if (!durationMinutes) return 0;
+  // 2pts per 30 minutes
   return Math.floor(durationMinutes / 30) * 2;
+}
+
+// Round duration up to next 30-min bracket
+export function roundUpToNearest30(minutes) {
+  if (!minutes) return 0;
+  return Math.ceil(minutes / 30) * 30;
 }
 
 export function activityTotal(s) {

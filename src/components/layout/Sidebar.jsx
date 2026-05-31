@@ -22,32 +22,48 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'Training',
+    label: 'My Progress',
     items: [
-      { path: '/parade', label: 'Parade State', icon: ClipboardList, level: 0 },
-      { path: '/attendance', label: 'Lesson Attendance', icon: FileCheck, level: 2 },
-      { path: '/schedule', label: 'Training Plan', icon: Calendar, level: 2 },
+      { path: '/progress', label: 'My Progress', icon: Brain, level: 0 },
+    ],
+  },
+  {
+    label: 'Detachment Training',
+    items: [
+      { path: '/schedule', label: 'Training Plan', icon: Calendar, level: 0 },
+    ],
+  },
+  {
+    label: 'Attendance',
+    items: [
+      { path: '/parade', label: 'Parade Nominal Roll', icon: ClipboardList, level: 1 },
+      { path: '/attendance', label: 'Lesson Nominal Roll', icon: FileCheck, level: 2 },
+    ],
+  },
+  {
+    label: 'Training Planning',
+    items: [
+      { path: '/tasks', label: 'Task List', icon: CheckSquare, level: 4 },
       { path: '/training-manager', label: 'Training Manager', icon: Brain, level: 4 },
-      { path: '/training-plan-export', label: 'Export PDF', icon: FileDown, level: 3 },
-    ],
-  },
-  {
-    label: 'Syllabus & Progress',
-    items: [
-      { path: '/syllabus', label: 'Syllabus', icon: BookOpen, level: 0 },
-      { path: '/personal-syllabus', label: 'My Syllabus', icon: BookOpenCheck, level: 0 },
-      { path: '/progress', label: 'Progress Matrix', icon: Brain, level: 3 },
+      { path: '/plan-generator', label: 'Plan Generator', icon: Wand2, level: 4 },
+      { path: '/training-plan-export', label: 'Export PDF', icon: FileDown, level: 4 },
       { path: '/bulk-progress', label: 'Bulk Progress Entry', icon: ClipboardCheck, level: 4 },
-      { path: '/tasks', label: 'Task List', icon: CheckSquare, level: 3 },
     ],
   },
   {
-    label: 'Governance',
+    label: 'Syllabus',
     items: [
-      { path: '/cfav-governance', label: 'CFAV Governance', icon: ShieldCheck, level: 3 },
-      { path: '/wht', label: 'Weapon Handling Tests', icon: Crosshair, level: 0 },
-      { path: '/staff-availability', label: 'My Availability', icon: CalendarCheck, level: 3 },
-      { path: '/instructor-quals', label: 'Instructor Quals', icon: GraduationCap, level: 3 },
+      { path: '/syllabus', label: 'Syllabus', icon: BookOpen, level: 2 },
+      { path: '/personal-syllabus', label: 'My Syllabus', icon: BookOpenCheck, level: 2 },
+      { path: '/wht', label: 'Weapon Handling Tests', icon: Crosshair, level: 2 },
+    ],
+  },
+  {
+    label: 'Staffing',
+    items: [
+      { path: '/cfav-governance', label: 'My Governance', icon: ShieldCheck, level: 2 },
+      { path: '/staff-availability', label: 'My Availability', icon: CalendarCheck, level: 2 },
+      { path: '/instructor-quals', label: 'My Qualifications', icon: GraduationCap, level: 2 },
     ],
   },
   {
@@ -58,17 +74,13 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'Analytics',
+    label: 'Detachment Management',
     items: [
       { path: '/analytics', label: 'Analytics', icon: BarChart2, level: 4 },
-      { path: '/plan-generator', label: 'Plan Generator', icon: Wand2, level: 4 },
-    ],
-  },
-  {
-    label: 'Administration',
-    items: [
-      { path: '/personnel', label: 'Personnel', icon: Users, level: 5 },
-      { path: '/admin', label: 'Admin Controls', icon: Settings, level: 5 },
+      { path: '/personnel', label: 'Personnel', icon: Users, level: 4 },
+      { path: '/cfav-governance-all', label: 'CFAV Governance', icon: ShieldCheck, level: 4 },
+      { path: '/instructor-quals', label: 'Instructor Qualifications', icon: GraduationCap, level: 4 },
+      { path: '/admin', label: 'Admin Controls', icon: Settings, level: 4 },
     ],
   },
   {

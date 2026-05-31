@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Plus, Pencil, Trash2, Search, AlertCircle, Eye } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, Search, AlertCircle, Eye, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, LEVEL_NAMES } from '@/lib/accessLevels';
 
@@ -31,7 +31,8 @@ export default function Personnel() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [starFilter, setStarFilter] = useState('all');
   const [levelFilter, setLevelFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('active'); // default: hide non-active for lower levels
+  const [statusFilter, setStatusFilter] = useState('active');
+  const [sortBy, setSortBy] = useState('surname');
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -111,28 +112,41 @@ export default function Personnel() {
     setOpen(true);
   }
 
-  const filtered = personnel.filter(p => {
-    // Hide non-active personnel from L3 and below
-    const status = p.PersonnelStatus || 'Active';
-    if (!canViewSensitive && status !== 'Active') return false;
+  const STAR_ORDER = { 'Basic': 0, '1 Star': 1, '2 Star': 2, '3 Star': 3, '4 Star': 4 };
 
-    const matchSearch = !search ||
-      p.Surname?.toLowerCase().includes(search.toLowerCase()) ||
-      p.FirstName?.toLowerCase().includes(search.toLowerCase()) ||
-      p.PNumber?.toLowerCase().includes(search.toLowerCase()) ||
-      p.RoleName?.toLowerCase().includes(search.toLowerCase()) ||
-      p.Rank?.toLowerCase().includes(search.toLowerCase());
-    const matchType = typeFilter === 'all' || p.Type === typeFilter;
-    const matchStar = starFilter === 'all' || p.CurrentStarLevel === starFilter;
-    const matchLevel = levelFilter === 'all' || String(p.AccessLevel) === levelFilter;
-    const matchStatus = statusFilter === 'all' || (statusFilter === 'active' ? status === 'Active' : status !== 'Active');
-    return matchSearch && matchType && matchStar && matchLevel && matchStatus;
-  });
+  const filtered = personnel
+    .filter(p => {
+      const status = p.PersonnelStatus || 'Active';
+      if (!canViewSensitive && status !== 'Active') return false;
+      const matchSearch = !search ||
+        p.Surname?.toLowerCase().includes(search.toLowerCase()) ||
+        p.FirstName?.toLowerCase().includes(search.toLowerCase()) ||
+        p.PNumber?.toLowerCase().includes(search.toLowerCase()) ||
+        p.RoleName?.toLowerCase().includes(search.toLowerCase()) ||
+        p.Rank?.toLowerCase().includes(search.toLowerCase());
+      const matchType = typeFilter === 'all' || p.Type === typeFilter;
+      const matchStar = starFilter === 'all' || p.CurrentStarLevel === starFilter;
+      const matchLevel = levelFilter === 'all' || String(p.AccessLevel) === levelFilter;
+      const matchStatus = statusFilter === 'all' || (statusFilter === 'active' ? status === 'Active' : status !== 'Active');
+      return matchSearch && matchType && matchStar && matchLevel && matchStatus;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'star') {
+        const aOrder = STAR_ORDER[a.CurrentStarLevel] ?? 99;
+        const bOrder = STAR_ORDER[b.CurrentStarLevel] ?? 99;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+      }
+      if (sortBy === 'rank') {
+        return (a.Rank || '').localeCompare(b.Rank || '');
+      }
+      // default: surname
+      return (a.Surname || '').localeCompare(b.Surname || '');
+    });
 
   const atLimit = personnel.length >= 999;
 
   return (
-    <AccessGate level={ACCESS_LEVELS.DET_COMMANDER}>
+    <AccessGate level={ACCESS_LEVELS.DET_2IC}>
       <PageHeader
         title="Personnel Manager"
         description={`${personnel.length}/999 records`}
@@ -277,6 +291,17 @@ export default function Personnel() {
                 </SelectContent>
               </Select>
             )}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-40">
+                <ArrowUpDown className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="surname">Sort: Surname</SelectItem>
+                <SelectItem value="star">Sort: Star Level ↑</SelectItem>
+                <SelectItem value="rank">Sort: Rank</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <p className="text-xs text-muted-foreground mt-1">{filtered.length} of {personnel.length} shown</p>
         </CardHeader>
