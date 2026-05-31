@@ -149,6 +149,9 @@
           "user_condition": {
             "role": "admin"
           }
+        },
+        {
+          "data.PersonnelStatus": "Active"
         }
       ]
     },
