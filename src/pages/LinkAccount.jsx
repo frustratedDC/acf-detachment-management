@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Shield, Lock, User, Hash, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usePersonnel } from '@/lib/usePersonnel';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
@@ -16,10 +17,10 @@ export default function LinkAccount() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Bootstrap mode: no personnel records exist at all
+  // Bootstrap / self-link mode
   const [noRecords, setNoRecords] = useState(false);
   const [bootstrapMode, setBootstrapMode] = useState(false);
-  const [bsForm, setBsForm] = useState({ PNumber: '', FirstName: '', Surname: '', Rank: '' });
+  const [bsForm, setBsForm] = useState({ PNumber: '', FirstName: '', Surname: '', Rank: '', AccessLevel: 4, RoleName: 'Detachment Commander' });
   const [bsLoading, setBsLoading] = useState(false);
 
   useEffect(() => {
@@ -46,12 +47,15 @@ export default function LinkAccount() {
     setBsLoading(true);
     setError('');
     try {
-      const res = await base44.functions.invoke('bootstrapAdmin', {
+      const payload = {
         PNumber: bsForm.PNumber.trim(),
         FirstName: bsForm.FirstName.trim(),
         Surname: bsForm.Surname.trim(),
         Rank: bsForm.Rank.trim(),
-      });
+        // If records already exist, use self_link mode so this user can create their own record
+        ...(noRecords ? {} : { mode: 'self_link', AccessLevel: bsForm.AccessLevel, RoleName: bsForm.RoleName }),
+      };
+      const res = await base44.functions.invoke('bootstrapAdmin', payload);
       if (res.data?.error) throw new Error(res.data.error);
       await refresh();
     } catch (err) {
@@ -77,15 +81,19 @@ export default function LinkAccount() {
           <p className="text-muted-foreground mt-1">Link your account to continue</p>
         </div>
 
-        {/* Bootstrap panel — only shown when no personnel records exist */}
-        {noRecords && !bootstrapMode && (
+        {/* Bootstrap / self-link panel */}
+        {!bootstrapMode && (
           <div className="mb-4 p-4 rounded-xl border border-accent/40 bg-accent/5 text-sm">
             <p className="font-semibold text-foreground mb-1 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-accent" />First-time setup detected
+              <ShieldCheck className="w-4 h-4 text-accent" />{noRecords ? 'First-time setup detected' : 'No linked account found'}
             </p>
-            <p className="text-muted-foreground text-xs mb-3">No personnel records exist yet. Create your administrator account to get started.</p>
+            <p className="text-muted-foreground text-xs mb-3">
+              {noRecords
+                ? 'No personnel records exist yet. Create your administrator account to get started.'
+                : "Your login isn't linked to a personnel record. You can create one now, or ask your System Admin to add you and use the link form below."}
+            </p>
             <Button size="sm" className="w-full" onClick={() => setBootstrapMode(true)}>
-              Create Admin Account
+              {noRecords ? 'Create Admin Account' : 'Create My Account'}
             </Button>
           </div>
         )}
@@ -96,7 +104,7 @@ export default function LinkAccount() {
               <CardTitle className="text-base flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-accent" />Create Administrator Account
               </CardTitle>
-              <CardDescription>This will create a Level 6 System Administrator record linked to your login.</CardDescription>
+              <CardDescription>{noRecords ? 'This will create a Level 6 System Administrator record linked to your login.' : 'Create a new personnel record linked to your login.'}</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleBootstrap} className="space-y-3">
@@ -120,6 +128,26 @@ export default function LinkAccount() {
                     <Input value={bsForm.Surname} onChange={e => setBsForm(p => ({...p, Surname: e.target.value}))} placeholder="Surname" className="mt-1" required />
                   </div>
                 </div>
+                {!noRecords && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Access Level</Label>
+                      <Select value={String(bsForm.AccessLevel)} onValueChange={v => setBsForm(p => ({...p, AccessLevel: Number(v)}))}>
+                        <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="6">L6 – System Admin</SelectItem>
+                          <SelectItem value="5">L5 – Det Commander</SelectItem>
+                          <SelectItem value="4">L4 – Senior Instructor</SelectItem>
+                          <SelectItem value="3">L3 – Instructor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Role Name</Label>
+                      <Input value={bsForm.RoleName} onChange={e => setBsForm(p => ({...p, RoleName: e.target.value}))} placeholder="e.g. Instructor" className="mt-1" />
+                    </div>
+                  </div>
+                )}
                 {error && (
                   <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 p-3 rounded-lg">
                     <AlertCircle className="w-4 h-4 shrink-0" />{error}
