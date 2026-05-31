@@ -1,24 +1,21 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from 'react';
 import PageHeader from "@/components/shared/PageHeader";
 import { Shirt } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import UniformRequestForm from '@/components/forms/UniformRequestForm';
 
 export default function UniformExchange() {
+  const [open, setOpen] = useState(true);
+
   return (
-    <div className="min-h-screen">
+    <div className="p-6 space-y-6">
       <PageHeader 
         title="Uniform Exchange" 
         description="Request uniform items and exchanges"
         icon={Shirt}
+        actions={<Button onClick={() => setOpen(true)}>Open Form</Button>}
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Coming Soon</CardTitle>
-          <CardDescription>This feature is currently in development</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Submit and track uniform requests and exchanges.</p>
-        </CardContent>
-      </Card>
+      <UniformRequestForm open={open} onClose={() => setOpen(false)} />
     </div>
   );
 }
