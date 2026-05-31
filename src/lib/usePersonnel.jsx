@@ -50,7 +50,13 @@ export function PersonnelProvider({ children }) {
     if (matches.length === 0) {
       throw new Error('PNumber not found');
     }
-    const record = matches[0];
+    // DEFENSIVE FIX: Sort by created_date ascending (oldest first)
+    const sorted = matches.sort((a, b) => {
+      const dateA = new Date(a.created_date || 0);
+      const dateB = new Date(b.created_date || 0);
+      return dateA - dateB;
+    });
+    const record = sorted[0];
     if (record.Surname.toLowerCase() !== surname.toLowerCase()) {
       throw new Error('Surname does not match');
     }
@@ -63,9 +69,14 @@ export function PersonnelProvider({ children }) {
       LinkedEmailUID: user.email,
     });
     const updated = await base44.entities.PersonnelManager.filter({ PNumber: pNumber });
-    setPersonnel(updated[0]);
+    const updatedSorted = updated.sort((a, b) => {
+      const dateA = new Date(a.created_date || 0);
+      const dateB = new Date(b.created_date || 0);
+      return dateA - dateB;
+    });
+    setPersonnel(updatedSorted[0]);
     setNeedsLinking(false);
-    return updated[0];
+    return updatedSorted[0];
   }
 
   const setViewAs = useCallback((person) => { setViewAsState(person); }, []);
