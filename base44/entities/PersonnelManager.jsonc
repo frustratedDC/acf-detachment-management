@@ -88,32 +88,36 @@
       "description": "Email UID from Base44 Auth"
     },
     "HeadCircumference": {
-      "type": "number",
+      "type": "string",
       "description": "Head circumference in cm"
     },
     "Height": {
-      "type": "number",
+      "type": "string",
       "description": "Height in cm"
     },
     "Chest": {
-      "type": "number",
+      "type": "string",
       "description": "Chest measurement in cm"
     },
     "Waist": {
-      "type": "number",
+      "type": "string",
       "description": "Waist measurement in cm"
     },
     "SeatHips": {
-      "type": "number",
-      "description": "Seat/hips measurement in cm"
+      "type": "string",
+      "description": "Seat/Hips measurement in cm"
     },
     "InnerLeg": {
-      "type": "number",
+      "type": "string",
       "description": "Inner leg measurement in cm"
     },
     "BootSize": {
-      "type": "number",
-      "description": "Boot size (UK)"
+      "type": "string",
+      "description": "Boot size"
+    },
+    "IsBootOrder": {
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [

@@ -1,0 +1,49 @@
+{
+  "name": "KASession",
+  "type": "object",
+  "properties": {
+    "SessionID": {
+      "type": "string",
+      "description": "Unique session identifier"
+    },
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the fitness session"
+    },
+    "StartTime": {
+      "type": "string",
+      "description": "Session start time"
+    },
+    "EndTime": {
+      "type": "string",
+      "description": "Session end time"
+    },
+    "DurationMinutes": {
+      "type": "number",
+      "description": "Total session duration in minutes"
+    },
+    "AssignedStarLevels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Star levels assigned to this session"
+    },
+    "Attendees": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of PNumbers of cadets attending"
+    },
+    "Scores": {
+      "type": "object",
+      "description": "Key-value map of PNumber to activity score subsets"
+    }
+  },
+  "required": [
+    "Date",
+    "StartTime"
+  ]
+}

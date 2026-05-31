@@ -11,69 +11,67 @@
       "format": "date",
       "description": "Date of inspection"
     },
-    "BeretRating": {
-      "type": "number",
-      "minimum": 1,
-      "maximum": 5,
-      "description": "Beret condition rating (1-5)"
-    },
-    "BeretComment": {
+    "InspectedByPNumber": {
       "type": "string",
-      "description": "Optional comment on beret condition"
+      "description": "PNumber of the inspector"
     },
-    "ShirtSmockRating": {
+    "BeretScore": {
       "type": "number",
-      "minimum": 1,
-      "maximum": 5,
-      "description": "Shirt/smock condition rating (1-5)"
+      "description": "Beret condition score"
     },
-    "ShirtSmockComment": {
+    "BeretComments": {
       "type": "string",
-      "description": "Optional comment on shirt/smock condition"
+      "description": "Comments on beret condition"
     },
-    "TrousersRating": {
+    "ShirtSmockScore": {
       "type": "number",
-      "minimum": 1,
-      "maximum": 5,
-      "description": "Trousers condition rating (1-5)"
+      "description": "Shirt/smock condition score"
     },
-    "TrousersComment": {
+    "ShirtSmockComments": {
       "type": "string",
-      "description": "Optional comment on trousers condition"
+      "description": "Comments on shirt/smock condition"
     },
-    "BootsRating": {
+    "TrousersScore": {
       "type": "number",
-      "minimum": 1,
-      "maximum": 5,
-      "description": "Boots condition rating (1-5)"
+      "description": "Trousers condition score"
     },
-    "BootsComment": {
+    "TrousersComments": {
       "type": "string",
-      "description": "Optional comment on boots condition"
+      "description": "Comments on trousers condition"
     },
-    "AccessoriesRating": {
+    "BootsScore": {
       "type": "number",
-      "minimum": 1,
-      "maximum": 5,
-      "description": "Accessories condition rating (1-5)"
+      "description": "Boots condition score"
     },
-    "AccessoriesComment": {
+    "BootsComments": {
       "type": "string",
-      "description": "Optional comment on accessories condition"
+      "description": "Comments on boots condition"
     },
-    "GeneralAppearanceRating": {
+    "AccessoriesScore": {
       "type": "number",
-      "minimum": 1,
-      "maximum": 5,
-      "description": "General appearance rating (1-5)"
+      "description": "Accessories condition score"
     },
-    "GeneralAppearanceComment": {
+    "AccessoriesComments": {
       "type": "string",
-      "description": "Optional comment on general appearance"
+      "description": "Comments on accessories condition"
+    },
+    "AppearanceScore": {
+      "type": "number",
+      "description": "General appearance score"
+    },
+    "AppearanceComments": {
+      "type": "string",
+      "description": "Comments on general appearance"
+    },
+    "TotalScore": {
+      "type": "number",
+      "description": "Total inspection score"
     }
   },
   "required": [
     "PNumber",
-    "Date"
+    "Date",
+    "InspectedByPNumber",
+    "TotalScore"
   ]
 }

@@ -9,15 +9,10 @@
     "RequestType": {
       "type": "string",
       "enum": [
-        "Indent",
+        "Initial Indent",
         "Exchange"
       ],
       "description": "Type of uniform request"
-    },
-    "IsBootOrder": {
-      "type": "boolean",
-      "default": false,
-      "description": "Whether this is a boot order"
     },
     "ItemName": {
       "type": "string",
@@ -25,23 +20,26 @@
     },
     "SizeReturning": {
       "type": "string",
-      "description": "Size of item being returned (for exchanges)"
+      "description": "Size of item being returned (optional)"
     },
     "ReasonForReturn": {
       "type": "string",
-      "description": "Reason for return or exchange"
+      "description": "Reason for return or exchange (optional)"
     },
     "Status": {
       "type": "string",
       "enum": [
         "Pending",
         "Approved",
-        "Ordered",
-        "Received",
-        "Rejected"
+        "Completed"
       ],
       "default": "Pending",
       "description": "Current status of the request"
+    },
+    "DateSubmitted": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the request was submitted"
     }
   },
   "required": [
