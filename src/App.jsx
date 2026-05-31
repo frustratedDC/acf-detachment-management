@@ -39,6 +39,12 @@ import KASessionForm from '@/pages/KASessionForm';
 import KALeaderboard from '@/pages/KALeaderboard';
 import MyProgress from '@/pages/MyProgress';
 import FormsResources from '@/pages/FormsResources';
+import MyGovernance from '@/pages/MyGovernance';
+import MyAvailability from '@/pages/MyAvailability';
+import MyQualifications from '@/pages/MyQualifications';
+import Accounts from '@/pages/Accounts';
+import AllAvailability from '@/pages/AllAvailability';
+import FormCreator from '@/pages/FormCreator';
 
 const AppContent = () => {
   const { personnel, loading, needsLinking } = usePersonnel();
@@ -84,6 +90,12 @@ const AppContent = () => {
         <Route path="/ka-leaderboard" element={<KALeaderboard />} />
         <Route path="/my-progress" element={<MyProgress />} />
         <Route path="/forms-resources" element={<FormsResources />} />
+        <Route path="/my-governance" element={<MyGovernance />} />
+        <Route path="/my-availability" element={<MyAvailability />} />
+        <Route path="/my-qualifications" element={<MyQualifications />} />
+        <Route path="/accounts" element={<Accounts />} />
+        <Route path="/all-availability" element={<AllAvailability />} />
+        <Route path="/form-creator" element={<FormCreator />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

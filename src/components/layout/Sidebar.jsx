@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { usePersonnel } from '@/lib/usePersonnel';
-import { hasAccess, ACCESS_LEVELS, LEVEL_NAMES } from '@/lib/accessLevels';
+import { hasAccess, ACCESS_LEVELS, LEVEL_NAMES, isAdultInstructor } from '@/lib/accessLevels';
 import {
   LayoutDashboard, Users, BookOpen, Calendar, ClipboardList,
   FileCheck, Brain, CheckSquare, Settings, HelpCircle, Shield,
@@ -17,8 +17,6 @@ const NAV_GROUPS = [
     label: 'Overview',
     items: [
       { path: '/', label: 'Dashboard', icon: LayoutDashboard, level: 0 },
-      { path: '/notices', label: 'Notices', icon: Megaphone, level: 0 },
-      { path: '/calendar', label: 'Training Calendar', icon: CalendarDays, level: 0 },
     ],
   },
   {
@@ -26,11 +24,14 @@ const NAV_GROUPS = [
     items: [
       { path: '/my-progress', label: 'My Progress', icon: TrendingUp, level: 0 },
     ],
+    hideIfAdult: true, // Hide for L3+
   },
   {
     label: 'Detachment Training',
     items: [
-      { path: '/schedule', label: 'Training Plan', icon: Calendar, level: 0 },
+      { path: '/calendar', label: 'View Calendar', icon: CalendarDays, level: 0 },
+      { path: '/schedule', label: 'Monthly Training Plan', icon: Calendar, level: 0 },
+      { path: '/training-calendar', label: 'Upcoming Training/Events', icon: CalendarCheck, level: 0 },
     ],
   },
   {
@@ -61,26 +62,22 @@ const NAV_GROUPS = [
   {
     label: 'Staffing',
     items: [
-      { path: '/cfav-governance', label: 'My Governance', icon: ShieldCheck, level: 2 },
-      { path: '/staff-availability', label: 'My Availability', icon: CalendarCheck, level: 2 },
-      { path: '/instructor-quals', label: 'My Qualifications', icon: GraduationCap, level: 2 },
+      { path: '/my-governance', label: 'My Governance', icon: ShieldCheck, level: 3 },
+      { path: '/my-availability', label: 'My Availability', icon: CalendarCheck, level: 2 },
+      { path: '/my-qualifications', label: 'My Qualifications', icon: GraduationCap, level: 2 },
     ],
-    hideIfLevel: 4,
-  },
-  {
-    label: 'Keeping Active',
-    items: [
-      { path: '/ka-sessions', label: 'KA Sessions', icon: Dumbbell, level: 2 },
-      { path: '/ka-leaderboard', label: 'KA Leaderboard', icon: Trophy, level: 2 },
-    ],
+    hideIfAdult: false,
   },
   {
     label: 'Detachment Management',
     items: [
       { path: '/analytics', label: 'Analytics', icon: BarChart2, level: 4 },
       { path: '/personnel', label: 'Personnel', icon: Users, level: 4 },
+      { path: '/accounts', label: 'Accounts', icon: Shield, level: 4 },
       { path: '/cfav-governance', label: 'CFAV Governance', icon: ShieldCheck, level: 4 },
       { path: '/instructor-quals', label: 'Instructor Qualifications', icon: GraduationCap, level: 4 },
+      { path: '/all-availability', label: 'All Instructor Availability', icon: CalendarCheck, level: 4 },
+      { path: '/form-creator', label: 'Form & Resource Creator', icon: FolderOpen, level: 4 },
       { path: '/admin', label: 'Admin Controls', icon: Settings, level: 4 },
     ],
   },
@@ -142,7 +139,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         {NAV_GROUPS.map(group => {
           const visibleItems = group.items.filter(item => hasAccess(accessLevel, item.level));
           if (visibleItems.length === 0) return null;
-          if (group.hideIfLevel !== undefined && hasAccess(accessLevel, group.hideIfLevel)) return null;
+          if (group.hideIfAdult && isAdultInstructor(accessLevel)) return null;
           const isGroupCollapsed = !!collapsedGroups[group.label];
           const hasActiveItem = visibleItems.some(item => location.pathname === item.path);
 
