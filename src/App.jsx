@@ -34,6 +34,7 @@ import InstructorQualMatrix from '@/pages/InstructorQualMatrix';
 import AnalyticsDashboard from '@/pages/AnalyticsDashboard';
 import TrainingPlanGenerator from '@/pages/TrainingPlanGenerator';
 import KASessions from '@/pages/KASessions';
+import KeepingActiveTracker from '@/pages/KeepingActiveTracker';
 import KASessionForm from '@/pages/KASessionForm';
 import KALeaderboard from '@/pages/KALeaderboard';
 import MyProgress from '@/pages/MyProgress';
@@ -85,6 +86,7 @@ const AppContent = () => {
         <Route path="/analytics" element={<AnalyticsDashboard />} />
         <Route path="/plan-generator" element={<TrainingPlanGenerator />} />
         <Route path="/ka-sessions" element={<KASessions />} />
+        <Route path="/keeping-active" element={<KeepingActiveTracker />} />
         <Route path="/ka-session-new" element={<KASessionForm />} />
         <Route path="/ka-leaderboard" element={<KALeaderboard />} />
         <Route path="/my-progress" element={<MyProgress />} />

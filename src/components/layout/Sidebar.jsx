@@ -78,6 +78,12 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: 'Keeping Active',
+    items: [
+      { path: '/keeping-active', label: 'Keeping Active Tracker', icon: Dumbbell, level: 0 },
+    ],
+  },
+  {
     label: 'Detachment Management',
     items: [
       { path: '/analytics', label: 'Analytics', icon: BarChart2, level: 4 },
