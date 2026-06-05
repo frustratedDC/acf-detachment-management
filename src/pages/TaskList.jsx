@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil, Shirt, ShieldCheck } from 'lucide-react';
+import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil, Shirt, ShieldCheck, HeartHandshake } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
@@ -63,24 +63,51 @@ export default function TaskList() {
 
   const pendingAccessRequests = accessRequests.filter(r => r.Status === 'Pending');
 
+  const { data: ceRequests = [] } = useQuery({
+    queryKey: ['ce-requests'],
+    queryFn: () => base44.entities.CommunityEngagementLedger.filter({ Status: 'Pending' }),
+  });
+
+  const approveCEMutation = useMutation({
+    mutationFn: (entry) => base44.entities.CommunityEngagementLedger.update(entry.id, {
+      Status: 'Approved',
+      ApprovedByPNumber: me?.PNumber,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ce-requests'] });
+      toast.success('CE hours approved');
+    },
+  });
+
+  const rejectCEMutation = useMutation({
+    mutationFn: (entry) => base44.entities.CommunityEngagementLedger.update(entry.id, {
+      Status: 'Rejected',
+      ApprovedByPNumber: me?.PNumber,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ce-requests'] });
+      toast.success('CE hours rejected');
+    },
+  });
+
   const approveAccessMutation = useMutation({
     mutationFn: async ({ req }) => {
-      // 1. Update the request status
       await base44.entities.AccessRequest.update(req.id, {
         Status: 'Approved',
         RespondedByPNumber: me?.PNumber,
         ResponseDate: format(new Date(), 'yyyy-MM-dd'),
       });
-      // 2. Grant the feature flag on the cadet's PersonnelManager record
       const records = await base44.entities.PersonnelManager.filter({ PNumber: req.RequesterPNumber });
       if (records.length > 0) {
-        await base44.entities.PersonnelManager.update(records[0].id, { KeepingActiveAccess: true });
+        const flagField = req.FeatureKey === 'CEAccess' ? { CEAccess: true } : { KeepingActiveAccess: true };
+        await base44.entities.PersonnelManager.update(records[0].id, flagField);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['access-requests'] });
       queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
-      toast.success('Access approved — cadet can now use the Keeping Active Tracker');
+      const label = vars.req.FeatureKey === 'CEAccess' ? 'Community Engagement Tracker' : 'Keeping Active Tracker';
+      toast.success(`Access approved — cadet can now use the ${label}`);
     },
     onError: () => toast.error('Failed to approve access'),
   });
@@ -207,6 +234,10 @@ export default function TaskList() {
           <TabsTrigger value="access-requests" className="gap-1">
             <ShieldCheck className="w-3.5 h-3.5" />
             Access ({pendingAccessRequests.length})
+          </TabsTrigger>
+          <TabsTrigger value="ce-requests" className="gap-1">
+            <HeartHandshake className="w-3.5 h-3.5" />
+            CE Hours ({ceRequests.length})
           </TabsTrigger>
         </TabsList>
 
@@ -357,6 +388,43 @@ export default function TaskList() {
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="ce-requests">
+          <Card>
+            <CardContent className="p-2">
+              {ceRequests.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground text-sm">No pending CE hour submissions.</p>
+              ) : (
+                <div className="space-y-2">
+                  {ceRequests.map(entry => {
+                    const cadet = personnelMap[entry.CadetPNumber];
+                    return (
+                      <div key={entry.id} className="p-3 rounded-lg border hover:bg-muted/30 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold">
+                              {cadet ? `${cadet.Rank || ''} ${cadet.Surname}`.trim() : entry.CadetPNumber}
+                              {' — '}<span className="text-primary">{entry.Hours}h</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">{entry.Date} · {entry.Description}</p>
+                          </div>
+                          <Badge variant="outline" className="text-xs shrink-0">Pending</Badge>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="text-chart-2 hover:text-chart-2" onClick={() => approveCEMutation.mutate(entry)}>
+                            <Check className="w-3.5 h-3.5 mr-1" />Approve
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => rejectCEMutation.mutate(entry)}>
+                            <X className="w-3.5 h-3.5 mr-1" />Reject
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

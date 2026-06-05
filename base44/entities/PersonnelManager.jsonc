@@ -134,6 +134,11 @@
       "type": "boolean",
       "default": false,
       "description": "If true, this cadet has been granted explicit access to the Keeping Active Tracker by an Adult Instructor, regardless of rank."
+    },
+    "CEAccess": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, this cadet has been granted explicit access to the Community Engagement Tracker by an Adult Instructor, regardless of rank."
     }
   },
   "required": [

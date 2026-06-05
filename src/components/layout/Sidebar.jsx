@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
   CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown,
   CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, Trophy, TrendingUp, FolderOpen,
-  AlertCircle, Shirt
+  AlertCircle, Shirt, HeartHandshake
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -80,6 +80,7 @@ const NAV_GROUPS = [
     label: 'Keeping Active',
     items: [
       { path: '/keeping-active', label: 'Keeping Active Tracker', icon: Dumbbell, level: 0 },
+      { path: '/community-engagement', label: 'Community Engagement', icon: HeartHandshake, level: 0 },
     ],
   },
   {

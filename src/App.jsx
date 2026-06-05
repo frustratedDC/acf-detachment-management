@@ -50,6 +50,7 @@ import UniformExchange from '@/pages/UniformExchange';
 import CourseRequest from '@/pages/CourseRequest';
 import ReportIssue from '@/pages/ReportIssue';
 import HealthyMinds from '@/pages/HealthyMinds';
+import CommunityEngagement from '@/pages/CommunityEngagement';
 
 const AppContent = () => {
   const { personnel, loading } = usePersonnel();
@@ -104,6 +105,7 @@ const AppContent = () => {
         <Route path="/course-request" element={<CourseRequest />} />
         <Route path="/report-issue" element={<ReportIssue />} />
         <Route path="/healthy-minds" element={<HealthyMinds />} />
+        <Route path="/community-engagement" element={<CommunityEngagement />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

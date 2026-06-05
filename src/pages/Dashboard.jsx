@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard, Users, Calendar, ClipboardList, BookOpen,
-  AlertTriangle, CheckCircle2, Megaphone, CalendarDays, ArrowRight, Check
+  AlertTriangle, CheckCircle2, Megaphone, CalendarDays, ArrowRight, Check, HeartHandshake
 } from 'lucide-react';
 import { format, parseISO, addDays } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
@@ -120,6 +120,17 @@ export default function Dashboard() {
   const isAcknowledged = (notice) =>
     (notice.AcknowledgedBy || []).includes(personnel?.PNumber);
 
+  // CE hours (cadets only)
+  const { data: myCEEntries = [] } = useQuery({
+    queryKey: ['ce-mine', personnel?.PNumber],
+    queryFn: () => base44.entities.CommunityEngagementLedger.filter({ CadetPNumber: personnel?.PNumber }),
+    enabled: !!personnel?.PNumber && isCadet(level),
+  });
+
+  const myCETotalHours = myCEEntries
+    .filter(e => e.Status === 'Approved')
+    .reduce((s, e) => s + (e.Hours || 0), 0);
+
   // My WHT records
   const { data: myWHTs = [] } = useQuery({
     queryKey: ['wht-mine', personnel?.PNumber],
@@ -224,6 +235,49 @@ export default function Dashboard() {
                     </Button>
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Community Engagement widget (cadets only) */}
+          {isCadet(level) && (
+            <Card className="border-primary/20">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <HeartHandshake className="w-4 h-4 text-primary" />
+                    Community Engagement
+                  </CardTitle>
+                  <Link to="/community-engagement">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                      View <ArrowRight className="w-3 h-3" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-3xl font-bold">{myCETotalHours.toFixed(1)}h</span>
+                  <span className="text-xs text-muted-foreground">approved hours</span>
+                </div>
+                {['1 Star', '2 Star'].map(sl => {
+                  const req = sl === '1 Star' ? 4 : 8;
+                  const met = myCETotalHours >= req;
+                  return (
+                    <div key={sl} className="mb-2">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-0.5">
+                        <span>{sl}: {req}h (Required)</span>
+                        <span>{met ? '✓ Met' : `${Math.max(0, req - myCETotalHours).toFixed(1)}h remaining`}</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-1.5">
+                        <div
+                          className={`rounded-full h-1.5 ${met ? 'bg-chart-2' : 'bg-primary'}`}
+                          style={{ width: `${Math.min(100, (myCETotalHours / req) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
           )}

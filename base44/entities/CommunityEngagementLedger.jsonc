@@ -1,0 +1,72 @@
+{
+  "name": "CommunityEngagementLedger",
+  "type": "object",
+  "properties": {
+    "CadetPNumber": {
+      "type": "string",
+      "description": "PNumber of the cadet submitting hours"
+    },
+    "CadetName": {
+      "type": "string",
+      "description": "Display name of the cadet"
+    },
+    "Hours": {
+      "type": "number",
+      "description": "Number of community engagement hours"
+    },
+    "Description": {
+      "type": "string",
+      "description": "Description of the activity undertaken"
+    },
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the activity took place"
+    },
+    "ApprovedByPNumber": {
+      "type": "string",
+      "description": "PNumber of the approving Adult Instructor"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Pending",
+      "description": "Approval status"
+    }
+  },
+  "required": [
+    "CadetPNumber",
+    "Hours",
+    "Description",
+    "Date"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "data.CadetPNumber": "{{user.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

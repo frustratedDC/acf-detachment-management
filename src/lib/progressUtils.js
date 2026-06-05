@@ -142,9 +142,12 @@ export function getWhtAlerts(whtRecords, warnDays = 30, today = new Date()) {
     .sort((a, b) => a.daysRemaining - b.daysRemaining);
 }
 
+// CE hour requirements for mandatory gates
+const CE_MANDATORY_GATES = { '1 Star': 4, '2 Star': 8 };
+
 /**
  * Checks if a cadet should be promoted to the next star level.
- * Uses dual-logic completion engine.
+ * Uses dual-logic completion engine + CE hours gate for 1 Star and 2 Star.
  */
 export async function checkAndPromoteCadet(cadetPNumber, currentStarLevel, syllabus, allProgress) {
   const approvedCodes = new Set(
@@ -152,6 +155,20 @@ export async function checkAndPromoteCadet(cadetPNumber, currentStarLevel, sylla
       .filter(p => p.CadetPNumber === cadetPNumber && p.Status === 'Approved')
       .map(p => p.LessonCode)
   );
+
+  // CE hours gate — check mandatory requirement for current star level before advancing
+  const ceGateHours = CE_MANDATORY_GATES[currentStarLevel];
+  if (ceGateHours) {
+    const ceLedger = await base44.entities.CommunityEngagementLedger.filter({
+      CadetPNumber: cadetPNumber,
+      Status: 'Approved',
+    });
+    const totalCEHours = ceLedger.reduce((s, e) => s + (e.Hours || 0), 0);
+    if (totalCEHours < ceGateHours) {
+      // CE hours requirement not met — skip promotion
+      return null;
+    }
+  }
 
   const ready = isReadyForAdvancement(currentStarLevel, syllabus, approvedCodes);
 
