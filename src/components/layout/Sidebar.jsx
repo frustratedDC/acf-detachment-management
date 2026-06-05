@@ -7,8 +7,7 @@ import {
   FileCheck, Brain, CheckSquare, Settings, HelpCircle, Shield,
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
   CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown,
-  CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, Trophy, TrendingUp, FolderOpen,
-  AlertCircle, Shirt
+  CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, Trophy, TrendingUp, FolderOpen
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -66,15 +65,6 @@ const NAV_GROUPS = [
       { path: '/my-governance', label: 'My Governance', icon: ShieldCheck, level: 3 },
       { path: '/my-availability', label: 'My Availability', icon: CalendarCheck, level: 2 },
       { path: '/my-qualifications', label: 'My Qualifications', icon: GraduationCap, level: 2 },
-    ],
-  },
-  {
-    label: 'Forms & Resources',
-    items: [
-      { path: '/uniform-exchange', label: 'Uniform Exchange', icon: Shirt, level: 0 },
-      { path: '/course-request', label: 'Course Request', icon: BookOpen, level: 0 },
-      { path: '/report-issue', label: 'Report Issue to DC', icon: AlertCircle, level: 0 },
-      { path: '/healthy-minds', label: 'Healthy Minds', icon: Brain, level: 0 },
     ],
   },
   {
