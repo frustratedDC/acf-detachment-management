@@ -8,7 +8,7 @@ import KAStepActivities from "@/components/ka/KAStepActivities";
 import KAStepBriefing from "@/components/ka/KAStepBriefing";
 import KAStepScoring from "@/components/ka/KAStepScoring";
 import KAStepReview from "@/components/ka/KAStepReview";
-import KALogBookEntry from "@/components/ka/KALogBookEntry.jsx";
+import KALogBookEntry from "@/components/ka/KALogBookEntry";
 
 const STEPS = [
   { num: 1, label: "Attendance" },
