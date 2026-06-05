@@ -11,6 +11,8 @@
 import { base44 } from '@/api/base44Client';
 
 export const STAR_ORDER = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
+// Star levels that are cadet-progression levels (Adult excluded)
+export const CADET_STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
 
 // Qualifications that grant Cadet Instructor access (L2)
 const INSTRUCTOR_QUALS = ['JCIC', 'SCIC'];

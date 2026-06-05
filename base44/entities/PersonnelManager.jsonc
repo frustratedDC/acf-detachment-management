@@ -42,9 +42,10 @@
         "1 Star",
         "2 Star",
         "3 Star",
-        "4 Star"
+        "4 Star",
+        "Adult"
       ],
-      "description": "Current star level (Cadets only)"
+      "description": "Current star level. 'Adult' is auto-assigned to Adult Instructors and excluded from cadet progression."
     },
     "PersonnelStatus": {
       "type": "string",

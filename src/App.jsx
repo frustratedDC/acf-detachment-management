@@ -78,6 +78,7 @@ const AppContent = () => {
         <Route path="/admin" element={<AdminControls />} />
         <Route path="/training-plan-export" element={<TrainingPlanExport />} />
         <Route path="/calendar" element={<TrainingCalendar />} />
+        <Route path="/training-calendar" element={<TrainingCalendar />} />
         <Route path="/bulk-progress" element={<BulkProgressEntry />} />
         <Route path="/cfav-governance" element={<CFAVGovernance />} />
         <Route path="/notices" element={<ImportantNotices />} />

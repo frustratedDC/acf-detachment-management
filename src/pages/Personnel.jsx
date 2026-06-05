@@ -117,7 +117,7 @@ export default function Personnel() {
     setOpen(true);
   }
 
-  const STAR_ORDER = { 'Basic': 0, '1 Star': 1, '2 Star': 2, '3 Star': 3, '4 Star': 4 };
+  const STAR_ORDER = { 'Basic': 0, '1 Star': 1, '2 Star': 2, '3 Star': 3, '4 Star': 4, 'Adult': 99 };
 
   // Archived cadets (struck off strength)
   const archivedCadets = personnel.filter(p => p.IsArchived === true);
@@ -222,14 +222,18 @@ export default function Personnel() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label>Type</Label>
-                      <Select value={form.Type} onValueChange={(v) => setForm(p => ({ ...p, Type: v }))}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Cadet">Cadet</SelectItem>
-                          <SelectItem value="Adult Instructor">Adult Instructor</SelectItem>
-                        </SelectContent>
-                      </Select>
+                     <Label>Type</Label>
+                     <Select value={form.Type} onValueChange={(v) => setForm(p => ({
+                       ...p,
+                       Type: v,
+                       CurrentStarLevel: v === 'Adult Instructor' ? 'Adult' : (p.CurrentStarLevel === 'Adult' ? 'Basic' : p.CurrentStarLevel)
+                     }))}>
+                       <SelectTrigger><SelectValue /></SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="Cadet">Cadet</SelectItem>
+                         <SelectItem value="Adult Instructor">Adult Instructor</SelectItem>
+                       </SelectContent>
+                     </Select>
                     </div>
                     <div>
                       <Label>Access Level</Label>
@@ -249,7 +253,7 @@ export default function Personnel() {
                       <Input value={form.RoleName} onChange={(e) => setForm(p => ({ ...p, RoleName: e.target.value }))} placeholder="e.g. Sergeant, Officer" />
                     </div>
                     <div>
-                       <Label>Star Level (Cadets)</Label>
+                       <Label>Star Level</Label>
                        <Select value={form.CurrentStarLevel} onValueChange={(v) => setForm(p => ({ ...p, CurrentStarLevel: v }))}>
                          <SelectTrigger><SelectValue /></SelectTrigger>
                          <SelectContent>
@@ -258,6 +262,7 @@ export default function Personnel() {
                            <SelectItem value="2 Star">2 Star</SelectItem>
                            <SelectItem value="3 Star">3 Star</SelectItem>
                            <SelectItem value="4 Star">4 Star</SelectItem>
+                           <SelectItem value="Adult">Adult</SelectItem>
                          </SelectContent>
                        </Select>
                      </div>
@@ -314,14 +319,17 @@ export default function Personnel() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="Search name, PNumber, rank, role..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
             </div>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="All Types" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="Cadet">Cadet</SelectItem>
-                <SelectItem value="Adult Instructor">Instructor</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex rounded-md border border-input overflow-hidden shrink-0">
+              {[['all', 'All'], ['Cadet', 'Cadets'], ['Adult Instructor', 'Adults']].map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => setTypeFilter(val)}
+                  className={`px-3 py-1.5 text-sm font-medium transition-colors border-r last:border-r-0 border-input ${typeFilter === val ? 'bg-primary text-primary-foreground' : 'bg-transparent text-foreground hover:bg-muted'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <Select value={starFilter} onValueChange={setStarFilter}>
               <SelectTrigger className="w-36"><SelectValue placeholder="Star Level" /></SelectTrigger>
               <SelectContent>

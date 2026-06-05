@@ -38,7 +38,7 @@ function StatBox({ label, value, sub, color = 'text-primary' }) {
 export default function MyProgress() {
   const { personnel } = usePersonnel();
   const pnum = personnel?.PNumber;
-  const isAdult = personnel?.Type === 'Adult Instructor';
+  const isAdult = personnel?.Type === 'Adult Instructor' || personnel?.CurrentStarLevel === 'Adult';
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
 
