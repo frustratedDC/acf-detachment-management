@@ -9,6 +9,7 @@ import KAStepBriefing from "@/components/ka/KAStepBriefing";
 import KAStepScoring from "@/components/ka/KAStepScoring";
 import KAStepReview from "@/components/ka/KAStepReview";
 import KALogBookEntry from "@/components/ka/KALogBookEntry";
+import { bjMax } from "@/lib/kaScoring";
 
 const STEPS = [
   { num: 1, label: "Attendance" },
@@ -44,11 +45,16 @@ export default function KeepingActiveTracker() {
   const [sessionEndTime, setSessionEndTime] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [historicalSessions, setHistoricalSessions] = useState([]);
 
   useEffect(() => {
-    base44.entities.PersonnelManager.list()
-      .then(records => setPersonnel(records))
-      .finally(() => setLoadingPersonnel(false));
+    Promise.all([
+      base44.entities.PersonnelManager.list(),
+      base44.entities.KA_Session.filter({}),
+    ]).then(([pRecords, kaSessions]) => {
+      setPersonnel(pRecords);
+      setHistoricalSessions(kaSessions);
+    }).finally(() => setLoadingPersonnel(false));
   }, []);
 
   const personnelMap = useMemo(() => {
@@ -76,7 +82,7 @@ export default function KeepingActiveTracker() {
     setSubmitting(true);
     const date = sessionStartTime?.toISOString().split('T')[0];
 
-    // Build attendee scores array for KASession
+    // Build attendee scores array for KAFitnessSession
     const attendeeScores = rows.map(row => ({
       PNumber: row.pnum,
       BroadJump1: row.s.BJ1 ?? null,
@@ -87,7 +93,6 @@ export default function KeepingActiveTracker() {
       ShuttleRun: row.s.Shuttle ?? null,
     }));
 
-    // Save KASession record
     await base44.entities.KAFitnessSession.create({
       Date: date,
       StartTime: sessionStartTime?.toTimeString().slice(0, 5),
@@ -115,12 +120,14 @@ export default function KeepingActiveTracker() {
         MSFT: row.s.MSFT_skip ? null : msftVal,
       });
 
-      // Log cumulative points to KA_LogBook
+      const bonuses = row.bonuses || { sessionHighs: 0, pbsBroken: 0 };
+      const finalTotal = row.activityTotal + participationPts + bonuses.sessionHighs + bonuses.pbsBroken;
+
       await base44.entities.KA_LogBook.create({
         Date: date,
         Name: row.pnum,
-        Points: row.total,
-        Notes: `Session auto-score: ${roundedMinutes}min, ${row.activityTotal} activity pts + ${participationPts} participation pts`,
+        Points: finalTotal,
+        Notes: `Session auto-score: ${roundedMinutes}min | Activity: ${row.activityTotal} | Part: +${participationPts} | Session Highs: +${bonuses.sessionHighs} | PBs: +${bonuses.pbsBroken}`,
         Entered_By: "system",
       });
     }
@@ -270,6 +277,7 @@ export default function KeepingActiveTracker() {
                     sessionStartTime={sessionStartTime}
                     sessionEndTime={sessionEndTime}
                     selectedActivities={selectedActivities}
+                    historicalSessions={historicalSessions}
                     onSubmit={handleSubmit}
                     submitting={submitting}
                     submitted={submitted}
