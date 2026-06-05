@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Brain, AlertTriangle, CheckCircle2, Users, Lightbulb,
-  Loader2, PlusCircle, Search, TrendingUp, BookOpen
+  Loader2, PlusCircle, Search, TrendingUp, BookOpen, SortAsc
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -29,6 +29,7 @@ export default function TrainingManager() {
   const [search, setSearch] = useState('');
   const [addingLesson, setAddingLesson] = useState(null); // lessonCode being added
   const [planDate, setPlanDate] = useState(today);
+  const [prioritized, setPrioritized] = useState(true); // mandatory-first toggle
 
   const { data: schedule = [] } = useQuery({
     queryKey: ['schedule-all'],
@@ -94,14 +95,20 @@ export default function TrainingManager() {
 
   const allSubjects = useMemo(() => [...new Set(lessonGaps.map(l => l.SubjectName))].sort(), [lessonGaps]);
 
-  const filteredGaps = useMemo(() => lessonGaps.filter(l => {
-    if (filterStar !== 'all' && l.StarLevel !== filterStar) return false;
-    if (filterSubject !== 'all' && l.SubjectName !== filterSubject) return false;
-    if (search && !l.LessonName.toLowerCase().includes(search.toLowerCase()) &&
-        !l.LessonCode.toLowerCase().includes(search.toLowerCase()) &&
-        !l.SubjectName.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  }), [lessonGaps, filterStar, filterSubject, search]);
+  const filteredGaps = useMemo(() => {
+    const filtered = lessonGaps.filter(l => {
+      if (filterStar !== 'all' && l.StarLevel !== filterStar) return false;
+      if (filterSubject !== 'all' && l.SubjectName !== filterSubject) return false;
+      if (search && !l.LessonName.toLowerCase().includes(search.toLowerCase()) &&
+          !l.LessonCode.toLowerCase().includes(search.toLowerCase()) &&
+          !l.SubjectName.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    });
+    if (prioritized) {
+      filtered.sort((a, b) => (b.IsMandatory ? 1 : 0) - (a.IsMandatory ? 1 : 0) || b.missingCount - a.missingCount);
+    }
+    return filtered;
+  }, [lessonGaps, filterStar, filterSubject, search, prioritized]);
 
   // --- Exception monitor ---
   const presentPNumbers = new Set(paradeState.filter(p => p.AttendanceStatus === 'Present').map(p => p.UserPNumber));
@@ -265,7 +272,16 @@ Provide 3-5 prioritized recommendations for upcoming training nights. Be concise
               Cadet Progression Gaps ({filteredGaps.length} lessons need covering)
             </CardTitle>
             {/* Add to plan controls */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <Button
+                size="sm"
+                variant={prioritized ? "default" : "outline"}
+                className="h-8 text-xs gap-1"
+                onClick={() => setPrioritized(p => !p)}
+              >
+                <SortAsc className="w-3.5 h-3.5" />
+                {prioritized ? 'Prioritized' : 'Default Sort'}
+              </Button>
               <Input
                 type="date"
                 value={planDate}
@@ -307,7 +323,7 @@ Provide 3-5 prioritized recommendations for upcoming training nights. Be concise
             {filteredGaps.map(lesson => {
               const isAdding = addingLesson === lesson.LessonCode;
               return (
-                <div key={lesson.LessonCode} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/40 border border-transparent hover:border-border transition-colors">
+                <div key={lesson.LessonCode} className={`flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/40 border transition-colors ${lesson.IsMandatory ? 'border-l-2 border-l-destructive border-r-transparent border-t-transparent border-b-transparent hover:border-r-border hover:border-t-border hover:border-b-border bg-destructive/5' : 'border-transparent hover:border-border'}`}>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium">{lesson.LessonName}</span>
