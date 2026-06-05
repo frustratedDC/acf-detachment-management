@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import PageHeader from "@/components/shared/PageHeader";
-import { Dumbbell, ChevronRight, BookOpen, Lock, Send } from "lucide-react";
+import { Dumbbell, ChevronRight, BookOpen, Lock, Send, History, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { ACCESS_LEVELS, hasAccess } from "@/lib/accessLevels";
 import { format } from "date-fns";
@@ -15,6 +15,7 @@ import KAStepBriefing from "@/components/ka/KAStepBriefing";
 import KAStepScoring from "@/components/ka/KAStepScoring";
 import KAStepReview from "@/components/ka/KAStepReview";
 import KALogBookEntry from "@/components/ka/KALogBookEntry";
+import KAHistoryView from "@/components/ka/KAHistoryView";
 import { bjMax } from "@/lib/kaScoring";
 
 const STEPS = [
@@ -37,7 +38,9 @@ export default function KeepingActiveTracker() {
   const [checkingRequest, setCheckingRequest] = useState(true);
 
   // Session state
-  const [mode, setMode] = useState("session");
+  // Read ?tab=history from URL to auto-open history tab
+  const initialTab = typeof window !== 'undefined' && window.location.search.includes('tab=history') ? 'history' : 'session';
+  const [mode, setMode] = useState(initialTab);
   const [step, setStep] = useState(1);
   const [personnel, setPersonnel] = useState([]);
   const [loadingPersonnel, setLoadingPersonnel] = useState(true);
@@ -242,7 +245,7 @@ export default function KeepingActiveTracker() {
       />
 
       {/* Mode tabs */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 flex-wrap">
         <button
           onClick={() => setMode("session")}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${mode === "session" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}
@@ -254,6 +257,12 @@ export default function KeepingActiveTracker() {
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${mode === "logbook" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}
         >
           <BookOpen className="w-4 h-4" />Log Book Entry
+        </button>
+        <button
+          onClick={() => setMode("history")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${mode === "history" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}
+        >
+          <History className="w-4 h-4" />My History
         </button>
       </div>
 
@@ -276,6 +285,11 @@ export default function KeepingActiveTracker() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* History mode */}
+      {mode === "history" && (
+        <KAHistoryView pnum={me?.PNumber} promotionDate={me?.PromotionDate} />
       )}
 
       {/* Session Tracker mode */}

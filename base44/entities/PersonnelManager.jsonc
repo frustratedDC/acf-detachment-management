@@ -47,6 +47,11 @@
       ],
       "description": "Current star level. 'Adult' is auto-assigned to Adult Instructors and excluded from cadet progression."
     },
+    "PromotionDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the cadet was last promoted to their CurrentStarLevel. Used to calculate KA points for the current level."
+    },
     "PersonnelStatus": {
       "type": "string",
       "enum": [

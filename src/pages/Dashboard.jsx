@@ -15,6 +15,7 @@ import { format, parseISO, addDays } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import MyInspections from '@/components/dashboard/MyInspections';
+import KADashboardWidget from '@/components/dashboard/KADashboardWidget';
 
 const PRIORITY_COLORS = {
   Urgent: 'border-l-4 border-destructive bg-destructive/5',
@@ -132,6 +133,7 @@ export default function Dashboard() {
     .reduce((s, e) => s + (e.Hours || 0), 0);
 
   // My WHT records
+
   const { data: myWHTs = [] } = useQuery({
     queryKey: ['wht-mine', personnel?.PNumber],
     queryFn: () => base44.entities.WeaponHandlingTest.filter({ PNumber: personnel?.PNumber }),
@@ -281,6 +283,9 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           )}
+
+          {/* KA Points widget (cadets only) */}
+          {isCadet(level) && <KADashboardWidget personnel={personnel} />}
 
           {/* My Inspections (Cadets only) */}
           {isCadet(level) && <MyInspections />}

@@ -200,6 +200,8 @@ export async function checkAndPromoteCadet(cadetPNumber, currentStarLevel, sylla
 
   if (newStarLevel && rec.CurrentStarLevel === currentStarLevel) {
     updates.CurrentStarLevel = newStarLevel;
+    // Stamp the promotion date so KA "current level" points can be scoped correctly
+    updates.PromotionDate = new Date().toISOString().split('T')[0];
   }
 
   if (earnedQual && (rec.AccessLevel ?? 0) < 2) {
