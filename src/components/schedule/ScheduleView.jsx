@@ -117,7 +117,12 @@ export default function ScheduleView({ schedule, isLoading, canEdit, onEdit, onD
                                         <span className="text-sm font-semibold">{entry.LessonName || entry.LessonCode}</span>
                                       </div>
                                       <p className="text-xs text-muted-foreground">
-                                        {[entry.InstructorPNumber, entry.DressCode, entry.Location].filter(Boolean).join(' · ')}
+                                        {[
+                                          entry.InstructorPNumber,
+                                          entry.Instructor2PNumber ? `+${entry.Instructor2PNumber}` : null,
+                                          entry.DressCode,
+                                          entry.Location
+                                        ].filter(Boolean).join(' · ')}
                                       </p>
                                     </div>
                                   ))

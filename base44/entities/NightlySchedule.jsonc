@@ -13,7 +13,11 @@
     },
     "InstructorPNumber": {
       "type": "string",
-      "description": "Assigned instructor PNumber"
+      "description": "Primary assigned instructor PNumber"
+    },
+    "Instructor2PNumber": {
+      "type": "string",
+      "description": "Second assigned instructor PNumber (optional)"
     },
     "LessonCode": {
       "type": "string",
@@ -28,7 +32,9 @@
       "enum": [
         "Basic",
         "1 Star",
-        "2 Star"
+        "2 Star",
+        "3 Star",
+        "4 Star"
       ],
       "description": "Star level assigned"
     },
@@ -48,7 +54,6 @@
   "required": [
     "Date",
     "Period",
-    "InstructorPNumber",
     "LessonCode",
     "AssignedStarLevel"
   ]

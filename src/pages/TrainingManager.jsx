@@ -106,7 +106,10 @@ export default function TrainingManager() {
   // --- Exception monitor ---
   const presentPNumbers = new Set(paradeState.filter(p => p.AttendanceStatus === 'Present').map(p => p.UserPNumber));
   const todaySchedule = schedule.filter(s => s.Date === today);
-  const scheduledInstructors = [...new Set(todaySchedule.map(s => s.InstructorPNumber))];
+  const scheduledInstructors = [...new Set([
+    ...todaySchedule.map(s => s.InstructorPNumber),
+    ...todaySchedule.map(s => s.Instructor2PNumber)
+  ].filter(Boolean))];
   const absentInstructors = scheduledInstructors.filter(ip => paradeState.some(p => p.UserPNumber === ip && p.AttendanceStatus !== 'Present'));
   const presentInstructors = instructors.filter(p => presentPNumbers.has(p.PNumber));
 
@@ -210,18 +213,24 @@ Provide 3-5 prioritized recommendations for upcoming training nights. Be concise
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Users className="w-4 h-4" />Available Instructors ({presentInstructors.length})
+              <Users className="w-4 h-4" />Present Instructors ({presentInstructors.length})
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-1.5">
-              {presentInstructors.map(inst => (
-                <Badge key={inst.PNumber} variant="secondary" className="text-xs">
-                  {inst.Rank ? `${inst.Rank} ` : ''}{inst.Surname}
-                </Badge>
-              ))}
-              {presentInstructors.length === 0 && <p className="text-xs text-muted-foreground">No instructors marked present.</p>}
-            </div>
+          <CardContent className="space-y-2">
+            {presentInstructors.length === 0 && <p className="text-xs text-muted-foreground">No instructors marked present.</p>}
+            {presentInstructors.map(inst => {
+              const isAssigned = scheduledInstructors.includes(inst.PNumber);
+              const assignedLessons = todaySchedule.filter(s => s.InstructorPNumber === inst.PNumber);
+              return (
+                <div key={inst.PNumber} className={`flex items-center justify-between rounded px-2 py-1 text-xs ${isAssigned ? 'bg-chart-2/10' : 'bg-destructive/10'}`}>
+                  <span className="font-medium">{inst.Rank ? `${inst.Rank} ` : ''}{inst.Surname}</span>
+                  {isAssigned
+                    ? <span className="text-chart-2 text-xs">{assignedLessons.map(l => l.LessonCode).join(', ')}</span>
+                    : <span className="text-destructive font-semibold">UNASSIGNED</span>
+                  }
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
 

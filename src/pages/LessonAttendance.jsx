@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileCheck, Send, Search, Users, Pencil } from 'lucide-react';
+import { FileCheck, Send, Search, Users, Pencil, AlertTriangle, UserX } from 'lucide-react';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -67,6 +67,29 @@ export default function LessonAttendance() {
     presentPNumbers.has(p.PNumber) &&
     !alreadyCompletedPNumbers.has(p.PNumber)
   );
+
+  // Cadets present tonight with no lesson assigned (already completed all lessons for their level, or star level not scheduled)
+  const scheduledStarLevels = new Set(myLessons.map(l => l.AssignedStarLevel));
+  const unassignedPresentCadets = isL4 ? allPersonnel.filter(p =>
+    p.Type === 'Cadet' &&
+    (p.PersonnelStatus || 'Active') === 'Active' &&
+    presentPNumbers.has(p.PNumber) &&
+    !scheduledStarLevels.has(p.CurrentStarLevel)
+  ) : [];
+
+  // Instructors present tonight
+  const presentInstructorPNumbers = new Set(
+    allPersonnel
+      .filter(p => p.Type === 'Adult Instructor' && (p.PersonnelStatus || 'Active') === 'Active' && presentPNumbers.has(p.PNumber))
+      .map(p => p.PNumber)
+  );
+  const assignedInstructorPNumbers = new Set(myLessons.map(l => l.InstructorPNumber).filter(Boolean));
+  const unassignedPresentInstructors = isL4 ? allPersonnel.filter(p =>
+    p.Type === 'Adult Instructor' &&
+    (p.PersonnelStatus || 'Active') === 'Active' &&
+    presentPNumbers.has(p.PNumber) &&
+    !assignedInstructorPNumbers.has(p.PNumber)
+  ) : [];
 
   const filteredCadets = eligibleCadets.filter(c =>
     c.Surname?.toLowerCase().includes(search.toLowerCase()) ||
@@ -222,6 +245,50 @@ export default function LessonAttendance() {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* Unassigned Present Cadets — L4+ only */}
+      {isL4 && unassignedPresentCadets.length > 0 && (
+        <Card className="mt-4 border-amber-500/30 bg-amber-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2 text-amber-700">
+              <AlertTriangle className="w-4 h-4" />
+              Unassigned Present Cadets ({unassignedPresentCadets.length})
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">These cadets are present but their star level has no lesson scheduled tonight. DC/2IC action required.</p>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {unassignedPresentCadets.map(c => (
+                <Badge key={c.PNumber} variant="outline" className="text-xs border-amber-400 text-amber-700">
+                  {[c.Rank, c.Surname].filter(Boolean).join(' ')} · {c.CurrentStarLevel}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Unassigned Present Instructors — L4+ only */}
+      {isL4 && unassignedPresentInstructors.length > 0 && (
+        <Card className="mt-4 border-destructive/30 bg-destructive/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2 text-destructive">
+              <UserX className="w-4 h-4" />
+              Unassigned Present Instructors ({unassignedPresentInstructors.length})
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">These instructors are present but not assigned to any lesson tonight. Consider assigning them as a second instructor or to cover a gap.</p>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {unassignedPresentInstructors.map(i => (
+                <Badge key={i.PNumber} variant="outline" className="text-xs border-destructive/40 text-destructive">
+                  {[i.Rank, i.Surname].filter(Boolean).join(' ')} · L{i.AccessLevel}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Change Request Dialog */}

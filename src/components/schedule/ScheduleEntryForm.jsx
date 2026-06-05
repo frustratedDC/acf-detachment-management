@@ -18,6 +18,7 @@ const PERIODS = [1, 2];
 
 const emptyEntry = () => ({
   InstructorPNumber: '',
+  Instructor2PNumber: '',
   LessonCode: '',
   LessonName: '',
   DressCode: '',
@@ -115,6 +116,7 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
         const existing = existingEntries.find(e => e.AssignedStarLevel === star && e.Period === period);
         map[key] = existing ? {
           InstructorPNumber: existing.InstructorPNumber || '',
+          Instructor2PNumber: existing.Instructor2PNumber || '',
           LessonCode: existing.LessonCode || '',
           LessonName: existing.LessonName || '',
           DressCode: existing.DressCode || '',
@@ -165,6 +167,7 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
             records.push({
               Date: formDate, Period: period, AssignedStarLevel: star,
               InstructorPNumber: entry.InstructorPNumber,
+              Instructor2PNumber: entry.Instructor2PNumber || '',
               LessonCode: entry.LessonCode,
               LessonName: lesson?.LessonName || entry.LessonName || entry.LessonCode,
               DressCode: entry.DressCode, Location: entry.Location, Notes: entry.Notes,
@@ -240,26 +243,41 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
                                 </p>
                               )}
                             </div>
-                            <div>
-                              <Label className="text-xs">Instructor</Label>
-                              <Select value={entry.InstructorPNumber} onValueChange={(val) => updateEntry(key, 'InstructorPNumber', val)}>
-                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select" /></SelectTrigger>
-                                <SelectContent>
-                                  {instructors.map(i => {
-                                    const avail = isAvailableOnDate(i.PNumber);
-                                    return (
-                                      <SelectItem key={i.PNumber} value={i.PNumber}>
-                                        {avail === true ? '✓ ' : avail === false ? '✗ ' : ''}{i.Rank ? `${i.Rank} ` : ''}{i.Surname}
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </SelectContent>
-                              </Select>
-                              {qualWarn && (
-                                <p className="text-xs text-destructive flex items-center gap-1 mt-0.5">
-                                  <AlertTriangle className="w-3 h-3 shrink-0" />{qualWarn}
-                                </p>
-                              )}
+                            <div className="space-y-1">
+                             <Label className="text-xs">Instructor 1</Label>
+                             <Select value={entry.InstructorPNumber} onValueChange={(val) => updateEntry(key, 'InstructorPNumber', val)}>
+                               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select" /></SelectTrigger>
+                               <SelectContent>
+                                 <SelectItem value={null}>— None —</SelectItem>
+                                 {instructors.map(i => {
+                                   const avail = isAvailableOnDate(i.PNumber);
+                                   return (
+                                     <SelectItem key={i.PNumber} value={i.PNumber}>
+                                       {avail === true ? '✓ ' : avail === false ? '✗ ' : ''}{i.Rank ? `${i.Rank} ` : ''}{i.Surname}
+                                     </SelectItem>
+                                   );
+                                 })}
+                               </SelectContent>
+                             </Select>
+                             <Select value={entry.Instructor2PNumber || ''} onValueChange={(val) => updateEntry(key, 'Instructor2PNumber', val)}>
+                               <SelectTrigger className="h-7 text-xs border-dashed"><SelectValue placeholder="+ 2nd Instructor" /></SelectTrigger>
+                               <SelectContent>
+                                 <SelectItem value={null}>— None —</SelectItem>
+                                 {instructors.filter(i => i.PNumber !== entry.InstructorPNumber).map(i => {
+                                   const avail = isAvailableOnDate(i.PNumber);
+                                   return (
+                                     <SelectItem key={i.PNumber} value={i.PNumber}>
+                                       {avail === true ? '✓ ' : avail === false ? '✗ ' : ''}{i.Rank ? `${i.Rank} ` : ''}{i.Surname}
+                                     </SelectItem>
+                                   );
+                                 })}
+                               </SelectContent>
+                             </Select>
+                             {qualWarn && (
+                               <p className="text-xs text-destructive flex items-center gap-1 mt-0.5">
+                                 <AlertTriangle className="w-3 h-3 shrink-0" />{qualWarn}
+                               </p>
+                             )}
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2">
