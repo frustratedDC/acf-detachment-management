@@ -472,6 +472,135 @@ function SysAdminPanel({ queryClient }) {
           );
           }
 
+// ─── Export Subject Completions Card ────────────────────────────────────────
+function ExportSubjectCompletionsCard() {
+  const currentYear = new Date().getFullYear();
+  const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+
+  const [filterMode, setFilterMode] = useState('range'); // 'range' | 'month'
+  const [startDate, setStartDate] = useState(`${currentYear}-01-01`);
+  const [endDate, setEndDate] = useState(`${currentYear}-12-31`);
+  const [selectedMonth, setSelectedMonth] = useState(`${currentYear}-${currentMonth}`);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+
+    let filterStart, filterEnd;
+    if (filterMode === 'month') {
+      const [yr, mo] = selectedMonth.split('-');
+      filterStart = `${yr}-${mo}-01`;
+      const lastDay = new Date(parseInt(yr), parseInt(mo), 0).getDate();
+      filterEnd = `${yr}-${mo}-${String(lastDay).padStart(2, '0')}`;
+    } else {
+      filterStart = startDate;
+      filterEnd = endDate;
+    }
+
+    const [progress, personnel, syllabus] = await Promise.all([
+      base44.entities.ProgressLedger.filter({ Status: 'Approved' }),
+      base44.entities.PersonnelManager.filter({}),
+      base44.entities.SyllabusMaster.filter({}),
+    ]);
+
+    const filtered = progress.filter(r => {
+      if (!r.CompletionDate) return false;
+      return r.CompletionDate >= filterStart && r.CompletionDate <= filterEnd;
+    });
+
+    const personnelMap = Object.fromEntries(personnel.map(p => [p.PNumber, p]));
+    const syllabusMap = Object.fromEntries(syllabus.map(s => [s.LessonCode, s]));
+    const headers = ['SURNAME', 'INITIAL', 'RANK', 'STAR LEVEL', 'SUBJECT', 'DATE COMPLETED'];
+    const rows = filtered.map(r => {
+      const p = personnelMap[r.CadetPNumber] || {};
+      const s = syllabusMap[r.LessonCode] || {};
+      return [
+        `"${p.Surname || r.CadetPNumber}"`,
+        `"${(p.FirstName || '').charAt(0)}"`,
+        `"${p.Rank || ''}"`,
+        `"${p.CurrentStarLevel || s.StarLevel || ''}"`,
+        `"${s.SubjectName || ''}"`,
+        `"${r.CompletionDate || ''}"`,
+      ].join(',');
+    });
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filterMode === 'month'
+      ? `subject_completions_${selectedMonth}.csv`
+      : `subject_completions_${filterStart}_to_${filterEnd}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${rows.length} completion records`);
+    setExporting(false);
+  }
+
+  return (
+    <Card className="md:col-span-2">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Download className="w-4 h-4 text-chart-2" />
+          Export Subject Completions to CSV
+        </CardTitle>
+        <CardDescription>
+          Filter by date range or month/year, then export approved completions.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Filter mode toggle */}
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={filterMode === 'range' ? 'default' : 'outline'}
+            onClick={() => setFilterMode('range')}
+          >
+            Date Range
+          </Button>
+          <Button
+            size="sm"
+            variant={filterMode === 'month' ? 'default' : 'outline'}
+            onClick={() => setFilterMode('month')}
+          >
+            Month / Year
+          </Button>
+        </div>
+
+        {filterMode === 'range' ? (
+          <div className="flex flex-wrap gap-4 items-end">
+            <div>
+              <Label className="text-xs">Start Date</Label>
+              <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1 w-36" />
+            </div>
+            <div>
+              <Label className="text-xs">End Date</Label>
+              <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="mt-1 w-36" />
+            </div>
+          </div>
+        ) : (
+          <div>
+            <Label className="text-xs">Month / Year</Label>
+            <Input
+              type="month"
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              className="mt-1 w-44"
+            />
+          </div>
+        )}
+
+        <Button variant="outline" className="w-full" onClick={handleExport} disabled={exporting}>
+          {exporting
+            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Exporting...</>
+            : <><Download className="w-4 h-4 mr-2" />Export Filtered Results to CSV</>}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Detachment Commander Section (L5+) ────────────────────────────────────
 function DetCommanderPanel({ queryClient }) {
   const fileRef = useRef(null);
@@ -681,50 +810,7 @@ function DetCommanderPanel({ queryClient }) {
         </Card>
 
         {/* Export Subject Completions */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Download className="w-4 h-4 text-chart-2" />
-              Export Subject Completions to CSV
-            </CardTitle>
-            <CardDescription>
-              Download all approved lesson completions with headers: SURNAME, INITIAL, RANK, STAR LEVEL, SUBJECT, DATE COMPLETED
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full" onClick={async () => {
-              const [progress, personnel, syllabus] = await Promise.all([
-                base44.entities.ProgressLedger.filter({ Status: 'Approved' }),
-                base44.entities.PersonnelManager.filter({}),
-                base44.entities.SyllabusMaster.filter({}),
-              ]);
-              const personnelMap = Object.fromEntries(personnel.map(p => [p.PNumber, p]));
-              const syllabusMap = Object.fromEntries(syllabus.map(s => [s.LessonCode, s]));
-              const headers = ['SURNAME', 'INITIAL', 'RANK', 'STAR LEVEL', 'SUBJECT', 'DATE COMPLETED'];
-              const rows = progress.map(r => {
-                const p = personnelMap[r.CadetPNumber] || {};
-                const s = syllabusMap[r.LessonCode] || {};
-                return [
-                  `"${p.Surname || r.CadetPNumber}"`,
-                  `"${(p.FirstName || '').charAt(0)}"`,
-                  `"${p.Rank || ''}"`,
-                  `"${p.CurrentStarLevel || s.StarLevel || ''}"`,
-                  `"${s.SubjectName || ''}"`,
-                  `"${r.CompletionDate || ''}"`,
-                ].join(',');
-              });
-              const csv = [headers.join(','), ...rows].join('\n');
-              const blob = new Blob([csv], { type: 'text/csv' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url; a.download = 'subject_completions.csv'; a.click();
-              URL.revokeObjectURL(url);
-              toast.success(`Exported ${rows.length} completion records`);
-            }}>
-              <Download className="w-4 h-4 mr-2" />Export Subject Completions to CSV
-            </Button>
-          </CardContent>
-        </Card>
+        <ExportSubjectCompletionsCard />
 
         {/* Purge Personnel */}
         <Card className="border-destructive/30">
