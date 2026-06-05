@@ -80,13 +80,16 @@ export default function UniformInspectionForm({ onClose, onSuccess }) {
       await base44.entities.UniformInspection.create(data);
 
       if (missingItems) {
-        // Create tasks in ProgressLedger (generic task tracking)
-        await base44.entities.ProgressLedger.create({
-          UserPNumber: selectedPNumber,
-          Status: 'Pending',
-          Description: `Missing uniform items - inspection on ${format(new Date(), 'dd/MM/yyyy')}`,
-          AssignedTo: 'Detachment Commander',
-          DueDate: format(new Date(), 'yyyy-MM-dd'),
+        const inspectedPerson = allPersonnel.find(p => p.PNumber === selectedPNumber);
+        const inspectedName = inspectedPerson
+          ? [inspectedPerson.Rank, inspectedPerson.FirstName, inspectedPerson.Surname].filter(Boolean).join(' ')
+          : selectedPNumber;
+        await base44.entities.ImportantNotice.create({
+          Title: `Missing Uniform Items — ${inspectedName}`,
+          Body: `Inspection on ${format(new Date(), 'dd/MM/yyyy')} flagged missing or damaged items for ${inspectedName} (${selectedPNumber}). Please action with Detachment Commander.`,
+          Priority: 'High',
+          PublishedByPNumber: me?.PNumber || '',
+          IsActive: true,
         });
       }
     },
