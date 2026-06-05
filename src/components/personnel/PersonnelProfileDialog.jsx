@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
 import { ACCESS_LEVELS, LEVEL_NAMES, isCadet } from '@/lib/accessLevels';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import LeaverPipeline from './LeaverPipeline';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,6 +31,7 @@ export default function PersonnelProfileDialog({ person, open, onClose }) {
   const [status, setStatus] = useState(person?.PersonnelStatus || 'Active');
   const [notes, setNotes] = useState(person?.StatusNotes || '');
   const [dirty, setDirty] = useState(false);
+  const [leaverOpen, setLeaverOpen] = useState(false);
   const [qualInput, setQualInput] = useState('');
   const [qualsDirty, setQualsDirty] = useState(false);
   const [qualsList, setQualsList] = useState(person?.QualifiedSubjects || []);
@@ -94,6 +96,7 @@ export default function PersonnelProfileDialog({ person, open, onClose }) {
   const fullName = [person.Rank, person.FirstName, person.Surname].filter(Boolean).join(' ');
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -193,7 +196,10 @@ export default function PersonnelProfileDialog({ person, open, onClose }) {
                 <>
                   <div>
                     <Label className="text-xs">Status</Label>
-                    <Select value={status} onValueChange={(v) => { setStatus(v); setDirty(true); }}>
+                    <Select value={status} onValueChange={(v) => {
+                    if (v === 'Leaver') { setLeaverOpen(true); return; }
+                    setStatus(v); setDirty(true);
+                  }}>
                       <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
@@ -252,5 +258,18 @@ export default function PersonnelProfileDialog({ person, open, onClose }) {
         )}
       </DialogContent>
     </Dialog>
+
+    {leaverOpen && (
+      <LeaverPipeline
+        person={person}
+        open={leaverOpen}
+        onClose={() => setLeaverOpen(false)}
+        onConfirmed={() => {
+          queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
+          onClose();
+        }}
+      />
+    )}
+  </>
   );
 }
