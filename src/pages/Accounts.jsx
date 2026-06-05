@@ -1,22 +1,22 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PageHeader from "@/components/shared/PageHeader";
-import { Shield } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 export default function Accounts() {
   return (
     <div className="min-h-screen">
-      <PageHeader 
-        title="Accounts" 
-        description="Manage user accounts and access levels"
-        icon={Shield}
-      />
+      <PageHeader title="Accounts" description="Detachment financial management" icon={BookOpen} />
       <Card>
         <CardHeader>
-          <CardTitle>Coming Soon</CardTitle>
-          <CardDescription>This feature is currently in development</CardDescription>
+          <CardTitle>Detachment Cash & Bank Ledger</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Manage detachment user accounts and access control.</p>
+        <CardContent className="space-y-3">
+          <p className="text-muted-foreground text-sm">Double-entry cash and bank ledger with running balances, voucher generation, and CSV export.</p>
+          <Button asChild>
+            <Link to="/accounts-ledger">Open Accounts Ledger</Link>
+          </Button>
         </CardContent>
       </Card>
     </div>

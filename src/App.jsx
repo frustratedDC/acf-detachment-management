@@ -43,6 +43,7 @@ import MyGovernance from '@/pages/MyGovernance';
 import MyAvailability from '@/pages/MyAvailability';
 import MyQualifications from '@/pages/MyQualifications';
 import Accounts from '@/pages/Accounts';
+import AccountsLedger from '@/pages/AccountsLedger';
 import AllAvailability from '@/pages/AllAvailability';
 import FormCreator from '@/pages/FormCreator';
 import UniformExchange from '@/pages/UniformExchange';
@@ -95,6 +96,7 @@ const AppContent = () => {
         <Route path="/my-availability" element={<MyAvailability />} />
         <Route path="/my-qualifications" element={<MyQualifications />} />
         <Route path="/accounts" element={<Accounts />} />
+        <Route path="/accounts-ledger" element={<AccountsLedger />} />
         <Route path="/all-availability" element={<AllAvailability />} />
         <Route path="/form-creator" element={<FormCreator />} />
         <Route path="/uniform-exchange" element={<UniformExchange />} />
