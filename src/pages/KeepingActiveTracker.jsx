@@ -2,12 +2,13 @@ import { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import PageHeader from "@/components/shared/PageHeader";
-import { Dumbbell, ChevronRight } from "lucide-react";
+import { Dumbbell, ChevronRight, BookOpen } from "lucide-react";
 import KAStepAttendance from "@/components/ka/KAStepAttendance";
 import KAStepActivities from "@/components/ka/KAStepActivities";
 import KAStepBriefing from "@/components/ka/KAStepBriefing";
 import KAStepScoring from "@/components/ka/KAStepScoring";
 import KAStepReview from "@/components/ka/KAStepReview";
+import KALogBookEntry from "@/components/ka/KALogBookEntry.jsx";
 
 const STEPS = [
   { num: 1, label: "Attendance" },
@@ -20,6 +21,7 @@ const STEPS = [
 const DEFAULT_ACTIVITIES = ["WarmUp", "BroadJump", "Squats", "PressUps", "Shuttle", "CoolDown"];
 
 export default function KeepingActiveTracker() {
+  const [mode, setMode] = useState("session"); // "session" | "logbook"
   const [step, setStep] = useState(1);
   const [personnel, setPersonnel] = useState([]);
   const [loadingPersonnel, setLoadingPersonnel] = useState(true);
@@ -147,6 +149,46 @@ export default function KeepingActiveTracker() {
         icon={Dumbbell}
       />
 
+      {/* Mode tabs */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setMode("session")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${mode === "session" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}
+        >
+          <Dumbbell className="w-4 h-4" />Session Tracker
+        </button>
+        <button
+          onClick={() => setMode("logbook")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${mode === "logbook" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}
+        >
+          <BookOpen className="w-4 h-4" />Log Book Entry
+        </button>
+      </div>
+
+      {/* Log Book Entry mode */}
+      {mode === "logbook" && (
+        <div className="max-w-5xl">
+          <Card>
+            <CardHeader>
+              <CardTitle>Log Book Entry</CardTitle>
+              <CardDescription>Manually award KA Log Book points to cadets for activities outside a formal session.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingPersonnel ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-muted border-t-primary rounded-full animate-spin" />
+                </div>
+              ) : (
+                <KALogBookEntry personnel={personnel} />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Session Tracker mode */}
+      {mode === "session" && <>
+
       {/* Step Indicator */}
       <div className="flex items-center gap-1 mb-6 flex-wrap">
         {STEPS.map((s, i) => (
@@ -239,6 +281,7 @@ export default function KeepingActiveTracker() {
           </CardContent>
         </Card>
       </div>
+      </>}
     </div>
   );
 }
