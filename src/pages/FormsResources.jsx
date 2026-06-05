@@ -31,11 +31,13 @@ const FORMS = [
   {
     id: 'course-request',
     title: 'Course Request Form',
-    description: 'Request to attend an ACF course.',
+    description: 'All details should be entered as stated on Cadet Portal.',
     icon: '🎓',
     fields: [
-      { key: 'name', label: 'Your Name', type: 'text', required: true },
-      { key: 'course_name', label: 'Course Name / Type', type: 'text', required: true },
+      { key: 'name', label: 'Name', type: 'text', required: true },
+      { key: 'course_title', label: 'Course Title', type: 'text', required: true },
+      { key: 'start_date', label: 'Course Start Date', type: 'date', required: true },
+      { key: 'end_date', label: 'Course End Date', type: 'date', required: true },
       { key: 'reason', label: 'Why do you want to attend?', type: 'textarea', required: true },
     ],
     taskTitle: 'Course Request',
@@ -56,15 +58,7 @@ const FORMS = [
   },
 ];
 
-const RESOURCES = [
-  {
-    id: 'healthy-minds',
-    title: 'Healthy Minds',
-    description: 'Mental health and wellbeing resources for cadets and adults.',
-    url: 'https://www.healthymindshub.co.uk',
-    category: 'Wellbeing',
-  },
-];
+const RESOURCES = [];
 
 function FormDialog({ form, personnel, onClose }) {
   const [values, setValues] = useState({});
@@ -115,6 +109,13 @@ function FormDialog({ form, personnel, onClose }) {
                   <Textarea
                     className="mt-1"
                     rows={3}
+                    value={values[f.key] || ''}
+                    onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
+                  />
+                ) : f.type === 'date' ? (
+                  <Input
+                    type="date"
+                    className="mt-1"
                     value={values[f.key] || ''}
                     onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
                   />
