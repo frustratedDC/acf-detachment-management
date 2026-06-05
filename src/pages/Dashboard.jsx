@@ -151,7 +151,6 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Tonight's Lessons" value={todaySchedule.length} icon={Calendar} color="bg-primary/10 text-primary" to="/schedule" />
         {hasAccess(level, ACCESS_LEVELS.CADET_NCO) && (
           <StatCard title="Present Tonight" value={presentCount} icon={ClipboardList} color="bg-chart-2/10 text-chart-2" to="/parade" />
         )}

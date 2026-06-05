@@ -1,0 +1,68 @@
+{
+  "name": "AccessRequest",
+  "type": "object",
+  "properties": {
+    "RequesterPNumber": {
+      "type": "string",
+      "description": "PNumber of the cadet requesting access"
+    },
+    "RequesterName": {
+      "type": "string",
+      "description": "Display name of the requester"
+    },
+    "FeatureKey": {
+      "type": "string",
+      "description": "Feature being requested e.g. KeepingActiveAccess"
+    },
+    "FeatureLabel": {
+      "type": "string",
+      "description": "Human-readable feature name e.g. Keeping Active Tracker"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Pending"
+    },
+    "RespondedByPNumber": {
+      "type": "string"
+    },
+    "ResponseDate": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "RequesterPNumber",
+    "FeatureKey",
+    "Status"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "data.RequesterPNumber": "{{user.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

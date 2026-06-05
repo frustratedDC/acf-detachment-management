@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil, Shirt } from 'lucide-react';
+import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil, Shirt, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
@@ -55,6 +55,47 @@ export default function TaskList() {
   });
 
   const pendingUniformRequests = uniformRequests.filter(r => r.Status === 'Pending');
+
+  const { data: accessRequests = [] } = useQuery({
+    queryKey: ['access-requests'],
+    queryFn: () => base44.entities.AccessRequest.filter({}),
+  });
+
+  const pendingAccessRequests = accessRequests.filter(r => r.Status === 'Pending');
+
+  const approveAccessMutation = useMutation({
+    mutationFn: async ({ req }) => {
+      // 1. Update the request status
+      await base44.entities.AccessRequest.update(req.id, {
+        Status: 'Approved',
+        RespondedByPNumber: me?.PNumber,
+        ResponseDate: format(new Date(), 'yyyy-MM-dd'),
+      });
+      // 2. Grant the feature flag on the cadet's PersonnelManager record
+      const records = await base44.entities.PersonnelManager.filter({ PNumber: req.RequesterPNumber });
+      if (records.length > 0) {
+        await base44.entities.PersonnelManager.update(records[0].id, { KeepingActiveAccess: true });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['access-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
+      toast.success('Access approved — cadet can now use the Keeping Active Tracker');
+    },
+    onError: () => toast.error('Failed to approve access'),
+  });
+
+  const rejectAccessMutation = useMutation({
+    mutationFn: (req) => base44.entities.AccessRequest.update(req.id, {
+      Status: 'Rejected',
+      RespondedByPNumber: me?.PNumber,
+      ResponseDate: format(new Date(), 'yyyy-MM-dd'),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['access-requests'] });
+      toast.success('Access request rejected');
+    },
+  });
 
   const resolveUniformMutation = useMutation({
     mutationFn: ({ id, status }) => base44.entities.UniformRequest.update(id, { Status: status }),
@@ -162,6 +203,10 @@ export default function TaskList() {
           <TabsTrigger value="uniform-requests" className="gap-1">
             <Shirt className="w-3.5 h-3.5" />
             Uniform ({pendingUniformRequests.length})
+          </TabsTrigger>
+          <TabsTrigger value="access-requests" className="gap-1">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Access ({pendingAccessRequests.length})
           </TabsTrigger>
         </TabsList>
 
@@ -273,6 +318,45 @@ export default function TaskList() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="access-requests">
+          <Card>
+            <CardContent className="p-2">
+              {accessRequests.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground text-sm">No access requests.</p>
+              ) : (
+                <div className="space-y-2">
+                  {accessRequests.map(req => (
+                    <div key={req.id} className="p-3 rounded-lg border hover:bg-muted/30 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold">
+                            {req.RequesterName || req.RequesterPNumber} — {req.FeatureLabel || req.FeatureKey}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            PNumber: {req.RequesterPNumber} · Requested: {req.created_date ? format(new Date(req.created_date), 'd MMM yyyy') : '—'}
+                          </p>
+                        </div>
+                        <Badge variant={req.Status === 'Approved' ? 'default' : req.Status === 'Rejected' ? 'destructive' : 'outline'} className="text-xs shrink-0">
+                          {req.Status}
+                        </Badge>
+                      </div>
+                      {req.Status === 'Pending' && (
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="text-chart-2 hover:text-chart-2" onClick={() => approveAccessMutation.mutate({ req })}>
+                            <Check className="w-3.5 h-3.5 mr-1" />Approve
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => rejectAccessMutation.mutate(req)}>
+                            <X className="w-3.5 h-3.5 mr-1" />Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
