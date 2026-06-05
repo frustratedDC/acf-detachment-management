@@ -198,7 +198,7 @@ export default function KeepingActiveTracker() {
     }
     return (
       <div>
-        <PageHeader title="Keeping Active Tracker" description="Log and score KA fitness sessions" icon={Dumbbell} />
+        <PageHeader title="Logbook" description="Log and score KA fitness sessions" icon={Dumbbell} />
         <Card className="max-w-md mx-auto mt-8">
           <CardContent className="py-10 text-center space-y-4">
             <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto">
@@ -239,7 +239,7 @@ export default function KeepingActiveTracker() {
   return (
     <div>
       <PageHeader
-        title="Keeping Active Tracker"
+        title="Logbook"
         description="Log and score KA fitness sessions"
         icon={Dumbbell}
       />

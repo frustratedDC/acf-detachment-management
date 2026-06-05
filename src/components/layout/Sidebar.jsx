@@ -77,9 +77,9 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'Keeping Active',
+    label: 'Logbook',
     items: [
-      { path: '/keeping-active', label: 'Keeping Active Tracker', icon: Dumbbell, level: 0 },
+      { path: '/keeping-active', label: 'Logbook', icon: Dumbbell, level: 0 },
       { path: '/community-engagement', label: 'Community Engagement', icon: HeartHandshake, level: 0 },
     ],
   },
