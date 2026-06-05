@@ -601,36 +601,11 @@ function ExportSubjectCompletionsCard() {
   );
 }
 
-// ─── Detachment Commander Section (L5+) ────────────────────────────────────
-function DetCommanderPanel({ queryClient }) {
+// ─── Personnel Panel (L4+) — import/purge roster ────────────────────────────
+function PersonnelPanel({ queryClient }) {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [purgingPersonnel, setPurgingPersonnel] = useState(false);
-  const [detName, setDetName] = useState('');
-  const [savingSettings, setSavingSettings] = useState(false);
-
-  const { data: settings = [] } = useQuery({
-    queryKey: ['det-settings'],
-    queryFn: () => base44.entities.DetachmentSettings.filter({}),
-  });
-
-  useEffect(() => {
-    const name = settings.find(s => s.Key === 'detachment_name');
-    if (name) setDetName(name.Value);
-  }, [settings]);
-
-  async function saveDetachmentName() {
-    setSavingSettings(true);
-    const existing = settings.find(s => s.Key === 'detachment_name');
-    if (existing) {
-      await base44.entities.DetachmentSettings.update(existing.id, { Value: detName });
-    } else {
-      await base44.entities.DetachmentSettings.create({ Key: 'detachment_name', Value: detName, Description: 'Detachment display name for exports' });
-    }
-    queryClient.invalidateQueries({ queryKey: ['det-settings'] });
-    toast.success('Detachment name saved');
-    setSavingSettings(false);
-  }
 
   async function handlePersonnelCsvUpload(e) {
     const file = e.target.files?.[0];
@@ -659,111 +634,50 @@ function DetCommanderPanel({ queryClient }) {
     if (result.status === 'success' && result.output) {
       const records = Array.isArray(result.output) ? result.output : [result.output];
       const batch = records.filter(r => r.PNumber && r.Surname).map(r => ({
-        PNumber: r.PNumber,
-        Rank: r.Rank || '',
-        FirstName: r.FirstName || '',
-        Surname: r.Surname,
-        Type: r.Type || 'Cadet',
-        AccessLevel: parseInt(r.AccessLevel) || 0,
-        RoleName: r.RoleName || '',
+        PNumber: r.PNumber, Rank: r.Rank || '', FirstName: r.FirstName || '',
+        Surname: r.Surname, Type: r.Type || 'Cadet',
+        AccessLevel: parseInt(r.AccessLevel) || 0, RoleName: r.RoleName || '',
         CurrentStarLevel: r.CurrentStarLevel || 'Basic',
-        PersonnelStatus: 'Active',
-        IsLinked: false,
+        PersonnelStatus: 'Active', IsLinked: false,
       }));
-      
       if (batch.length > 0) {
-        // DEFENSIVE FIX: Check for existing PNumbers to prevent duplicate imports
         const existing = await base44.entities.PersonnelManager.filter({});
-        const existingPNumbers = new Set(existing.map(r => r.PNumber));
-        const uniqueRecords = batch.filter(r => {
-          if (existingPNumbers.has(r.PNumber)) {
-            console.warn(`Skipping duplicate PNumber: ${r.PNumber}`);
-            return false;
-          }
-          return true;
-        });
-        
-        if (uniqueRecords.length === 0) {
-          toast.error('All records in this CSV already exist in the database');
-          setUploading(false);
-          if (fileRef.current) fileRef.current.value = '';
-          return;
-        }
-        
-        for (let i = 0; i < uniqueRecords.length; i += 50) {
-          await base44.entities.PersonnelManager.bulkCreate(uniqueRecords.slice(i, i + 50));
-        }
-        const skipped = batch.length - uniqueRecords.length;
-        const msg = skipped > 0 
-          ? `Imported ${uniqueRecords.length} records (${skipped} duplicates skipped)`
-          : `Imported ${uniqueRecords.length} personnel records`;
-        toast.success(msg);
+        const existingPNums = new Set(existing.map(r => r.PNumber));
+        const unique = batch.filter(r => !existingPNums.has(r.PNumber));
+        if (unique.length === 0) { toast.error('All records already exist'); setUploading(false); if (fileRef.current) fileRef.current.value = ''; return; }
+        for (let i = 0; i < unique.length; i += 50) await base44.entities.PersonnelManager.bulkCreate(unique.slice(i, i + 50));
+        const skipped = batch.length - unique.length;
+        toast.success(`Imported ${unique.length} records${skipped > 0 ? ` (${skipped} duplicates skipped)` : ''}`);
         queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
-      } else {
-        toast.error('No valid records found');
-      }
-    } else {
-      toast.error('Failed to parse CSV: ' + (result.details || 'Unknown error'));
-    }
+      } else { toast.error('No valid records found'); }
+    } else { toast.error('Failed to parse CSV: ' + (result.details || 'Unknown error')); }
     setUploading(false);
     if (fileRef.current) fileRef.current.value = '';
   }
 
   async function purgePersonnel() {
-    if (!window.confirm('This will permanently delete ALL personnel records (except your own). Are you sure?')) return;
+    if (!window.confirm('Permanently delete ALL personnel records (except your own)?')) return;
     setPurgingPersonnel(true);
     const user = await base44.auth.me();
     const all = await base44.entities.PersonnelManager.filter({});
-    // Never delete the currently linked admin's own record
     const toDelete = all.filter(r => r.LinkedEmailUID !== user?.email);
-    for (const record of toDelete) {
-      await base44.entities.PersonnelManager.delete(record.id);
-    }
+    for (const record of toDelete) await base44.entities.PersonnelManager.delete(record.id);
     queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
-    toast.success(`Purged ${toDelete.length} personnel records (your own record was preserved)`);
+    toast.success(`Purged ${toDelete.length} personnel records`);
     setPurgingPersonnel(false);
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
-        <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
-        <p className="text-xs text-primary font-medium">Detachment Commander actions — manage your detachment's personnel roster and data.</p>
+        <Users className="w-4 h-4 text-primary shrink-0" />
+        <p className="text-xs text-primary font-medium">Manage the detachment personnel roster — import new records or remove all entries.</p>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Detachment Name */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Settings className="w-4 h-4 text-primary" />
-              Detachment Name
-            </CardTitle>
-            <CardDescription>Display name used in exports and reports</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-3 max-w-md">
-              <div className="flex-1">
-                <Input value={detName} onChange={e => setDetName(e.target.value)} placeholder="e.g. 123 (City) Sqn ACF" />
-              </div>
-              <Button onClick={saveDetachmentName} disabled={savingSettings}>
-                {savingSettings ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Save
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Personnel CSV Upload */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="w-4 h-4 text-chart-2" />
-              Import Personnel Roster
-            </CardTitle>
-            <CardDescription>
-              Upload your detachment roster CSV. Columns: PNumber, Rank, FirstName, Surname, Type, AccessLevel, RoleName, CurrentStarLevel
-            </CardDescription>
+            <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4 text-chart-2" />Import Personnel Roster</CardTitle>
+            <CardDescription>CSV columns: PNumber, Rank, FirstName, Surname, Type, AccessLevel, RoleName, CurrentStarLevel</CardDescription>
           </CardHeader>
           <CardContent>
             <input type="file" accept=".csv,.xlsx" ref={fileRef} onChange={handlePersonnelCsvUpload} className="hidden" />
@@ -772,17 +686,166 @@ function DetCommanderPanel({ queryClient }) {
             </Button>
           </CardContent>
         </Card>
+        <Card className="border-destructive/30">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2"><Trash2 className="w-4 h-4 text-destructive" />Purge Personnel Roster</CardTitle>
+            <CardDescription>Remove all personnel records. Cannot be undone.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="destructive" onClick={purgePersonnel} disabled={purgingPersonnel} className="w-full">
+              {purgingPersonnel ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Purging...</> : <><AlertTriangle className="w-4 h-4 mr-2" />Purge All Personnel</>}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
 
-        {/* Inject Community Engagement */}
+// ─── Engagement Audit Panel (DC-only L5+) ───────────────────────────────────
+function EngagementAuditPanel() {
+  const { data: ledger = [] } = useQuery({
+    queryKey: ['engagement-audit'],
+    queryFn: () => base44.entities.InstructorAttendanceLedger.filter({}),
+  });
+  const { data: allPersonnel = [] } = useQuery({
+    queryKey: ['all-personnel-engagement'],
+    queryFn: () => base44.entities.PersonnelManager.filter({ Type: 'Adult Instructor' }),
+  });
+
+  const byInstructor = {};
+  ledger.forEach(e => {
+    if (!byInstructor[e.InstructorPNumber]) byInstructor[e.InstructorPNumber] = { name: e.InstructorName, entries: [] };
+    byInstructor[e.InstructorPNumber].entries.push(e);
+  });
+
+  const rows = Object.entries(byInstructor).map(([pnum, data]) => {
+    const total = data.entries.length;
+    const present = data.entries.filter(e => e.AttendanceStatus === 'Present').length;
+    const score = total > 0 ? Math.round((present / total) * 100) : null;
+    return { pnum, name: data.name, total, present, score, entries: data.entries };
+  }).sort((a, b) => (a.score ?? 101) - (b.score ?? 101));
+
+  const flagged = rows.filter(r => r.score !== null && r.score < 60);
+  const healthy = rows.filter(r => r.score === null || r.score >= 60);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+        <ShieldCheck className="w-4 h-4 text-destructive shrink-0" />
+        <p className="text-xs text-destructive font-medium">DC-only view — Instructor engagement records from the Parade State. Not visible to instructors.</p>
+      </div>
+      {flagged.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-destructive flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> Flagged — Below 60% Attendance</h3>
+          {flagged.map(r => <EngagementRow key={r.pnum} row={r} />)}
+        </div>
+      )}
+      {healthy.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-muted-foreground">All Other Instructors</h3>
+          {healthy.map(r => <EngagementRow key={r.pnum} row={r} />)}
+        </div>
+      )}
+      {rows.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-8">No engagement records yet. Records are created via the "Not Attended" button on Parade State.</p>
+      )}
+    </div>
+  );
+}
+
+function EngagementRow({ row }) {
+  const [open, setOpen] = useState(false);
+  const scoreColor = row.score === null ? 'text-muted-foreground' : row.score < 60 ? 'text-destructive' : row.score < 80 ? 'text-amber-600' : 'text-chart-2';
+  return (
+    <Card className={row.score !== null && row.score < 60 ? 'border-destructive/30' : ''}>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-sm">{row.name || row.pnum}</p>
+            <p className="text-xs text-muted-foreground">{row.present}/{row.total} sessions present</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`text-lg font-bold ${scoreColor}`}>{row.score !== null ? `${row.score}%` : 'N/A'}</span>
+            {row.entries.some(e => e.EngagementNotes || (e.QuickTags && e.QuickTags.length > 0)) && (
+              <button onClick={() => setOpen(!open)} className="text-xs text-muted-foreground hover:text-foreground underline">
+                {open ? 'Hide' : 'Notes'}
+              </button>
+            )}
+          </div>
+        </div>
+        {open && (
+          <div className="mt-3 space-y-2 border-t pt-3">
+            {row.entries.filter(e => e.EngagementNotes || e.QuickTags?.length > 0).map(e => (
+              <div key={e.id} className="text-xs bg-muted/30 rounded p-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-medium">{e.Date}</span>
+                  <span className="text-muted-foreground">{e.Reason || e.AttendanceStatus}</span>
+                </div>
+                {e.QuickTags?.length > 0 && <div className="flex flex-wrap gap-1 mb-1">{e.QuickTags.map(t => <span key={t} className="px-1.5 py-0.5 bg-destructive/10 text-destructive rounded text-xs">{t}</span>)}</div>}
+                {e.EngagementNotes && <p className="text-muted-foreground">{e.EngagementNotes}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Operations Panel (L4+) — settings, syllabus, exports ───────────────────
+function DetCommanderPanel({ queryClient }) {
+  const [detName, setDetName] = useState('');
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const { data: settings = [] } = useQuery({
+    queryKey: ['det-settings'],
+    queryFn: () => base44.entities.DetachmentSettings.filter({}),
+  });
+
+  useEffect(() => {
+    const name = settings.find(s => s.Key === 'detachment_name');
+    if (name) setDetName(name.Value);
+  }, [settings]);
+
+  async function saveDetachmentName() {
+    setSavingSettings(true);
+    const existing = settings.find(s => s.Key === 'detachment_name');
+    if (existing) {
+      await base44.entities.DetachmentSettings.update(existing.id, { Value: detName });
+    } else {
+      await base44.entities.DetachmentSettings.create({ Key: 'detachment_name', Value: detName, Description: 'Detachment display name for exports' });
+    }
+    queryClient.invalidateQueries({ queryKey: ['det-settings'] });
+    toast.success('Detachment name saved');
+    setSavingSettings(false);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+        <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+        <p className="text-xs text-primary font-medium">Operational settings — detachment configuration, syllabus management and data exports.</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary" />
-              Inject Community Engagement Subject
-            </CardTitle>
-            <CardDescription>
-              Add "Community Engagement" lessons to 1 Star, 2 Star, 3 Star and 4 Star syllabus profiles
-            </CardDescription>
+            <CardTitle className="text-base flex items-center gap-2"><Settings className="w-4 h-4 text-primary" />Detachment Name</CardTitle>
+            <CardDescription>Display name used in exports and reports</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-3 max-w-md">
+              <Input value={detName} onChange={e => setDetName(e.target.value)} placeholder="e.g. 123 (City) Sqn ACF" className="flex-1" />
+              <Button onClick={saveDetachmentName} disabled={savingSettings}>
+                {savingSettings ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}Save
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4 text-primary" />Inject Community Engagement Subject</CardTitle>
+            <CardDescription>Add Community Engagement lessons to 1–4 Star syllabus profiles</CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" className="w-full" onClick={async () => {
@@ -808,27 +871,7 @@ function DetCommanderPanel({ queryClient }) {
             </Button>
           </CardContent>
         </Card>
-
-        {/* Export Subject Completions */}
         <ExportSubjectCompletionsCard />
-
-        {/* Purge Personnel */}
-        <Card className="border-destructive/30">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Trash2 className="w-4 h-4 text-destructive" />
-              Purge Personnel Roster
-            </CardTitle>
-            <CardDescription>
-              Remove all personnel records from this detachment. Cannot be undone.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="destructive" onClick={purgePersonnel} disabled={purgingPersonnel} className="w-full">
-              {purgingPersonnel ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Purging...</> : <><AlertTriangle className="w-4 h-4 mr-2" />Purge All Personnel</>}
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
@@ -839,38 +882,61 @@ export default function AdminControls() {
   const queryClient = useQueryClient();
   const { personnel: me } = usePersonnel();
   const myLevel = me?.AccessLevel ?? 0;
+  const isDC = myLevel >= ACCESS_LEVELS.DET_COMMANDER;
   const isSysAdmin = myLevel >= ACCESS_LEVELS.SYSTEM_ADMIN;
 
   return (
     <AccessGate level={ACCESS_LEVELS.DET_2IC}>
       <PageHeader
-        title="Admin Controls"
-        description={isSysAdmin ? 'System Administrator & Detachment Commander' : 'Detachment Commander'}
-        icon={isSysAdmin ? Shield : ShieldCheck}
+        title="Command Hub"
+        description="Centralised detachment administration and oversight"
+        icon={ShieldCheck}
       />
 
-      {isSysAdmin ? (
-        <Tabs defaultValue="det-commander">
-          <TabsList className="mb-4">
-            <TabsTrigger value="det-commander" className="gap-2">
+      <Tabs defaultValue="operations">
+        <TabsList className="mb-4 flex-wrap h-auto gap-1">
+          <TabsTrigger value="operations" className="gap-2">
+            <Zap className="w-4 h-4" />
+            Operations
+          </TabsTrigger>
+          <TabsTrigger value="personnel" className="gap-2">
+            <Users className="w-4 h-4" />
+            Personnel
+          </TabsTrigger>
+          {isDC && (
+            <TabsTrigger value="engagement" className="gap-2">
               <ShieldCheck className="w-4 h-4" />
-              Det Commander
+              Engagement Audit
             </TabsTrigger>
+          )}
+          {isSysAdmin && (
             <TabsTrigger value="sys-admin" className="gap-2">
               <Shield className="w-4 h-4" />
               System Admin
             </TabsTrigger>
-          </TabsList>
-          <TabsContent value="det-commander">
-            <DetCommanderPanel queryClient={queryClient} />
+          )}
+        </TabsList>
+
+        <TabsContent value="operations">
+          <DetCommanderPanel queryClient={queryClient} />
+        </TabsContent>
+
+        <TabsContent value="personnel">
+          <PersonnelPanel queryClient={queryClient} />
+        </TabsContent>
+
+        {isDC && (
+          <TabsContent value="engagement">
+            <EngagementAuditPanel />
           </TabsContent>
+        )}
+
+        {isSysAdmin && (
           <TabsContent value="sys-admin">
             <SysAdminPanel queryClient={queryClient} />
           </TabsContent>
-        </Tabs>
-      ) : (
-        <DetCommanderPanel queryClient={queryClient} />
-      )}
+        )}
+      </Tabs>
     </AccessGate>
   );
 }

@@ -4,11 +4,11 @@ import { usePersonnel } from '@/lib/usePersonnel';
 import { hasAccess, ACCESS_LEVELS, LEVEL_NAMES, isAdultInstructor } from '@/lib/accessLevels';
 import {
   LayoutDashboard, Users, BookOpen, Calendar, ClipboardList,
-  FileCheck, Brain, CheckSquare, Settings, HelpCircle, Shield,
+  FileCheck, Brain, Settings, HelpCircle, Shield,
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
   CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown,
-  CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, Trophy, TrendingUp, FolderOpen,
-  AlertCircle, Shirt, HeartHandshake, Activity
+  CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, TrendingUp, FolderOpen,
+  AlertCircle, Shirt, HeartHandshake
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,6 @@ const NAV_GROUPS = [
     items: [
       { path: '/calendar', label: 'View Calendar', icon: CalendarDays, level: 0 },
       { path: '/schedule', label: 'Monthly Training Plan', icon: Calendar, level: 0 },
-      { path: '/training-calendar', label: 'Upcoming Training/Events', icon: CalendarCheck, level: 0 },
     ],
   },
   {
@@ -45,7 +44,6 @@ const NAV_GROUPS = [
   {
     label: 'Training Planning',
     items: [
-      { path: '/tasks', label: 'Task List', icon: CheckSquare, level: 4 },
       { path: '/training-manager', label: 'Training Manager', icon: Brain, level: 4 },
       { path: '/plan-generator', label: 'Plan Generator', icon: Wand2, level: 4 },
       { path: '/training-plan-export', label: 'Export PDF', icon: FileDown, level: 4 },
@@ -84,7 +82,7 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'Detachment Management',
+    label: 'Command Hub',
     items: [
       { path: '/analytics', label: 'Analytics', icon: BarChart2, level: 4 },
       { path: '/personnel', label: 'Personnel', icon: Users, level: 4 },
@@ -93,8 +91,7 @@ const NAV_GROUPS = [
       { path: '/instructor-quals', label: 'Instructor Qualifications', icon: GraduationCap, level: 4 },
       { path: '/all-availability', label: 'All Instructor Availability', icon: CalendarCheck, level: 4 },
       { path: '/form-creator', label: 'Form & Resource Creator', icon: FolderOpen, level: 4 },
-      { path: '/instructor-engagement', label: 'Instructor Engagement', icon: Activity, level: 5 },
-      { path: '/admin', label: 'Admin Controls', icon: Settings, level: 4 },
+      { path: '/admin', label: 'Command Hub', icon: Settings, level: 4 },
     ],
   },
   {

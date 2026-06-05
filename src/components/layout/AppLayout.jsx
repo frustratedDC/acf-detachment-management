@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import { cn } from '@/lib/utils';
 import { usePersonnel } from '@/lib/usePersonnel';
 import { Menu, Eye, X } from 'lucide-react';
+import AttentionBadge from './AttentionBadge';
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -22,6 +23,7 @@ export default function AppLayout() {
           <Menu className="w-5 h-5 text-sidebar-foreground" />
         </button>
         <span className="font-bold text-sm text-sidebar-foreground flex-1 truncate">ACF Training Manager</span>
+        <AttentionBadge />
         {viewAs && (
           <div className="flex items-center gap-1.5 bg-accent/20 rounded-lg px-2 py-1 shrink-0">
             <Eye className="w-3 h-3 text-accent-foreground" />
@@ -73,6 +75,13 @@ export default function AppLayout() {
           collapsed ? "md:ml-16" : "md:ml-64"
         )}
       >
+        {/* Desktop attention badge — fixed top-right */}
+        <div className={cn(
+          "hidden md:flex fixed top-2 right-4 z-30",
+          viewAs && "top-9"
+        )}>
+          <AttentionBadge />
+        </div>
         <div className="p-4 md:p-6 max-w-[1400px] mx-auto">
           <Outlet />
         </div>
