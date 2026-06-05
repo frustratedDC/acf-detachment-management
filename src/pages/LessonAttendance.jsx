@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FileCheck, Send, Search, Users, Pencil } from 'lucide-react';
-import { isCadet, ACCESS_LEVELS } from '@/lib/accessLevels';
+import { ACCESS_LEVELS } from '@/lib/accessLevels';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -61,7 +61,7 @@ export default function LessonAttendance() {
   const alreadyCompletedPNumbers = new Set(existingProgress.filter(p => p.Status === 'Approved').map(p => p.CadetPNumber));
 
   const eligibleCadets = allPersonnel.filter(p =>
-    isCadet(p.AccessLevel) &&
+    p.Type === 'Cadet' &&
     (p.PersonnelStatus || 'Active') === 'Active' &&
     p.CurrentStarLevel === activeLesson?.AssignedStarLevel &&
     presentPNumbers.has(p.PNumber) &&
