@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileCheck, Send, Search, Users, Pencil, AlertTriangle, UserX } from 'lucide-react';
+import { FileCheck, Send, Search, Users, Pencil, AlertTriangle, UserX, EyeOff, Eye } from 'lucide-react';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -59,14 +59,23 @@ export default function LessonAttendance() {
     enabled: !!activeLesson?.LessonCode,
   });
   const alreadyCompletedPNumbers = new Set(existingProgress.filter(p => p.Status === 'Approved').map(p => p.CadetPNumber));
+  const pendingPNumbers = new Set(existingProgress.filter(p => p.Status === 'Pending').map(p => p.CadetPNumber));
 
-  const eligibleCadets = allPersonnel.filter(p =>
+  const [hideCompleted, setHideCompleted] = useState(false);
+
+  // All cadets at the right star level who are present (including already completed, for display)
+  const nominalRollCadets = allPersonnel.filter(p =>
     p.Type === 'Cadet' &&
     (p.PersonnelStatus || 'Active') === 'Active' &&
     p.CurrentStarLevel === activeLesson?.AssignedStarLevel &&
-    presentPNumbers.has(p.PNumber) &&
-    !alreadyCompletedPNumbers.has(p.PNumber)
+    presentPNumbers.has(p.PNumber)
   );
+
+  const eligibleCadets = nominalRollCadets.filter(p => !alreadyCompletedPNumbers.has(p.PNumber));
+
+  const displayCadets = hideCompleted
+    ? nominalRollCadets.filter(p => !alreadyCompletedPNumbers.has(p.PNumber))
+    : nominalRollCadets;
 
   // Cadets present tonight with no lesson assigned (already completed all lessons for their level, or star level not scheduled)
   const scheduledStarLevels = new Set(myLessons.map(l => l.AssignedStarLevel));
@@ -91,7 +100,7 @@ export default function LessonAttendance() {
     !assignedInstructorPNumbers.has(p.PNumber)
   ) : [];
 
-  const filteredCadets = eligibleCadets.filter(c =>
+  const filteredCadets = displayCadets.filter(c =>
     c.Surname?.toLowerCase().includes(search.toLowerCase()) ||
     c.PNumber?.toLowerCase().includes(search.toLowerCase())
   );
@@ -193,45 +202,77 @@ export default function LessonAttendance() {
             </CardContent>
           </Card>
 
-          {/* Cadet List */}
+          {/* Cadet Nominal Roll */}
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  Eligible Cadets ({eligibleCadets.length})
+                  Nominal Roll ({nominalRollCadets.length})
+                  <span className="text-xs font-normal text-muted-foreground ml-1">
+                    {alreadyCompletedPNumbers.size} completed · {eligibleCadets.length} eligible
+                  </span>
                 </CardTitle>
                 <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={`h-8 text-xs ${hideCompleted ? 'border-primary text-primary' : ''}`}
+                    onClick={() => setHideCompleted(v => !v)}
+                  >
+                    {hideCompleted ? <Eye className="w-3.5 h-3.5 mr-1" /> : <EyeOff className="w-3.5 h-3.5 mr-1" />}
+                    {hideCompleted ? 'Show All' : 'Hide Completed'}
+                  </Button>
                   <Search className="w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-48"
+                    className="w-36 h-8"
                   />
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-1 mb-4">
-                {filteredCadets.map(cadet => (
-                  <label
-                    key={cadet.PNumber}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                  >
-                    <Checkbox
-                      checked={selectedCadets.includes(cadet.PNumber)}
-                      onCheckedChange={() => toggleCadet(cadet.PNumber)}
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{cadet.Surname}</p>
-                      <p className="text-xs text-muted-foreground">{cadet.PNumber}</p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">{cadet.CurrentStarLevel}</Badge>
-                  </label>
-                ))}
+                {filteredCadets.map(cadet => {
+                  const isApproved = alreadyCompletedPNumbers.has(cadet.PNumber);
+                  const isPending = !isApproved && pendingPNumbers.has(cadet.PNumber);
+                  return (
+                    <label
+                      key={cadet.PNumber}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                        isApproved
+                          ? 'bg-chart-2/5 cursor-default'
+                          : 'hover:bg-muted/50 cursor-pointer'
+                      }`}
+                    >
+                      {isApproved ? (
+                        <span className="text-chart-2 text-lg w-5 text-center" title="Already approved">✓</span>
+                      ) : isPending ? (
+                        <span className="text-yellow-500 text-lg w-5 text-center" title="Pending approval">⏳</span>
+                      ) : (
+                        <Checkbox
+                          checked={selectedCadets.includes(cadet.PNumber)}
+                          onCheckedChange={() => toggleCadet(cadet.PNumber)}
+                        />
+                      )}
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${isApproved ? 'text-muted-foreground line-through' : ''}`}>
+                          {cadet.Surname}{cadet.FirstName ? `, ${cadet.FirstName}` : ''}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{cadet.PNumber}</p>
+                      </div>
+                      {isApproved && <Badge className="text-xs bg-chart-2/20 text-chart-2 border-0">Completed</Badge>}
+                      {isPending && <Badge className="text-xs bg-yellow-100 text-yellow-700 border-0">Pending</Badge>}
+                      {!isApproved && !isPending && <Badge variant="outline" className="text-xs">{cadet.CurrentStarLevel}</Badge>}
+                    </label>
+                  );
+                })}
                 {filteredCadets.length === 0 && (
-                  <p className="text-center py-6 text-muted-foreground text-sm">No eligible cadets found.</p>
+                  <p className="text-center py-6 text-muted-foreground text-sm">
+                    {hideCompleted ? 'All present cadets have already completed this lesson.' : 'No cadets found.'}
+                  </p>
                 )}
               </div>
               <Button
