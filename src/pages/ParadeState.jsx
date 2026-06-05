@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 import UniformInspectionForm from '@/components/inspection/UniformInspectionForm';
+import EngagementNoteModal from '@/components/parade/EngagementNoteModal';
 
 export default function ParadeState() {
   const queryClient = useQueryClient();
@@ -25,6 +26,8 @@ export default function ParadeState() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [localStatuses, setLocalStatuses] = useState({});
   const [showInspectionForm, setShowInspectionForm] = useState(false);
+  const [engagementTarget, setEngagementTarget] = useState(null); // instructor record for modal
+  const isDC = (me?.AccessLevel ?? 0) >= ACCESS_LEVELS.DET_COMMANDER;
 
   const { data: allPersonnel = [] } = useQuery({
     queryKey: ['all-personnel'],
@@ -85,6 +88,24 @@ export default function ParadeState() {
       const cur = prev[pnum] || 'Absent';
       return { ...prev, [pnum]: cur === 'Present' ? 'Absent' : 'Present' };
     });
+  }
+
+  async function handleEngagementConfirm({ reason, notes, tags }) {
+    const p = engagementTarget;
+    setEngagementTarget(null);
+    setLocalStatuses(prev => ({ ...prev, [p.PNumber]: 'Absent' }));
+    const name = [p.Rank, p.FirstName, p.Surname].filter(Boolean).join(' ');
+    await base44.entities.InstructorAttendanceLedger.create({
+      InstructorPNumber: p.PNumber,
+      InstructorName: name,
+      Date: date,
+      AttendanceStatus: 'Absent',
+      Reason: reason,
+      EngagementNotes: notes,
+      QuickTags: tags,
+      RecordedByPNumber: me?.PNumber,
+    });
+    toast.success(`Not Attended recorded for ${name}`);
   }
 
   function setExcused(pnum) {
@@ -273,6 +294,15 @@ export default function ParadeState() {
                         {status === 'Excused' ? 'Unexcuse' : 'Excuse'}
                       </button>
                     )}
+                    {isDC && p.Type === 'Adult Instructor' && (
+                      <button
+                        onClick={() => setEngagementTarget(p)}
+                        className="text-xs px-2 py-1 rounded text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        title="Record Not Attended (DC only)"
+                      >
+                        Not Attended
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -288,6 +318,14 @@ export default function ParadeState() {
         <UniformInspectionForm
           onClose={() => setShowInspectionForm(false)}
           onSuccess={() => setShowInspectionForm(false)}
+        />
+      )}
+
+      {engagementTarget && (
+        <EngagementNoteModal
+          instructor={engagementTarget}
+          onConfirm={handleEngagementConfirm}
+          onCancel={() => setEngagementTarget(null)}
         />
       )}
     </AccessGate>

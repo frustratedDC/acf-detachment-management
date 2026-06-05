@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
   CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown,
   CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, Trophy, TrendingUp, FolderOpen,
-  AlertCircle, Shirt, HeartHandshake
+  AlertCircle, Shirt, HeartHandshake, Activity
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -93,6 +93,7 @@ const NAV_GROUPS = [
       { path: '/instructor-quals', label: 'Instructor Qualifications', icon: GraduationCap, level: 4 },
       { path: '/all-availability', label: 'All Instructor Availability', icon: CalendarCheck, level: 4 },
       { path: '/form-creator', label: 'Form & Resource Creator', icon: FolderOpen, level: 4 },
+      { path: '/instructor-engagement', label: 'Instructor Engagement', icon: Activity, level: 5 },
       { path: '/admin', label: 'Admin Controls', icon: Settings, level: 4 },
     ],
   },

@@ -51,6 +51,7 @@ import CourseRequest from '@/pages/CourseRequest';
 import ReportIssue from '@/pages/ReportIssue';
 import HealthyMinds from '@/pages/HealthyMinds';
 import CommunityEngagement from '@/pages/CommunityEngagement';
+import InstructorEngagement from '@/pages/InstructorEngagement';
 
 const AppContent = () => {
   const { personnel, loading } = usePersonnel();
@@ -106,6 +107,7 @@ const AppContent = () => {
         <Route path="/report-issue" element={<ReportIssue />} />
         <Route path="/healthy-minds" element={<HealthyMinds />} />
         <Route path="/community-engagement" element={<CommunityEngagement />} />
+        <Route path="/instructor-engagement" element={<InstructorEngagement />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

@@ -1,0 +1,80 @@
+{
+  "name": "InstructorAttendanceLedger",
+  "type": "object",
+  "properties": {
+    "InstructorPNumber": {
+      "type": "string",
+      "description": "PNumber of the instructor"
+    },
+    "InstructorName": {
+      "type": "string",
+      "description": "Display name of the instructor"
+    },
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the parade night"
+    },
+    "AttendanceStatus": {
+      "type": "string",
+      "enum": [
+        "Present",
+        "Absent",
+        "Excused"
+      ],
+      "default": "Absent"
+    },
+    "Reason": {
+      "type": "string",
+      "enum": [
+        "Late",
+        "No-Show",
+        "Training Issue",
+        "Other"
+      ],
+      "description": "Reason for non-attendance"
+    },
+    "EngagementNotes": {
+      "type": "string",
+      "description": "DC-only engagement notes"
+    },
+    "QuickTags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Quick-select engagement tags"
+    },
+    "RecordedByPNumber": {
+      "type": "string",
+      "description": "PNumber of the DC who recorded this"
+    }
+  },
+  "required": [
+    "InstructorPNumber",
+    "Date",
+    "AttendanceStatus"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
