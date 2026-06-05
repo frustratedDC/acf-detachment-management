@@ -11,7 +11,7 @@ function calcMSFT(level, shuttle) {
   return l + s;
 }
 
-export default function KAStepReview({ attendees, personnelMap, scores, sessionStartTime, sessionEndTime, selectedActivities, onSubmit, submitting, submitted }) {
+export default function KAStepReview({ attendees, personnelMap, scores, sessionStartTime, sessionEndTime, selectedActivities, onSubmit, submitting, submitted, onReset }) {
   const elapsedMinutes = useMemo(() => {
     if (!sessionStartTime || !sessionEndTime) return 0;
     return (sessionEndTime.getTime() - sessionStartTime.getTime()) / 60000;
@@ -49,6 +49,9 @@ export default function KAStepReview({ attendees, personnelMap, scores, sessionS
         </div>
         <h3 className="text-xl font-bold text-foreground">Session Submitted</h3>
         <p className="text-sm text-muted-foreground">All scores have been committed to the KA database.</p>
+        {onReset && (
+          <Button variant="outline" onClick={onReset} className="mt-2">Start New Session</Button>
+        )}
       </div>
     );
   }

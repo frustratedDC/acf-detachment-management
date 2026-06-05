@@ -127,6 +127,18 @@ export default function KeepingActiveTracker() {
     setSubmitted(true);
   }
 
+  function handleReset() {
+    setStep(1);
+    setSelectedLevels([]);
+    setAttendees([]);
+    setSelectedActivities(DEFAULT_ACTIVITIES);
+    setSessionStartTime(null);
+    setBriefingConfirmedAt(null);
+    setScores({});
+    setSessionEndTime(null);
+    setSubmitted(false);
+  }
+
   return (
     <div>
       <PageHeader
@@ -219,6 +231,7 @@ export default function KeepingActiveTracker() {
                     onSubmit={handleSubmit}
                     submitting={submitting}
                     submitted={submitted}
+                    onReset={handleReset}
                   />
                 )}
               </>

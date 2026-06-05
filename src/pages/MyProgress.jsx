@@ -64,13 +64,10 @@ export default function MyProgress() {
     enabled: !!pnum,
   });
 
-  // KA total (simple sum from logbook + sessions duration-based participation for now)
+  // KA total — logbook already contains the full session score (activity + participation)
   const kaTotalPts = useMemo(() => {
-    const lb = kaLogbook.reduce((s, e) => s + (e.Points || 0), 0);
-    // session total = floor(duration/30)*2 per session (participation only without full scoring here)
-    const sess = kaSessions.reduce((s, e) => s + Math.floor((e.Duration_Minutes || 0) / 30) * 2, 0);
-    return lb + sess;
-  }, [kaLogbook, kaSessions]);
+    return kaLogbook.reduce((s, e) => s + (e.Points || 0), 0);
+  }, [kaLogbook]);
 
   const kaStarLevel = personnel?.CurrentStarLevel;
   const kaBenchmark = KA_BENCHMARKS[kaStarLevel] ?? null;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePersonnel } from '@/lib/usePersonnel';
 import { base44 } from '@/api/base44Client';
@@ -28,8 +28,11 @@ export default function TaskList() {
     queryFn: () => base44.entities.PersonnelManager.filter({}),
   });
 
-  const personnelMap = {};
-  personnel.forEach(p => { personnelMap[p.PNumber] = p; });
+  const personnelMap = useMemo(() => {
+    const m = {};
+    personnel.forEach(p => { m[p.PNumber] = p; });
+    return m;
+  }, [personnel]);
 
   const pending = allProgress.filter(p => p.Status === 'Pending');
   const approved = allProgress.filter(p => p.Status === 'Approved');
