@@ -89,8 +89,8 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
   });
 
   const { data: availability = [] } = useQuery({
-    queryKey: ['staff-availability'],
-    queryFn: () => base44.entities.StaffAvailability.filter({}),
+    queryKey: ['instructor-availability'],
+    queryFn: () => base44.entities.InstructorAvailability.list(),
   });
 
   const { data: recentSchedule = [] } = useQuery({
@@ -129,8 +129,9 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
   }, [existingEntries]);
 
   function isAvailableOnDate(pNumber) {
-    const rec = availability.find(a => a.EventDate === formDate && a.PNumber === pNumber);
-    return rec ? rec.IsAvailable : null;
+    const rec = availability.find(a => a.Date === formDate && a.InstructorPNumber === pNumber);
+    if (!rec) return null;
+    return rec.Status === 'Available';
   }
 
   function recentLessonWarning(lessonCode) {
