@@ -7,11 +7,10 @@ import AccessGate from '@/components/shared/AccessGate';
 import PageHeader from '@/components/shared/PageHeader';
 import ScheduleEntryForm from '@/components/schedule/ScheduleEntryForm';
 import ScheduleView from '@/components/schedule/ScheduleView';
-import { Card, CardContent } from '@/components/ui/card';
+import PlanLockBar from '@/components/schedule/PlanLockBar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Calendar, Plus, FileDown } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, addWeeks } from 'date-fns';
+import { Calendar, Plus } from 'lucide-react';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function TrainingSchedule() {
@@ -25,6 +24,11 @@ export default function TrainingSchedule() {
   const { data: schedule = [], isLoading } = useQuery({
     queryKey: ['schedule-all'],
     queryFn: () => base44.entities.NightlySchedule.list('-Date', 200),
+  });
+
+  const { data: trainingMonths = [] } = useQuery({
+    queryKey: ['training-months'],
+    queryFn: () => base44.entities.TrainingMonth.list(),
   });
 
   const deleteMutation = useMutation({
@@ -41,6 +45,8 @@ export default function TrainingSchedule() {
   });
 
   const canEdit = hasAccess(level, ACCESS_LEVELS.DET_2IC);
+  const isDC = hasAccess(level, ACCESS_LEVELS.DET_COMMANDER);
+  const currentMonthStr = format(new Date(), 'yyyy-MM');
 
   return (
     <AccessGate level={0}>
@@ -56,6 +62,13 @@ export default function TrainingSchedule() {
             </Button>
           )
         }
+      />
+
+      {/* DC-only Lock Controls */}
+      <PlanLockBar
+        trainingMonths={trainingMonths}
+        currentMonthStr={currentMonthStr}
+        isDC={isDC}
       />
 
       {showForm && (
@@ -75,6 +88,9 @@ export default function TrainingSchedule() {
         canEdit={canEdit}
         onEdit={(date) => { setEditingDate(date); setShowForm(true); }}
         onDelete={(date) => deleteMutation.mutate(date)}
+        trainingMonths={trainingMonths}
+        myPNumber={personnel?.PNumber}
+        accessLevel={level}
       />
     </AccessGate>
   );
