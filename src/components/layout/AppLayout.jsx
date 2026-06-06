@@ -22,7 +22,7 @@ export default function AppLayout() {
         >
           <Menu className="w-5 h-5 text-sidebar-foreground" />
         </button>
-        <span className="font-bold text-sm text-sidebar-foreground flex-1 truncate">ACF Training Manager</span>
+        <span className="font-bold text-sm flex-1 truncate" style={{ color: '#D4AF37' }}>Leigh Detachment</span>
         <AttentionBadge />
         {viewAs && (
           <div className="flex items-center gap-1.5 bg-accent/20 rounded-lg px-2 py-1 shrink-0">

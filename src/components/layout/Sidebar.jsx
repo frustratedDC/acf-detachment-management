@@ -113,21 +113,21 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         collapsed ? "md:w-16" : "md:w-60",
         "w-60"
       )}
-      style={{ background: '#002147' }}
+      style={{ background: '#0B3D2E' }}
     >
       {/* Header / Branding */}
       <div className="p-3 border-b border-sidebar-border shrink-0">
         <div className="flex items-center gap-2.5">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs"
-            style={{ background: '#FFD700', color: '#002147' }}
+            style={{ background: '#D4AF37', color: '#0B3D2E' }}
           >
-            KRH
+            LD
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <h1 className="font-bold text-xs leading-tight truncate" style={{ color: '#FFD700' }}>Kings Royal Hussars</h1>
-              <p className="text-xs truncate" style={{ color: 'rgba(255,215,0,0.55)', fontSize: '0.65rem' }}>ACF Training Manager</p>
+              <h1 className="font-bold text-xs leading-tight truncate" style={{ color: '#D4AF37' }}>Leigh Detachment</h1>
+              <p className="text-xs truncate" style={{ color: 'rgba(212,175,55,0.55)', fontSize: '0.65rem' }}>ACF Training Manager</p>
             </div>
           )}
         </div>
@@ -160,17 +160,17 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <GroupIcon className="w-3.5 h-3.5 shrink-0" style={{ color: hasActiveItem ? '#FFD700' : 'rgba(255,215,0,0.4)' }} />
+                    <GroupIcon className="w-3.5 h-3.5 shrink-0" style={{ color: hasActiveItem ? '#D4AF37' : 'rgba(212,175,55,0.4)' }} />
                     <span
                       className="text-xs font-bold tracking-widest uppercase"
-                      style={{ color: hasActiveItem ? '#FFD700' : 'rgba(255,215,0,0.4)', fontSize: '0.6rem' }}
+                      style={{ color: hasActiveItem ? '#D4AF37' : 'rgba(212,175,55,0.4)', fontSize: '0.6rem' }}
                     >
                       {group.label}
                     </span>
                   </div>
                   <ChevronDown
                     className="w-3 h-3 transition-transform duration-200"
-                    style={{ color: 'rgba(255,215,0,0.3)', transform: isGroupCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
+                    style={{ color: 'rgba(212,175,55,0.3)', transform: isGroupCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
                   />
                 </button>
               ) : (
@@ -195,8 +195,8 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                             : "hover:bg-white/8"
                         )}
                         style={isActive
-                          ? { background: '#FFD700', color: '#002147' }
-                          : { color: 'rgba(255,255,255,0.7)' }
+                          ? { background: '#D4AF37', color: '#1A1A1A' }
+                          : { color: 'rgba(255,255,255,0.75)' }
                         }
                         title={collapsed ? item.label : undefined}
                       >
@@ -216,7 +216,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
       <div className="p-2 border-t border-white/10 shrink-0">
         {!collapsed && personnel && (
           <div className="mb-1.5 px-1">
-            <p className="text-xs font-semibold truncate" style={{ color: '#FFD700' }}>
+            <p className="text-xs font-semibold truncate" style={{ color: '#D4AF37' }}>
               {personnel.Rank && `${personnel.Rank} `}{personnel.FirstName} {personnel.Surname}
             </p>
             <p className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>{LEVEL_NAMES[accessLevel]}</p>
