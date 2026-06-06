@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
   CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown,
   CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, TrendingUp, FolderOpen,
-  AlertCircle, Shirt, HeartHandshake, AlertTriangle
+  AlertCircle, Shirt, HeartHandshake, AlertTriangle, FileText
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -90,6 +90,7 @@ const NAV_GROUPS = [
       { path: '/cfav-governance', label: 'CFAV Governance', icon: ShieldCheck, level: 4, inDevelopment: true },
       { path: '/instructor-quals', label: 'Instructor Qualifications', icon: GraduationCap, level: 4 },
       { path: '/all-availability', label: 'All Instructor Availability', icon: CalendarCheck, level: 4 },
+      { path: '/monthly-reports', label: 'Monthly Reports', icon: FileText, level: 4 },
       { path: '/form-creator', label: 'Form & Resource Creator', icon: FolderOpen, level: 4 },
       { path: '/admin', label: 'Command Hub', icon: Settings, level: 4 },
     ],

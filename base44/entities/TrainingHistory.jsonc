@@ -1,0 +1,81 @@
+{
+  "name": "TrainingHistory",
+  "type": "object",
+  "properties": {
+    "CadetPNumber": {
+      "type": "string",
+      "description": "PNumber of the cadet"
+    },
+    "LessonCode": {
+      "type": "string",
+      "description": "Lesson code completed"
+    },
+    "LessonName": {
+      "type": "string",
+      "description": "Name of the lesson"
+    },
+    "StarLevel": {
+      "type": "string",
+      "enum": [
+        "Basic",
+        "1 Star",
+        "2 Star",
+        "3 Star",
+        "4 Star"
+      ],
+      "description": "Star level of the lesson"
+    },
+    "SubjectName": {
+      "type": "string",
+      "description": "Subject category"
+    },
+    "CompletionDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date lesson was completed"
+    },
+    "ApprovedDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date lesson was approved"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Pending",
+      "description": "Approval status"
+    },
+    "ApprovedByPNumber": {
+      "type": "string",
+      "description": "PNumber of approving instructor"
+    }
+  },
+  "required": [
+    "CadetPNumber",
+    "LessonCode",
+    "LessonName",
+    "StarLevel"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
