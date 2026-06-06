@@ -1,0 +1,76 @@
+{
+  "name": "InstructorAvailability",
+  "type": "object",
+  "properties": {
+    "InstructorPNumber": {
+      "type": "string",
+      "description": "PNumber of the adult instructor"
+    },
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the availability"
+    },
+    "TimeSlot": {
+      "type": "string",
+      "description": "Time slot e.g., '19:00-21:00' (optional, for future scheduling support)"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Available",
+        "Unavailable"
+      ],
+      "default": "Available",
+      "description": "Instructor's availability status for this date/slot"
+    },
+    "Reason": {
+      "type": "string",
+      "description": "Optional reason for unavailability"
+    }
+  },
+  "required": [
+    "InstructorPNumber",
+    "Date",
+    "Status"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "data.InstructorPNumber": "{{user.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.InstructorPNumber": "{{user.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.InstructorPNumber": "{{user.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

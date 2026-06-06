@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Upload, Trash2, AlertTriangle, Loader2, FileUp, Users, Save, Shield, ShieldCheck, Zap, Download } from 'lucide-react';
+import { Settings, Upload, Trash2, AlertTriangle, Loader2, FileUp, Users, Save, Shield, ShieldCheck, Zap, Download, AlertCircle, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 
@@ -793,6 +794,36 @@ function EngagementRow({ row }) {
   );
 }
 
+// ─── Attendance Discrepancy Detection ────────────────────────────────────────
+function DiscrepancyAlert({ discrepancies }) {
+  if (discrepancies.length === 0) return null;
+
+  return (
+    <Card className="border-destructive/30 bg-destructive/5 mb-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2 text-destructive">
+          <AlertCircle className="w-5 h-5" />
+          Attendance Discrepancies ({discrepancies.length})
+        </CardTitle>
+        <CardDescription>Instructors marked Available but recorded as Absent</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {discrepancies.map(d => (
+          <div key={d.id} className="flex items-center justify-between p-2 rounded bg-muted/40">
+            <div className="text-sm">
+              <span className="font-medium">{d.instructorName}</span> ({d.pnum})
+              <span className="text-xs text-muted-foreground ml-2">{d.date}</span>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => window.alert('Resolve: Trigger engagement note modal for ' + d.pnum)}>
+              Resolve
+            </Button>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Operations Panel (L4+) — settings, syllabus, exports ───────────────────
 function DetCommanderPanel({ queryClient }) {
   const [detName, setDetName] = useState('');
@@ -802,6 +833,37 @@ function DetCommanderPanel({ queryClient }) {
     queryKey: ['det-settings'],
     queryFn: () => base44.entities.DetachmentSettings.filter({}),
   });
+
+  const { data: availability = [] } = useQuery({
+    queryKey: ['instructor-availability'],
+    queryFn: () => base44.entities.InstructorAvailability.list(),
+  });
+
+  const { data: attendanceLedger = [] } = useQuery({
+    queryKey: ['attendance-ledger'],
+    queryFn: () => base44.entities.InstructorAttendanceLedger.list(),
+  });
+
+  // Detect discrepancies: Available but Absent
+  const discrepancies = useMemo(() => {
+    const discrepancy = [];
+    availability.forEach(avail => {
+      if (avail.Status === 'Available') {
+        const absenceRecord = attendanceLedger.find(
+          a => a.InstructorPNumber === avail.InstructorPNumber && a.Date === avail.Date && a.AttendanceStatus === 'Absent'
+        );
+        if (absenceRecord) {
+          discrepancy.push({
+            id: `${avail.id}-${absenceRecord.id}`,
+            pnum: avail.InstructorPNumber,
+            instructorName: absenceRecord.InstructorName,
+            date: avail.Date,
+          });
+        }
+      }
+    });
+    return discrepancy;
+  }, [availability, attendanceLedger]);
 
   useEffect(() => {
     const name = settings.find(s => s.Key === 'detachment_name');
@@ -827,6 +889,7 @@ function DetCommanderPanel({ queryClient }) {
         <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
         <p className="text-xs text-primary font-medium">Operational settings — detachment configuration, syllabus management and data exports.</p>
       </div>
+      {discrepancies.length > 0 && <DiscrepancyAlert discrepancies={discrepancies} />}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="md:col-span-2">
           <CardHeader>
@@ -885,6 +948,30 @@ export default function AdminControls() {
   const isDC = myLevel >= ACCESS_LEVELS.DET_COMMANDER;
   const isSysAdmin = myLevel >= ACCESS_LEVELS.SYSTEM_ADMIN;
 
+  const { data: availability = [] } = useQuery({
+    queryKey: ['instructor-availability'],
+    queryFn: () => base44.entities.InstructorAvailability.list(),
+  });
+
+  const { data: attendanceLedger = [] } = useQuery({
+    queryKey: ['attendance-ledger'],
+    queryFn: () => base44.entities.InstructorAttendanceLedger.list(),
+  });
+
+  // Main discrepancy count for badge
+  const discrepancyCount = useMemo(() => {
+    let count = 0;
+    availability.forEach(avail => {
+      if (avail.Status === 'Available') {
+        const hasAbsence = attendanceLedger.some(
+          a => a.InstructorPNumber === avail.InstructorPNumber && a.Date === avail.Date && a.AttendanceStatus === 'Absent'
+        );
+        if (hasAbsence) count++;
+      }
+    });
+    return count;
+  }, [availability, attendanceLedger]);
+
   return (
     <AccessGate level={ACCESS_LEVELS.DET_2IC}>
       <PageHeader
@@ -898,6 +985,7 @@ export default function AdminControls() {
           <TabsTrigger value="operations" className="gap-2">
             <Zap className="w-4 h-4" />
             Operations
+            {discrepancyCount > 0 && <Badge className="ml-1 bg-destructive">{discrepancyCount}</Badge>}
           </TabsTrigger>
           <TabsTrigger value="personnel" className="gap-2">
             <Users className="w-4 h-4" />
