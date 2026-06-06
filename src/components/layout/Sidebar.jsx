@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
   CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown,
   CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, TrendingUp, FolderOpen,
-  AlertCircle, Shirt, HeartHandshake
+  AlertCircle, Shirt, HeartHandshake, AlertTriangle
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -84,10 +84,10 @@ const NAV_GROUPS = [
   {
     label: 'Command Hub',
     items: [
-      { path: '/analytics', label: 'Analytics', icon: BarChart2, level: 4 },
+      { path: '/analytics', label: 'Analytics', icon: BarChart2, level: 4, inDevelopment: true },
       { path: '/personnel', label: 'Personnel', icon: Users, level: 4 },
       { path: '/accounts', label: 'Accounts', icon: Shield, level: 4 },
-      { path: '/cfav-governance', label: 'CFAV Governance', icon: ShieldCheck, level: 4 },
+      { path: '/cfav-governance', label: 'CFAV Governance', icon: ShieldCheck, level: 4, inDevelopment: true },
       { path: '/instructor-quals', label: 'Instructor Qualifications', icon: GraduationCap, level: 4 },
       { path: '/all-availability', label: 'All Instructor Availability', icon: CalendarCheck, level: 4 },
       { path: '/form-creator', label: 'Form & Resource Creator', icon: FolderOpen, level: 4 },
@@ -183,7 +183,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                         key={item.path}
                         to={item.path}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200",
+                          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 group",
                           isActive
                             ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                             : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
@@ -191,7 +191,14 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                         title={collapsed ? item.label : undefined}
                       >
                         <Icon className={cn("w-4 h-4 shrink-0", isActive && "text-sidebar-primary")} />
-                        {!collapsed && <span className="truncate">{item.label}</span>}
+                        {!collapsed && (
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className="truncate">{item.label}</span>
+                            {item.inDevelopment && (
+                              <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" title="Work in Progress" />
+                            )}
+                          </div>
+                        )}
                       </Link>
                     );
                   })}
