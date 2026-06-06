@@ -53,6 +53,7 @@ import HealthyMinds from '@/pages/HealthyMinds';
 import CommunityEngagement from '@/pages/CommunityEngagement';
 import InstructorEngagement from '@/pages/InstructorEngagement';
 import MonthlyReports from '@/pages/MonthlyReports';
+import MyLogbooks from '@/pages/MyLogbooks';
 
 const AppContent = () => {
   const { personnel, loading } = usePersonnel();
@@ -110,6 +111,7 @@ const AppContent = () => {
         <Route path="/community-engagement" element={<CommunityEngagement />} />
         <Route path="/instructor-engagement" element={<InstructorEngagement />} />
         <Route path="/monthly-reports" element={<MonthlyReports />} />
+        <Route path="/my-logbooks" element={<MyLogbooks />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

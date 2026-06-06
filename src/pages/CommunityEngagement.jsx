@@ -35,6 +35,7 @@ export default function CommunityEngagement() {
   const [form, setForm] = useState({ Hours: "", Description: "", Date: format(new Date(), "yyyy-MM-dd") });
 
   const myCEAccess = hasAccess(me?.AccessLevel ?? 0, ACCESS_LEVELS.CADET_NCO) || me?.CEAccess === true;
+  const canSubmitCE = me?.role === 'admin' || hasAccess(me?.AccessLevel ?? 0, ACCESS_LEVELS.DET_2IC);
 
   // Check for existing access request
   useEffect(() => {
@@ -144,9 +145,11 @@ export default function CommunityEngagement() {
         description="Log and track your community engagement hours"
         icon={HeartHandshake}
         actions={
-          <Button onClick={() => setShowForm(s => !s)} size="sm" className="gap-1">
-            <PlusCircle className="w-4 h-4" />Add CE Hours
-          </Button>
+          canSubmitCE && (
+            <Button onClick={() => setShowForm(s => !s)} size="sm" className="gap-1">
+              <PlusCircle className="w-4 h-4" />Add CE Hours
+            </Button>
+          )
         }
       />
 
@@ -211,7 +214,7 @@ export default function CommunityEngagement() {
       </div>
 
       {/* Submission form */}
-      {showForm && (
+      {showForm && canSubmitCE && (
         <Card className="border-primary/30">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Log Community Engagement Hours</CardTitle>

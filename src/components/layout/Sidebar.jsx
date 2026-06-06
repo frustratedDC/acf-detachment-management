@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, BookOpenCheck, LogOut, FileDown,
   CalendarDays, ClipboardCheck, Megaphone, ShieldCheck, Crosshair, ChevronDown,
   CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, TrendingUp, FolderOpen,
-  AlertCircle, Shirt, HeartHandshake, AlertTriangle, FileText
+  AlertCircle, Shirt, HeartHandshake, AlertTriangle, FileText, BookMarked
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -77,6 +77,7 @@ const NAV_GROUPS = [
   {
     label: 'Logbook',
     items: [
+      { path: '/my-logbooks', label: 'My Logbooks', icon: BookMarked, level: 0 },
       { path: '/keeping-active', label: 'Logbook', icon: Dumbbell, level: 0 },
       { path: '/community-engagement', label: 'Community Engagement', icon: HeartHandshake, level: 0 },
     ],

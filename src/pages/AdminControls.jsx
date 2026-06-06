@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Settings, Upload, Trash2, AlertTriangle, Loader2, FileUp, Users, Save, Shield, ShieldCheck, Zap, Download, AlertCircle, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
+import AccessRequestsTab from '@/components/admin/AccessRequestsTab';
 
 // ─── Sys Admin Section (L6 only) ───────────────────────────────────────────
 function SysAdminPanel({ queryClient }) {
@@ -692,6 +693,10 @@ export default function AdminControls() {
             Operations
             {discrepancyCount > 0 && <Badge className="ml-1 bg-destructive">{discrepancyCount}</Badge>}
           </TabsTrigger>
+          <TabsTrigger value="access-requests" className="gap-2">
+            <Shield className="w-4 h-4" />
+            Access Requests
+          </TabsTrigger>
           <TabsTrigger value="personnel" className="gap-2">
             <Users className="w-4 h-4" />
             Personnel
@@ -712,6 +717,10 @@ export default function AdminControls() {
 
         <TabsContent value="operations">
           <DetCommanderPanel queryClient={queryClient} />
+        </TabsContent>
+
+        <TabsContent value="access-requests">
+          <AccessRequestsTab />
         </TabsContent>
 
         <TabsContent value="personnel">
