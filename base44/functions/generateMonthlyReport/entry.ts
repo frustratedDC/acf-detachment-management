@@ -16,64 +16,116 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing month or year' }, { status: 400 });
     }
 
-    // Fetch required data
-    const [personnel, attendanceLedger, qualifications, trainingHistory, progress] = await Promise.all([
+    const startDate = format(startOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
+    const endDate = format(endOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
+
+    // Fetch all required data in parallel
+    const [
+      personnel,
+      cadetParade,         // DailyParadeState: cadet attendance (UserPNumber)
+      instructorLedger,    // InstructorAttendanceLedger: instructor attendance (InstructorPNumber)
+      qualifications,
+      trainingHistory,     // TrainingHistory: has SubjectName for breakdown
+      progressLedger,      // ProgressLedger: lesson approvals (CompletionDate)
+      nightlySchedule,     // NightlySchedule: source of truth for expected training nights
+    ] = await Promise.all([
       base44.asServiceRole.entities.PersonnelManager.filter({}),
+      base44.asServiceRole.entities.DailyParadeState.filter({}),
       base44.asServiceRole.entities.InstructorAttendanceLedger.filter({}),
       base44.asServiceRole.entities.QualificationMatrix.filter({}),
       base44.asServiceRole.entities.TrainingHistory.filter({}),
       base44.asServiceRole.entities.ProgressLedger.filter({}),
+      base44.asServiceRole.entities.NightlySchedule.filter({}),
     ]);
 
-    const startDate = format(startOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
-    const endDate = format(endOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
-
-    // Calculate metrics
+    // Segment active personnel
     const cadets = personnel.filter(p => p.Type === 'Cadet' && p.PersonnelStatus === 'Active');
     const instructors = personnel.filter(p => p.Type === 'Adult Instructor' && p.PersonnelStatus === 'Active');
+    const cadetPNumbers = new Set(cadets.map(c => c.PNumber));
+    const instructorPNumbers = new Set(instructors.map(i => i.PNumber));
 
-    // Attendance calculations
-    const monthAttendance = attendanceLedger.filter(a => a.Date >= startDate && a.Date <= endDate);
-    const cadetAttendanceDates = [...new Set(monthAttendance.filter(a => a.UserPNumber && cadets.some(c => c.PNumber === a.UserPNumber)).map(a => a.Date))];
-    const instructorAttendanceDates = [...new Set(monthAttendance.filter(a => a.UserPNumber && instructors.some(i => i.PNumber === a.UserPNumber)).map(a => a.Date))];
+    // Training nights from NightlySchedule — source of truth for expected attendance
+    const trainingNights = [
+      ...new Set(
+        nightlySchedule
+          .filter(s => s.Date >= startDate && s.Date <= endDate)
+          .map(s => s.Date)
+      ),
+    ];
+    const trainingNightCount = trainingNights.length;
 
-    const cadetPresent = monthAttendance.filter(a => a.AttendanceStatus === 'Present' && cadets.some(c => c.PNumber === a.UserPNumber)).length;
-    const cadetTotal = cadetAttendanceDates.length * cadets.length;
-    const cadetAttendanceRate = cadetTotal > 0 ? Math.round((cadetPresent / cadetTotal) * 100) : 0;
+    // --- CADET ATTENDANCE (DailyParadeState, field: UserPNumber) ---
+    const monthCadetParade = cadetParade.filter(
+      a => a.Date >= startDate && a.Date <= endDate && cadetPNumbers.has(a.UserPNumber)
+    );
+    const cadetPresent = monthCadetParade.filter(a => a.AttendanceStatus === 'Present').length;
+    const expectedCadetAttendance = trainingNightCount * cadets.length;
+    const cadetAttendanceRate = expectedCadetAttendance > 0
+      ? Math.round((cadetPresent / expectedCadetAttendance) * 100)
+      : 0;
+    const cadetDataMissing = monthCadetParade.length === 0 && trainingNightCount > 0;
 
-    const instructorPresent = monthAttendance.filter(a => a.AttendanceStatus === 'Present' && instructors.some(i => i.PNumber === a.UserPNumber)).length;
-    const instructorTotal = instructorAttendanceDates.length * instructors.length;
-    const instructorAttendanceRate = instructorTotal > 0 ? Math.round((instructorPresent / instructorTotal) * 100) : 0;
+    // --- INSTRUCTOR ATTENDANCE (InstructorAttendanceLedger, field: InstructorPNumber) ---
+    const monthInstructorLedger = instructorLedger.filter(
+      a => a.Date >= startDate && a.Date <= endDate && instructorPNumbers.has(a.InstructorPNumber)
+    );
+    const instructorPresent = monthInstructorLedger.filter(a => a.AttendanceStatus === 'Present').length;
+    const expectedInstructorAttendance = trainingNightCount * instructors.length;
+    const instructorAttendanceRate = expectedInstructorAttendance > 0
+      ? Math.round((instructorPresent / expectedInstructorAttendance) * 100)
+      : 0;
+    const instructorDataMissing = monthInstructorLedger.length === 0 && trainingNightCount > 0;
 
-    // Subject completion
-    const monthProgress = progress.filter(p => p.created_date >= startDate && p.created_date <= endDate && p.Status === 'Approved');
+    // --- SUBJECT BREAKDOWN (TrainingHistory has SubjectName) ---
+    const monthTrainingHistory = trainingHistory.filter(
+      t => t.CompletionDate >= startDate && t.CompletionDate <= endDate && t.Status === 'Approved'
+    );
     const subjectBreakdown = {};
-    monthProgress.forEach(p => {
-      if (p.SubjectName) {
-        subjectBreakdown[p.SubjectName] = (subjectBreakdown[p.SubjectName] || 0) + 1;
+    monthTrainingHistory.forEach(t => {
+      if (t.SubjectName) {
+        subjectBreakdown[t.SubjectName] = (subjectBreakdown[t.SubjectName] || 0) + 1;
       }
     });
 
-    // Engagement
-    const cadetEngagement = monthProgress.length;
-    const expiringQuals = qualifications.filter(q => q.ExpiryDate && new Date(q.ExpiryDate) <= endOfMonth(new Date(year, month - 1, 1)) && new Date(q.ExpiryDate) >= startOfMonth(new Date(year, month - 1, 1))).length;
+    // --- LESSONS APPROVED (ProgressLedger, filter by CompletionDate) ---
+    const lessonsApproved = progressLedger.filter(
+      p => p.CompletionDate >= startDate && p.CompletionDate <= endDate && p.Status === 'Approved'
+    ).length;
+
+    // --- EXPIRING QUALIFICATIONS ---
+    const expiringQuals = qualifications.filter(
+      q => q.ExpiryDate && q.ExpiryDate >= startDate && q.ExpiryDate <= endDate
+    ).length;
+
+    const monthLabel = format(new Date(year, month - 1, 1), 'MMMM yyyy');
 
     const report = {
       month,
       year,
-      monthName: format(new Date(year, month - 1, 1), 'MMMM yyyy'),
+      monthName: monthLabel,
       generatedDate: format(new Date(), 'yyyy-MM-dd HH:mm:ss'),
       summary: {
         totalCadets: cadets.length,
         totalInstructors: instructors.length,
         cadetAttendanceRate,
         instructorAttendanceRate,
-        lessonsApproved: monthProgress.length,
+        cadetPresent,
+        expectedCadetAttendance,
+        instructorPresent,
+        expectedInstructorAttendance,
+        lessonsApproved,
         expiringQualifications: expiringQuals,
       },
+      // Data quality flags for UI tooltips
+      dataFlags: {
+        cadetDataMissing,
+        instructorDataMissing,
+        noTrainingNights: trainingNightCount === 0,
+        monthLabel,
+      },
       subjectBreakdown,
-      trainingDates: cadetAttendanceDates.length,
-      staffAvailable: instructorAttendanceDates.length,
+      trainingDates: trainingNightCount,
+      staffAvailable: instructorPresent,
     };
 
     return Response.json(report);

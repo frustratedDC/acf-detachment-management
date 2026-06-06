@@ -1,5 +1,4 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useMemo, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
 import AccessGate from '@/components/shared/AccessGate';
@@ -8,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Download, Loader2, BarChart2 } from 'lucide-react';
-import { format, subMonths, parseISO, startOfMonth, endOfMonth, isAfter } from 'date-fns';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { FileText, Download, Loader2, BarChart2, AlertCircle } from 'lucide-react';
+import { format, subMonths, startOfMonth, endOfMonth, isAfter } from 'date-fns';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 import { toast } from 'sonner';
 
@@ -33,14 +33,11 @@ export default function MonthlyReports() {
   // Check if selected month is in the future
   const isFutureMonth = isAfter(selectedMonthStart, today);
 
-  const { isLoading } = useQuery({
-    queryKey: ['scan-data-integrity'],
-    queryFn: async () => {
-      const res = await base44.functions.invoke('dataIntegrityScan', {});
-      return res.data;
-    },
-    enabled: false,
-  });
+  // onLoad: pre-fetch attendance to warm the cache
+  useEffect(() => {
+    base44.entities.DailyParadeState.list().catch(() => {});
+    base44.entities.InstructorAttendanceLedger.list().catch(() => {});
+  }, []);
 
   const handleGenerateReport = async () => {
     // Validate: prevent future months
@@ -266,45 +263,92 @@ export default function MonthlyReports() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Data quality warnings */}
+            {reportData.dataFlags?.noTrainingNights && (
+              <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                No training nights found in NightlySchedule for {reportData.dataFlags.monthLabel}. Attendance % cannot be calculated.
+              </div>
+            )}
+
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <Card>
-                <CardContent className="p-3">
-                  <p className="text-xs text-muted-foreground">Total Cadets</p>
-                  <p className="text-2xl font-bold">{reportData.summary.totalCadets}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-3">
-                  <p className="text-xs text-muted-foreground">Total Instructors</p>
-                  <p className="text-2xl font-bold">{reportData.summary.totalInstructors}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-3">
-                  <p className="text-xs text-muted-foreground">Cadet Attendance</p>
-                  <p className="text-2xl font-bold text-chart-2">{reportData.summary.cadetAttendanceRate}%</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-3">
-                  <p className="text-xs text-muted-foreground">Instructor Attendance</p>
-                  <p className="text-2xl font-bold text-chart-2">{reportData.summary.instructorAttendanceRate}%</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-3">
-                  <p className="text-xs text-muted-foreground">Lessons Approved</p>
-                  <p className="text-2xl font-bold text-accent-foreground">{reportData.summary.lessonsApproved}</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-3">
-                  <p className="text-xs text-muted-foreground">Expiring Quals</p>
-                  <p className="text-2xl font-bold text-destructive">{reportData.summary.expiringQualifications}</p>
-                </CardContent>
-              </Card>
-            </div>
+            <TooltipProvider>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <Card>
+                  <CardContent className="p-3">
+                    <p className="text-xs text-muted-foreground">Total Cadets</p>
+                    <p className="text-2xl font-bold">{reportData.summary.totalCadets}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-3">
+                    <p className="text-xs text-muted-foreground">Total Instructors</p>
+                    <p className="text-2xl font-bold">{reportData.summary.totalInstructors}</p>
+                  </CardContent>
+                </Card>
+
+                {/* Cadet Attendance with data-missing tooltip */}
+                <Card className={reportData.dataFlags?.cadetDataMissing ? 'border-amber-300' : ''}>
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-1">
+                      <p className="text-xs text-muted-foreground">Cadet Attendance</p>
+                      {reportData.dataFlags?.cadetDataMissing && (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <AlertCircle className="w-3 h-3 text-amber-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Data missing for {reportData.dataFlags.monthLabel}</p>
+                            <p className="text-xs opacity-70">No parade records found in DailyParadeState</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                    <p className="text-2xl font-bold text-chart-2">{reportData.summary.cadetAttendanceRate}%</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {reportData.summary.cadetPresent} / {reportData.summary.expectedCadetAttendance} expected
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Instructor Attendance with data-missing tooltip */}
+                <Card className={reportData.dataFlags?.instructorDataMissing ? 'border-amber-300' : ''}>
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-1">
+                      <p className="text-xs text-muted-foreground">Instructor Attendance</p>
+                      {reportData.dataFlags?.instructorDataMissing && (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <AlertCircle className="w-3 h-3 text-amber-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Data missing for {reportData.dataFlags.monthLabel}</p>
+                            <p className="text-xs opacity-70">No records found in InstructorAttendanceLedger</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                    <p className="text-2xl font-bold text-chart-2">{reportData.summary.instructorAttendanceRate}%</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {reportData.summary.instructorPresent} / {reportData.summary.expectedInstructorAttendance} expected
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-3">
+                    <p className="text-xs text-muted-foreground">Lessons Approved</p>
+                    <p className="text-2xl font-bold text-accent-foreground">{reportData.summary.lessonsApproved}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-3">
+                    <p className="text-xs text-muted-foreground">Expiring Quals</p>
+                    <p className="text-2xl font-bold text-destructive">{reportData.summary.expiringQualifications}</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </TooltipProvider>
 
             {/* Subject Breakdown */}
             {Object.keys(reportData.subjectBreakdown).length > 0 && (
