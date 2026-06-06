@@ -77,6 +77,18 @@ export default function MyProgress() {
     enabled: !!pnum,
   });
 
+  const { data: ceEntries = [] } = useQuery({
+    queryKey: ['ce-mine', pnum],
+    queryFn: () => base44.entities.CommunityEngagementLedger.filter({ CadetPNumber: pnum }),
+    enabled: !!pnum,
+  });
+
+  const { data: myQuals = [] } = useQuery({
+    queryKey: ['quals-mine', pnum],
+    queryFn: () => base44.entities.QualificationMatrix.filter({ InstructorPNumber: pnum }),
+    enabled: !!pnum,
+  });
+
   // KA total
   const kaTotalPts = useMemo(() => kaLogbook.reduce((s, e) => s + (e.Points || 0), 0), [kaLogbook]);
   const kaStarLevel = personnel?.CurrentStarLevel;
@@ -165,30 +177,42 @@ export default function MyProgress() {
       />
 
       {/* Stat boxes */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatBox
           label="KA Points"
           value={kaTotalPts}
-          sub={kaBenchmark ? `${kaBenchmark} req. for ${kaStarLevel}` : undefined}
+          sub={kaBenchmark ? `${kaBenchmark} req.` : undefined}
           color="text-primary"
         />
         <StatBox
           label="Attendance"
           value={attendanceRate != null ? `${attendanceRate}%` : '—'}
-          sub={`${attendance.length} parades recorded`}
+          sub={`${attendance.length} parades`}
           color="text-chart-2"
         />
         <StatBox
           label="WHT Alerts"
           value={whtAlerts.length}
-          sub={whtAlerts.length ? 'expiring / expired' : 'All current'}
+          sub={whtAlerts.length ? 'expiring/expired' : 'All current'}
           color={whtAlerts.length ? 'text-destructive' : 'text-emerald-600'}
         />
         <StatBox
           label="KA Sessions"
           value={kaSessions.length}
-          sub={`${kaLogbook.length} log book entries`}
+          sub={`${kaLogbook.length} logbook entries`}
           color="text-accent-foreground"
+        />
+        <StatBox
+          label="CE Hours"
+          value={ceEntries.filter(e => e.Status === 'Approved').reduce((s, e) => s + (e.Hours || 0), 0)}
+          sub={`${ceEntries.filter(e => e.Status === 'Pending').length} pending`}
+          color="text-chart-3"
+        />
+        <StatBox
+          label="Qualifications"
+          value={myQuals.length}
+          sub={myQuals.filter(q => q.Status === 'Expired').length > 0 ? `${myQuals.filter(q => q.Status === 'Expired').length} expired` : 'All current'}
+          color={myQuals.some(q => q.Status === 'Expired') ? 'text-destructive' : 'text-emerald-600'}
         />
       </div>
 

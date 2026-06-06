@@ -481,6 +481,17 @@ export default function BulkProgressEntry() {
               <AlertTriangle className="w-10 h-10 mx-auto mb-3 opacity-30" />
               <p className="font-medium">No eligible cadets found for {starLevel} — {subjectFilter}.</p>
               <p className="text-xs mt-1">No active cadets are currently at the <strong>{starLevel}</strong> level.</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-4 text-xs"
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
+                  queryClient.invalidateQueries({ queryKey: ['progress-all'] });
+                }}
+              >
+                ↻ Sync Latest Data
+              </Button>
             </div>
           ) : displayLessons.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-12">No lessons found for selected filters.</p>

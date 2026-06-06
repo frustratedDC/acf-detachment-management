@@ -16,6 +16,7 @@ export default function AttentionBadge() {
     queryFn: () => base44.entities.ProgressLedger.filter({ Status: 'Pending' }),
     enabled: isDC,
     refetchInterval: 60000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: pendingCE = [] } = useQuery({
@@ -23,6 +24,7 @@ export default function AttentionBadge() {
     queryFn: () => base44.entities.CommunityEngagementLedger.filter({ Status: 'Pending' }),
     enabled: isDC,
     refetchInterval: 60000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: pendingKA = [] } = useQuery({
@@ -30,6 +32,7 @@ export default function AttentionBadge() {
     queryFn: () => base44.entities.AccessRequest.filter({ Status: 'Pending' }),
     enabled: isDC,
     refetchInterval: 60000,
+    refetchOnWindowFocus: true,
   });
 
   if (!isDC) return null;

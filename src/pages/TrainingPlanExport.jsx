@@ -108,7 +108,7 @@ export default function TrainingPlanExport() {
   }
 
   // ── SHARED: draw KRH page footer ─────────────────────────────────────────
-  function drawPageFooter(doc, pageW, pageH, pageNum, totalPages) {
+  function drawPageFooter(doc, pageW, pageH, pageNum, totalPages, integrityDate) {
     doc.setFillColor(...KRH.navy);
     doc.rect(0, pageH - 7, pageW, 7, 'F');
     doc.setFillColor(...KRH.gold);
@@ -117,7 +117,7 @@ export default function TrainingPlanExport() {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...KRH.silver);
     doc.text(
-      `${detName}  ·  Issued ${format(new Date(), 'dd/MM/yyyy')}  ·  OFFICIAL  ·  Page ${pageNum} of ${totalPages}`,
+      `${detName}  ·  Issued ${format(new Date(), 'dd/MM/yyyy HH:mm')}  ·  Data verified against master records as of ${integrityDate}  ·  OFFICIAL  ·  Page ${pageNum} of ${totalPages}`,
       pageW / 2, pageH - 2.5, { align: 'center' }
     );
   }
@@ -246,9 +246,10 @@ export default function TrainingPlanExport() {
 
     // Footers
     const totalPages = doc.getNumberOfPages();
+    const integrityDate = format(new Date(), 'dd/MM/yyyy HH:mm');
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
-      drawPageFooter(doc, pageW, pageH, p, totalPages);
+      drawPageFooter(doc, pageW, pageH, p, totalPages, integrityDate);
     }
 
     doc.save(`Training_Condensed_${periodDesc.replace(/\s+/g, '_')}.pdf`);
@@ -373,9 +374,10 @@ export default function TrainingPlanExport() {
 
     // Footers
     const totalPages = doc.getNumberOfPages();
+    const integrityDate = format(new Date(), 'dd/MM/yyyy HH:mm');
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
-      drawPageFooter(doc, pageW, pageH, p, totalPages);
+      drawPageFooter(doc, pageW, pageH, p, totalPages, integrityDate);
     }
 
     doc.save(`Training_Detailed_${periodDesc.replace(/\s+/g, '_')}.pdf`);
