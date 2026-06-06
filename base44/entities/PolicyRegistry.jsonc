@@ -1,0 +1,63 @@
+{
+  "name": "PolicyRegistry",
+  "type": "object",
+  "properties": {
+    "Title": {
+      "type": "string",
+      "description": "Policy name"
+    },
+    "Description": {
+      "type": "string",
+      "description": "Policy description"
+    },
+    "DocumentUrl": {
+      "type": "string",
+      "description": "URL to policy document"
+    },
+    "EffectiveDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date policy became effective"
+    },
+    "ExpiryDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date policy expires"
+    },
+    "ComplianceStatus": {
+      "type": "string",
+      "enum": [
+        "Current",
+        "Expiring Soon",
+        "Expired"
+      ],
+      "default": "Current",
+      "description": "Compliance status"
+    },
+    "CreatedByPNumber": {
+      "type": "string",
+      "description": "PNumber of creator"
+    }
+  },
+  "required": [
+    "Title"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

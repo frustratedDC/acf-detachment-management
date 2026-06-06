@@ -1,0 +1,64 @@
+{
+  "name": "QualificationMatrix",
+  "type": "object",
+  "properties": {
+    "InstructorPNumber": {
+      "type": "string",
+      "description": "PNumber of the instructor"
+    },
+    "InstructorName": {
+      "type": "string",
+      "description": "Display name"
+    },
+    "QualificationType": {
+      "type": "string",
+      "description": "Type of qualification (e.g., Level 4 AAP, First Aid, Safeguarding)"
+    },
+    "AwardedDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date qualification was awarded"
+    },
+    "ExpiryDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date qualification expires"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Current",
+        "Expiring Soon",
+        "Expired"
+      ],
+      "default": "Current",
+      "description": "Qualification status"
+    },
+    "VerifiedByPNumber": {
+      "type": "string",
+      "description": "PNumber of verifying authority"
+    }
+  },
+  "required": [
+    "InstructorPNumber",
+    "QualificationType"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
