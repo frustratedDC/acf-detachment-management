@@ -5,7 +5,8 @@ import { usePersonnel } from '@/lib/usePersonnel';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { GraduationCap, AlertCircle } from 'lucide-react';
+import { GraduationCap, AlertCircle, Clock } from 'lucide-react';
+import { differenceInDays, parseISO, isBefore } from 'date-fns';
 
 function getQualificationColor(status) {
   switch (status) {
@@ -18,6 +19,21 @@ function getQualificationColor(status) {
     default:
       return 'bg-muted text-muted-foreground';
   }
+}
+
+function getExpiryWarning(expiryDate) {
+  if (!expiryDate) return null;
+  const today = new Date();
+  const exp = parseISO(expiryDate);
+  const daysLeft = differenceInDays(exp, today);
+  
+  if (isBefore(exp, today)) {
+    return { type: 'expired', label: 'Expired', color: 'text-destructive' };
+  }
+  if (daysLeft <= 30) {
+    return { type: 'warning', label: `${daysLeft}d left`, color: 'text-amber-700' };
+  }
+  return null;
 }
 
 export default function MyQualifications() {
@@ -113,28 +129,39 @@ export default function MyQualifications() {
             </CardContent>
           </Card>
         ) : (
-          myQualifications.map((qual) => (
-            <Card key={qual.id}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{qual.QualificationType}</p>
-                    {qual.AwardedDate && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Awarded: {new Date(qual.AwardedDate).toLocaleDateString()}
-                      </p>
-                    )}
-                    {qual.ExpiryDate && (
-                      <p className="text-xs text-muted-foreground">
-                        Expires: {new Date(qual.ExpiryDate).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
-                  <Badge className={getQualificationColor(qual.Status)}>{qual.Status}</Badge>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+          myQualifications.map((qual) => {
+           const warning = getExpiryWarning(qual.ExpiryDate);
+           return (
+             <Card key={qual.id} className={warning?.type === 'expired' ? 'border-destructive/30' : warning?.type === 'warning' ? 'border-amber-200/50' : ''}>
+               <CardContent className="p-4">
+                 <div className="flex items-start justify-between gap-4">
+                   <div className="flex-1">
+                     <div className="flex items-center gap-2">
+                       <p className="font-medium text-sm">{qual.QualificationType}</p>
+                       {warning && (
+                         <Badge variant="outline" className={`text-xs gap-1 ${warning.color}`}>
+                           <Clock className="w-3 h-3" />
+                           {warning.label}
+                         </Badge>
+                       )}
+                     </div>
+                     {qual.AwardedDate && (
+                       <p className="text-xs text-muted-foreground mt-1">
+                         Awarded: {new Date(qual.AwardedDate).toLocaleDateString()}
+                       </p>
+                     )}
+                     {qual.ExpiryDate && (
+                       <p className="text-xs text-muted-foreground">
+                         Expires: {new Date(qual.ExpiryDate).toLocaleDateString()}
+                       </p>
+                     )}
+                   </div>
+                   <Badge className={getQualificationColor(qual.Status)}>{qual.Status}</Badge>
+                 </div>
+               </CardContent>
+             </Card>
+           );
+          })
         )}
       </div>
 

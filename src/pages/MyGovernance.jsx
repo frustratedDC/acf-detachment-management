@@ -5,7 +5,8 @@ import { usePersonnel } from '@/lib/usePersonnel';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShieldCheck, FileText, AlertCircle } from 'lucide-react';
+import { ShieldCheck, FileText, AlertCircle, RefreshCw } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 
 function getComplianceColor(status) {
   switch (status) {
@@ -111,6 +112,10 @@ export default function MyGovernance() {
                         Expires: {new Date(policy.ExpiryDate).toLocaleDateString()}
                       </p>
                     )}
+                    <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Last updated: {policy.updated_date ? format(parseISO(policy.updated_date), 'dd MMM yyyy HH:mm') : 'Unknown'}</span>
+                    </div>
                   </div>
                   <Badge className={getComplianceColor(policy.ComplianceStatus)}>
                     {policy.ComplianceStatus}
