@@ -1,0 +1,74 @@
+{
+  "name": "DetachmentResources",
+  "type": "object",
+  "properties": {
+    "Title": {
+      "type": "string",
+      "description": "Name of the resource or form"
+    },
+    "Description": {
+      "type": "string",
+      "description": "Brief description of the resource"
+    },
+    "Type": {
+      "type": "string",
+      "enum": [
+        "Form",
+        "Resource"
+      ],
+      "default": "Resource",
+      "description": "Whether this is a Form or a Resource"
+    },
+    "Category": {
+      "type": "string",
+      "enum": [
+        "Training",
+        "Admin",
+        "Logistics",
+        "Other"
+      ],
+      "default": "Other",
+      "description": "Category for organization"
+    },
+    "FileUrl": {
+      "type": "string",
+      "description": "URL to the uploaded PDF/Excel file"
+    },
+    "FileName": {
+      "type": "string",
+      "description": "Original filename"
+    },
+    "CreatedByPNumber": {
+      "type": "string",
+      "description": "PNumber of the DC who created this resource"
+    },
+    "IsActive": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the resource is currently available"
+    }
+  },
+  "required": [
+    "Title",
+    "Type",
+    "Category"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
