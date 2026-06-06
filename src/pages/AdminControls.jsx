@@ -19,9 +19,6 @@ function SysAdminPanel({ queryClient }) {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [purging, setPurging] = useState(false);
-  const [auditResults, setAuditResults] = useState(null);
-  const [auditMode, setAuditMode] = useState(true);
-  const [densityResults, setDensityResults] = useState(null);
 
   async function handleSyllabusCsvUpload(e) {
     const file = e.target.files?.[0];
@@ -81,59 +78,6 @@ function SysAdminPanel({ queryClient }) {
     setPurging(false);
   }
 
-  async function auditMay31Duplicates() {
-    setPurging(true);
-    const all = await base44.entities.PersonnelManager.filter({});
-    const pNumberMap = {};
-    const duplicates = [];
-    
-    // Sort oldest first
-    const sorted = all.sort((a, b) => {
-      const dateA = new Date(a.created_date || 0);
-      const dateB = new Date(b.created_date || 0);
-      return dateA - dateB;
-    });
-    
-    sorted.forEach(record => {
-      if (!pNumberMap[record.PNumber]) {
-        pNumberMap[record.PNumber] = record;
-      } else {
-        // Check if created on May 31
-        const recordDate = new Date(record.created_date);
-        const isMay31 = recordDate.getUTCFullYear() === 2026 && 
-                        recordDate.getUTCMonth() === 4 && 
-                        recordDate.getUTCDate() === 31;
-        if (isMay31) {
-          duplicates.push(record);
-        }
-      }
-    });
-    
-    setAuditResults(duplicates);
-    setAuditMode(false);
-    toast.success(`Audit complete: Found ${duplicates.length} May 31 duplicates`);
-    setPurging(false);
-  }
-
-  async function executeMay31Purge() {
-    if (!auditResults || auditResults.length === 0) return;
-    if (!window.confirm(`Delete ${auditResults.length} duplicate records? This cannot be undone.`)) return;
-    
-    setPurging(true);
-    try {
-      for (const record of auditResults) {
-        await base44.entities.PersonnelManager.delete(record.id);
-      }
-      queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
-      toast.success(`Purged ${auditResults.length} duplicate records`);
-      setAuditResults(null);
-      setAuditMode(true);
-    } catch (e) {
-      toast.error(`Purge failed: ${e.message}`);
-    }
-    setPurging(false);
-  }
-
   async function purgeAllDataExceptAdmin(executeDelete = false) {
     const user = await base44.auth.me();
     if (user?.role !== 'admin') {
@@ -168,119 +112,7 @@ function SysAdminPanel({ queryClient }) {
     }
   }
 
-  async function purgeByDataDensity(executeDelete = false) {
-    console.log("🚀 Starting Safe Client-Side Base44 Scan...");
-    const response = await base44.entities.PersonnelManager.list();
-    const allRecords = Array.isArray(response) ? response : (response?.data || []);
-    
-    if (!allRecords || allRecords.length === 0) {
-      toast.info("No personnel records found");
-      return null;
-    }
-
-    const calculateDataWeight = (record) => {
-      let score = 0;
-      if (record.StatusNotes && record.StatusNotes.trim() !== "") score += 20;
-      if (Array.isArray(record.QualifiedSubjects) && record.QualifiedSubjects.length > 0) {
-        score += (record.QualifiedSubjects.length * 10);
-      }
-      if (record.PersonnelStatus && record.PersonnelStatus !== "Active") score += 15;
-      Object.keys(record).forEach(key => {
-        const val = record[key];
-        if (val !== null && val !== undefined && val !== "" && val !== false) {
-          score += 1;
-        }
-      });
-      return score;
-    };
-
-    const groups = {};
-    allRecords.forEach(record => {
-      if (!record.PNumber) return;
-      if (!groups[record.PNumber]) groups[record.PNumber] = [];
-      groups[record.PNumber].push({
-        raw: record,
-        weight: calculateDataWeight(record)
-      });
-    });
-
-    const recordsToPurge = [];
-    Object.keys(groups).forEach(pNumber => {
-      const group = groups[pNumber];
-      if (group.length > 1) {
-        group.sort((a, b) => {
-          if (b.weight !== a.weight) return b.weight - a.weight;
-          return (a.raw.id || 0) - (b.raw.id || 0);
-        });
-        for (let i = 1; i < group.length; i++) {
-          recordsToPurge.push({
-            duplicate: group[i].raw,
-            masterId: group[0].raw.id,
-            masterWeight: group[0].weight,
-            dupWeight: group[i].weight
-          });
-        }
-      }
-    });
-
-    console.log(`🔍 Analysis Complete. Found ${recordsToPurge.length} duplicate rows.`);
-
-    if (recordsToPurge.length === 0) {
-      toast.success("No data density duplicates found");
-      return null;
-    }
-
-    if (!executeDelete) {
-      console.log("⚠️ DRY RUN MODE. Check browser console logs for the table map.");
-      console.table(recordsToPurge.map(item => ({
-        "PNumber": item.duplicate.PNumber,
-        "Name": `${item.duplicate.FirstName} ${item.duplicate.Surname}`,
-        "Tossed ID": item.duplicate.id,
-        "Tossed Score": item.dupWeight,
-        "Preserved ID": item.masterId,
-        "Preserved Score": item.masterWeight
-      })));
-      return recordsToPurge;
-    }
-
-    setPurging(true);
-    try {
-      console.log(`🔥 Commencing deletion sequence on ${recordsToPurge.length} records...`);
-      let successCount = 0;
-      
-      for (const item of recordsToPurge) {
-        const targetId = item.duplicate.id;
-        console.log(`Attempting removal for Ghost ID: ${targetId}`);
-        
-        try {
-          const result = await base44.entities.PersonnelManager.delete(targetId);
-          console.log(`Target ID [${targetId}] deletion response:`, result);
-          successCount++;
-        } catch (innerErr) {
-          console.warn(`Standard delete failed for ID ${targetId}, trying object-payload fallback...`);
-          try {
-            const fallbackResult = await base44.entities.PersonnelManager.delete({ id: targetId });
-            console.log(`Fallback target ID [${targetId}] response:`, fallbackResult);
-            successCount++;
-          } catch (fallbackErr) {
-            console.error(`❌ Both deletion formats failed for ID ${targetId}:`, fallbackErr);
-          }
-        }
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
-      toast.success(`Purged ${successCount}/${recordsToPurge.length} low-density duplicates`);
-      return null;
-    } catch (e) {
-      toast.error(`Density purge failed: ${e.message}`);
-      console.error("❌ Global script execution error:", e);
-      return null;
-    } finally {
-      setPurging(false);
-    }
-  }
-
-  return (
+return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
         <Shield className="w-4 h-4 text-destructive shrink-0" />
@@ -288,56 +120,6 @@ function SysAdminPanel({ queryClient }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* May 31 Duplicate Purge */}
-        {auditMode ? (
-          <Card className="border-amber-300/50 bg-amber-50/30">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                Audit May 31 Duplicates
-              </CardTitle>
-              <CardDescription>Scan for duplicates created on May 31 (safe audit mode)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={auditMay31Duplicates} disabled={purging} className="w-full" variant="outline">
-                {purging ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Scanning...</> : <>🔍 Run Audit</>}
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-destructive/30 md:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-destructive" />
-                {auditResults?.length > 0 ? `${auditResults.length} Duplicates Found` : 'No Duplicates'}
-              </CardTitle>
-              <CardDescription>May 31 audit results — verify before executing purge</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {auditResults && auditResults.length > 0 && (
-                <div className="max-h-48 overflow-y-auto bg-muted/30 rounded p-3 border border-destructive/20">
-                  <ul className="text-xs space-y-1">
-                    {auditResults.slice(0, 20).map(r => (
-                      <li key={r.id} className="text-muted-foreground">
-                        {r.PNumber} — {r.Rank} {r.FirstName} {r.Surname}
-                      </li>
-                    ))}
-                    {auditResults.length > 20 && <li className="text-muted-foreground italic">+{auditResults.length - 20} more...</li>}
-                  </ul>
-                </div>
-              )}
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => { setAuditResults(null); setAuditMode(true); }} disabled={purging}>
-                  Back to Audit
-                </Button>
-                <Button variant="destructive" onClick={executeMay31Purge} disabled={purging || !auditResults?.length}>
-                  {purging ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Purging...</> : <>🔥 Execute Purge</>}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
          {/* Syllabus CSV Upload */}
          <Card>
           <CardHeader>
@@ -418,56 +200,7 @@ function SysAdminPanel({ queryClient }) {
           </CardContent>
         </Card>
 
-        {/* Data Density Deduplication */}
-        {!densityResults ? (
-          <Card className="border-blue-300/50 bg-blue-50/30">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Zap className="w-4 h-4 text-blue-600" />
-                Smart Deduplication
-              </CardTitle>
-              <CardDescription>Find duplicates by data density & quality (safe audit mode)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={() => purgeByDataDensity(false).then(setDensityResults)} disabled={purging} className="w-full" variant="outline">
-                {purging ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Scanning...</> : <>🔍 Scan Duplicates</>}
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-blue-300/50 md:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Zap className="w-4 h-4 text-blue-600" />
-                {densityResults?.length > 0 ? `${densityResults.length} Low-Density Duplicates` : 'No Duplicates Found'}
-              </CardTitle>
-              <CardDescription>Preserve high-data-weight records, remove low-density shells</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {densityResults && densityResults.length > 0 && (
-                <div className="max-h-48 overflow-y-auto bg-muted/30 rounded p-3 border border-blue-300/30 text-xs">
-                  <ul className="space-y-1">
-                    {densityResults.slice(0, 20).map(r => (
-                      <li key={r.duplicate.id} className="text-muted-foreground">
-                        {r.duplicate.PNumber} — {r.duplicate.Rank} {r.duplicate.FirstName} {r.duplicate.Surname}
-                        <span className="text-xs ml-2">(ID:{r.duplicate.id} Score:{r.dupWeight} → Keep ID:{r.masterId} Score:{r.masterWeight})</span>
-                      </li>
-                    ))}
-                    {densityResults.length > 20 && <li className="text-muted-foreground italic">+{densityResults.length - 20} more...</li>}
-                  </ul>
-                </div>
-              )}
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setDensityResults(null)} disabled={purging}>
-                  Back to Scan
-                </Button>
-                <Button variant="destructive" onClick={() => purgeByDataDensity(true)} disabled={purging || !densityResults?.length}>
-                  {purging ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Purging...</> : <>🔥 Execute Purge</>}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+
           </div>
           </div>
           );
@@ -905,35 +638,7 @@ function DetCommanderPanel({ queryClient }) {
             </div>
           </CardContent>
         </Card>
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4 text-primary" />Inject Community Engagement Subject</CardTitle>
-            <CardDescription>Add Community Engagement lessons to 1–4 Star syllabus profiles</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full" onClick={async () => {
-              const CE_LESSONS = [
-                { LessonCode: 'CE-1-01', StarLevel: '1 Star', SubjectName: 'Community Engagement', LessonName: 'Introduction to Community Engagement', IsMandatory: true },
-                { LessonCode: 'CE-1-02', StarLevel: '1 Star', SubjectName: 'Community Engagement', LessonName: 'Local Community Projects', IsMandatory: false },
-                { LessonCode: 'CE-2-01', StarLevel: '2 Star', SubjectName: 'Community Engagement', LessonName: 'Volunteering and Service', IsMandatory: true },
-                { LessonCode: 'CE-2-02', StarLevel: '2 Star', SubjectName: 'Community Engagement', LessonName: 'Community Impact Assessment', IsMandatory: false },
-                { LessonCode: 'CE-3-01', StarLevel: '3 Star', SubjectName: 'Community Engagement', LessonName: 'Leading Community Initiatives', IsMandatory: true },
-                { LessonCode: 'CE-3-02', StarLevel: '3 Star', SubjectName: 'Community Engagement', LessonName: 'Partnership and Stakeholder Engagement', IsMandatory: false },
-                { LessonCode: 'CE-4-01', StarLevel: '4 Star', SubjectName: 'Community Engagement', LessonName: 'Strategic Community Leadership', IsMandatory: true },
-                { LessonCode: 'CE-4-02', StarLevel: '4 Star', SubjectName: 'Community Engagement', LessonName: 'Legacy Planning and Sustainability', IsMandatory: false },
-              ];
-              const existing = await base44.entities.SyllabusMaster.filter({});
-              const existingCodes = new Set(existing.map(r => r.LessonCode));
-              const toAdd = CE_LESSONS.filter(l => !existingCodes.has(l.LessonCode));
-              if (toAdd.length === 0) { toast.info('Community Engagement lessons already exist'); return; }
-              await base44.entities.SyllabusMaster.bulkCreate(toAdd);
-              queryClient.invalidateQueries({ queryKey: ['syllabus-master-all'] });
-              toast.success(`Injected ${toAdd.length} Community Engagement lessons`);
-            }}>
-              <Users className="w-4 h-4 mr-2" />Inject Community Engagement Lessons
-            </Button>
-          </CardContent>
-        </Card>
+
         <ExportSubjectCompletionsCard />
       </div>
     </div>
