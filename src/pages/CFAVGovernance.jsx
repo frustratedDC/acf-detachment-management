@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
+import { getAuditInfo } from '@/lib/FeatureAuditLog';
 import AccessGate from '@/components/shared/AccessGate';
+import BriefingBar from '@/components/shared/BriefingBar';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,6 +54,8 @@ export default function CFAVGovernance() {
   const [editingRec, setEditingRec] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [selectedPNumber, setSelectedPNumber] = useState(me?.PNumber || '');
+  const [dismissedBriefing, setDismissedBriefing] = useState(false);
+  const auditInfo = getAuditInfo('/cfav-governance');
 
   const { data: allPersonnel = [] } = useQuery({
     queryKey: ['all-personnel'],
@@ -130,6 +134,15 @@ export default function CFAVGovernance() {
 
   return (
     <AccessGate level={ACCESS_LEVELS.DET_INSTRUCTOR}>
+      {!dismissedBriefing && auditInfo && (
+        <BriefingBar
+          reason={auditInfo.reason}
+          details={auditInfo.details}
+          estimatedCompletion={auditInfo.estimatedCompletion}
+          onDismiss={() => setDismissedBriefing(true)}
+        />
+      )}
+
       <PageHeader
         title="CFAV Governance"
         description="Adult instructor mandatory and supplementary qualifications"

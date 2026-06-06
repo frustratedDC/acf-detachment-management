@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
+import { getAuditInfo } from '@/lib/FeatureAuditLog';
 import AccessGate from '@/components/shared/AccessGate';
+import BriefingBar from '@/components/shared/BriefingBar';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -59,6 +61,8 @@ export default function AnalyticsDashboard() {
   const { personnel: me } = usePersonnel();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [dismissedBriefing, setDismissedBriefing] = useState(false);
+  const auditInfo = getAuditInfo('/analytics');
 
   const { data: allPersonnel = [], isLoading: loadingPersonnel } = useQuery({
     queryKey: ['all-personnel'],
@@ -201,6 +205,15 @@ export default function AnalyticsDashboard() {
 
   return (
     <AccessGate level={ACCESS_LEVELS.DET_COMMANDER}>
+      {!dismissedBriefing && auditInfo && (
+        <BriefingBar
+          reason={auditInfo.reason}
+          details={auditInfo.details}
+          estimatedCompletion={auditInfo.estimatedCompletion}
+          onDismiss={() => setDismissedBriefing(true)}
+        />
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Executive Dashboard</h1>
