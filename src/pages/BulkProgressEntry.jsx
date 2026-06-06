@@ -76,6 +76,7 @@ export default function BulkProgressEntry() {
   const [search, setSearch] = useState('');
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [sortBy, setSortBy] = useState('mandatory-first'); // 'mandatory-first' | 'subject-az' | 'code-asc'
 
   // ── Matrix pending ticks ────────────────────────────────────────────────────
   const [pending, setPending] = useState({});
@@ -120,13 +121,22 @@ export default function BulkProgressEntry() {
     [syllabus, starLevel]
   );
 
-  const displayLessons = useMemo(() =>
-    sortLessons(syllabus.filter(l =>
+  const displayLessons = useMemo(() => {
+    let filtered = syllabus.filter(l =>
       l.StarLevel === starLevel &&
       (subjectFilter === 'all' || l.SubjectName === subjectFilter)
-    )),
-    [syllabus, starLevel, subjectFilter]
-  );
+    );
+
+    if (sortBy === 'mandatory-first') {
+      filtered = sortLessons(filtered);
+    } else if (sortBy === 'subject-az') {
+      filtered = [...filtered].sort((a, b) => a.SubjectName.localeCompare(b.SubjectName));
+    } else if (sortBy === 'code-asc') {
+      filtered = [...filtered].sort((a, b) => a.LessonCode.localeCompare(b.LessonCode));
+    }
+
+    return filtered;
+  }, [syllabus, starLevel, subjectFilter, sortBy]);
 
   // Active cadets
   const allActiveCadets = useMemo(() =>
@@ -421,6 +431,17 @@ export default function BulkProgressEntry() {
                 <SelectContent>
                   <SelectItem value="all">All Subjects</SelectItem>
                   {subjectsForLevel.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs mb-1 block">Sort By</Label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-40 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mandatory-first">Mandatory First</SelectItem>
+                  <SelectItem value="subject-az">Subject (A–Z)</SelectItem>
+                  <SelectItem value="code-asc">Lesson Code (↑)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

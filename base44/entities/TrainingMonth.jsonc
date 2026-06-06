@@ -1,0 +1,46 @@
+{
+  "name": "TrainingMonth",
+  "type": "object",
+  "properties": {
+    "MonthDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Month identifier (e.g., 2026-06-01 represents June 2026)"
+    },
+    "IsLocked": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, cadets cannot view the month. Instructors can always view and unlock."
+    },
+    "IsArchived": {
+      "type": "boolean",
+      "default": false,
+      "description": "Automatically set to true on the first day of the month following this month. Archived months are hidden from cadets but visible to instructors."
+    },
+    "Notes": {
+      "type": "string",
+      "description": "Optional notes about the month (e.g., camp, special events)"
+    }
+  },
+  "required": [
+    "MonthDate"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

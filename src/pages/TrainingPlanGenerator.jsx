@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { usePersonnel } from '@/lib/usePersonnel';
 import AccessGate from '@/components/shared/AccessGate';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,9 +11,10 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Wand2, ChevronDown, ChevronRight, Info } from 'lucide-react';
+import { Wand2, ChevronDown, ChevronRight, Info, Lock, LockOpen, Archive } from 'lucide-react';
 import { format, addMonths, startOfMonth, endOfMonth, parseISO } from 'date-fns';
-import { ACCESS_LEVELS } from '@/lib/accessLevels';
+import { toast } from 'sonner';
+import { ACCESS_LEVELS, isAdultInstructor } from '@/lib/accessLevels';
 import { sortLessons } from '@/lib/lessonSort';
 
 const STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
@@ -44,12 +46,17 @@ function generatePlan(trainingNights, lessonsByLevel) {
 }
 
 export default function TrainingPlanGenerator() {
+  const { personnel: me } = usePersonnel();
+  const queryClient = useQueryClient();
   const [startMonth, setStartMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [duration, setDuration] = useState('3');
   const [selectedLevels, setSelectedLevels] = useState(['Basic', '1 Star', '2 Star']);
   const [mandatoryOnly, setMandatoryOnly] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [expandedDates, setExpandedDates] = useState({});
+  const [expandedArchive, setExpandedArchive] = useState(false);
+
+  const isInstructor = isAdultInstructor(me?.AccessLevel ?? 0);
 
   const { data: syllabus = [] } = useQuery({
     queryKey: ['syllabus-master-all'],
@@ -61,8 +68,26 @@ export default function TrainingPlanGenerator() {
     queryFn: () => base44.entities.CalendarEvent.filter({}),
   });
 
+  const { data: trainingMonths = [] } = useQuery({
+    queryKey: ['training-months'],
+    queryFn: () => base44.entities.TrainingMonth.list(),
+  });
+
+  const toggleLockMutation = useMutation({
+    mutationFn: async (monthId, isLocked) => {
+      await base44.entities.TrainingMonth.update(monthId, { IsLocked: !isLocked });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-months'] });
+      toast.success('Month lock status updated');
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const startDate = format(startOfMonth(parseISO(startMonth + '-01')), 'yyyy-MM-dd');
   const endDate = format(endOfMonth(addMonths(parseISO(startMonth + '-01'), parseInt(duration) - 1)), 'yyyy-MM-dd');
+
+  const currentMonthStr = format(new Date(), 'yyyy-MM');
 
   const trainingNights = useMemo(() =>
     calendarEvents
@@ -70,6 +95,40 @@ export default function TrainingPlanGenerator() {
       .sort((a, b) => a.Date.localeCompare(b.Date)),
     [calendarEvents, startDate, endDate]
   );
+
+  const monthsMap = useMemo(() => {
+    const map = {};
+    trainingMonths.forEach(m => {
+      const monthStr = m.MonthDate.substring(0, 7); // YYYY-MM
+      map[monthStr] = m;
+    });
+    return map;
+  }, [trainingMonths]);
+
+  // Helper to determine if cadet can see this month
+  function canSeeMonth(monthStr) {
+    if (isInstructor) return true; // Instructors see all
+    const monthData = monthsMap[monthStr];
+    if (!monthData) return true; // If no TrainingMonth record, default to visible
+    return monthData.IsLocked === false && monthData.IsArchived === false;
+  }
+
+  // Split months into current/upcoming and archived
+  const monthsByType = useMemo(() => {
+    if (!generated) return { current: {}, archived: {} };
+    const current = {}, archived = {};
+    Object.entries(planByMonth).forEach(([month, nights]) => {
+      const monthStr = nights[0] ? format(parseISO(nights[0].date), 'yyyy-MM') : null;
+      if (!monthStr) return;
+      const monthData = monthsMap[monthStr];
+      if (monthData?.IsArchived) {
+        archived[month] = nights;
+      } else {
+        current[month] = nights;
+      }
+    });
+    return { current, archived };
+  }, [generated, planByMonth, monthsMap]);
 
   const lessonsByLevel = useMemo(() => {
     const byLevel = {};
@@ -193,51 +252,148 @@ export default function TrainingPlanGenerator() {
             )}
             {generated && plan.length > 0 && (
               <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
-                {Object.entries(planByMonth).map(([month, nights]) => (
-                  <div key={month}>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 px-1">{month}</p>
-                    <div className="space-y-1.5">
-                      {nights.map(night => {
-                        const expanded = expandedDates[night.date];
+                {/* Current/Upcoming Section */}
+                {Object.entries(monthsByType.current).length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-bold text-foreground uppercase tracking-wider px-1">Current / Upcoming</h3>
+                    {Object.entries(monthsByType.current)
+                      .sort((a, b) => a[0].localeCompare(b[0]))
+                      .map(([month, nights]) => {
+                        const monthStr = format(parseISO(nights[0].date), 'yyyy-MM');
+                        const monthData = monthsMap[monthStr];
+                        const isCurrentMonth = monthStr === currentMonthStr;
+                        const canView = canSeeMonth(monthStr);
+
                         return (
-                          <div key={night.date} className="border rounded-lg overflow-hidden">
-                            <button
-                              className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
-                              onClick={() => setExpandedDates(prev => ({ ...prev, [night.date]: !prev[night.date] }))}
-                            >
-                              <div className="flex items-center gap-2">
-                                {expanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                                <span className="text-sm font-semibold">{format(parseISO(night.date), 'EEE dd MMM yyyy')}</span>
-                              </div>
-                              <div className="flex gap-1 flex-wrap">
-                                {selectedLevels.filter(sl => night.plans.some(p => p.starLevel === sl)).map(sl => (
-                                  <Badge key={sl} className={`text-xs py-0 h-5 ${STAR_COLORS[sl]}`}>{sl}</Badge>
-                                ))}
-                              </div>
-                            </button>
-                            {expanded && (
-                              <div className="divide-y">
-                                {night.plans.map((p, idx) => (
-                                  <div key={idx} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted/20">
-                                    <span className="text-muted-foreground w-5 shrink-0">P{p.period}</span>
-                                    <Badge className={`text-xs py-0 h-4 shrink-0 ${STAR_COLORS[p.starLevel]}`}>{p.starLevel}</Badge>
-                                    <span className="font-mono text-muted-foreground shrink-0 w-20">{p.lesson.LessonCode}</span>
-                                    <span className="flex-1 truncate">{p.lesson.LessonName}</span>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      {p.lesson.IsMandatory && <Badge variant="outline" className="text-xs py-0 h-4 border-destructive/40 text-destructive">M</Badge>}
-                                      {p.cycleNum > 1 && <Badge variant="secondary" className="text-xs py-0 h-4">Cycle {p.cycleNum}</Badge>}
-                                      <span className="text-muted-foreground text-xs">{p.lesson.SubjectName}</span>
+                          <div key={month}>
+                            <div className="flex items-center gap-2 px-1 mb-1">
+                              {isCurrentMonth && <Badge className="text-xs py-0 h-4 bg-accent text-accent-foreground">THIS MONTH</Badge>}
+                              <p className={`text-xs font-bold ${isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'} uppercase tracking-wider`}>{month}</p>
+                              {monthData?.IsLocked && (
+                                <Lock className="w-3 h-3 text-destructive" title="Month locked for cadets" />
+                              )}
+                              {isInstructor && monthData && (
+                                <button
+                                  onClick={() => toggleLockMutation.mutate(monthData.id, monthData.IsLocked)}
+                                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                  title={monthData.IsLocked ? 'Unlock month' : 'Lock month for cadets'}
+                                >
+                                  {monthData.IsLocked ? <Lock className="w-3 h-3" /> : <LockOpen className="w-3 h-3" />}
+                                </button>
+                              )}
+                            </div>
+                            {!canView ? (
+                              <div className="text-xs text-muted-foreground p-3 rounded-lg bg-muted/30 italic">Month locked for your view</div>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {nights.map(night => {
+                                  const expanded = expandedDates[night.date];
+                                  return (
+                                    <div key={night.date} className="border rounded-lg overflow-hidden">
+                                      <button
+                                        className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+                                        onClick={() => setExpandedDates(prev => ({ ...prev, [night.date]: !prev[night.date] }))}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          {expanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+                                          <span className="text-sm font-semibold">{format(parseISO(night.date), 'EEE dd MMM yyyy')}</span>
+                                        </div>
+                                        <div className="flex gap-1 flex-wrap">
+                                          {selectedLevels.filter(sl => night.plans.some(p => p.starLevel === sl)).map(sl => (
+                                            <Badge key={sl} className={`text-xs py-0 h-5 ${STAR_COLORS[sl]}`}>{sl}</Badge>
+                                          ))}
+                                        </div>
+                                      </button>
+                                      {expanded && (
+                                        <div className="divide-y">
+                                          {night.plans.map((p, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted/20">
+                                              <span className="text-muted-foreground w-5 shrink-0">P{p.period}</span>
+                                              <Badge className={`text-xs py-0 h-4 shrink-0 ${STAR_COLORS[p.starLevel]}`}>{p.starLevel}</Badge>
+                                              <span className="font-mono text-muted-foreground shrink-0 w-20">{p.lesson.LessonCode}</span>
+                                              <span className="flex-1 truncate">{p.lesson.LessonName}</span>
+                                              <div className="flex items-center gap-1 shrink-0">
+                                                {p.lesson.IsMandatory && <Badge variant="outline" className="text-xs py-0 h-4 border-destructive/40 text-destructive">M</Badge>}
+                                                {p.cycleNum > 1 && <Badge variant="secondary" className="text-xs py-0 h-4">Cycle {p.cycleNum}</Badge>}
+                                                <span className="text-muted-foreground text-xs">{p.lesson.SubjectName}</span>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
                         );
                       })}
-                    </div>
                   </div>
-                ))}
+                )}
+
+                {/* Archive Section (instructors only) */}
+                {isInstructor && Object.entries(monthsByType.archived).length > 0 && (
+                  <div className="border-t pt-4 mt-4">
+                    <button
+                      onClick={() => setExpandedArchive(!expandedArchive)}
+                      className="flex items-center gap-2 px-1 mb-2 hover:text-primary transition-colors"
+                    >
+                      {expandedArchive ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      <Archive className="w-4 h-4 text-muted-foreground" />
+                      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Archive ({Object.keys(monthsByType.archived).length})</h3>
+                    </button>
+                    {expandedArchive && (
+                      <div className="space-y-2">
+                        {Object.entries(monthsByType.archived).map(([month, nights]) => (
+                          <div key={month}>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 px-1">{month}</p>
+                            <div className="space-y-1.5 opacity-60">
+                              {nights.map(night => {
+                                const expanded = expandedDates[night.date];
+                                return (
+                                  <div key={night.date} className="border rounded-lg overflow-hidden">
+                                    <button
+                                      className="w-full flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+                                      onClick={() => setExpandedDates(prev => ({ ...prev, [night.date]: !prev[night.date] }))}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        {expanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+                                        <span className="text-sm font-semibold">{format(parseISO(night.date), 'EEE dd MMM yyyy')}</span>
+                                      </div>
+                                      <div className="flex gap-1 flex-wrap">
+                                        {selectedLevels.filter(sl => night.plans.some(p => p.starLevel === sl)).map(sl => (
+                                          <Badge key={sl} className={`text-xs py-0 h-5 ${STAR_COLORS[sl]}`}>{sl}</Badge>
+                                        ))}
+                                      </div>
+                                    </button>
+                                    {expanded && (
+                                      <div className="divide-y">
+                                        {night.plans.map((p, idx) => (
+                                          <div key={idx} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted/20">
+                                            <span className="text-muted-foreground w-5 shrink-0">P{p.period}</span>
+                                            <Badge className={`text-xs py-0 h-4 shrink-0 ${STAR_COLORS[p.starLevel]}`}>{p.starLevel}</Badge>
+                                            <span className="font-mono text-muted-foreground shrink-0 w-20">{p.lesson.LessonCode}</span>
+                                            <span className="flex-1 truncate">{p.lesson.LessonName}</span>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                              {p.lesson.IsMandatory && <Badge variant="outline" className="text-xs py-0 h-4 border-destructive/40 text-destructive">M</Badge>}
+                                              {p.cycleNum > 1 && <Badge variant="secondary" className="text-xs py-0 h-4">Cycle {p.cycleNum}</Badge>}
+                                              <span className="text-muted-foreground text-xs">{p.lesson.SubjectName}</span>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
