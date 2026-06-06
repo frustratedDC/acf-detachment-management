@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
@@ -9,17 +9,29 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, Download, Loader2, BarChart2 } from 'lucide-react';
-import { format, subMonths } from 'date-fns';
+import { format, subMonths, parseISO, startOfMonth, endOfMonth, isAfter } from 'date-fns';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 import { toast } from 'sonner';
 
 export default function MonthlyReports() {
   const { personnel: me } = usePersonnel();
-  const [selectedMonth, setSelectedMonth] = useState(format(subMonths(new Date(), 1), 'yyyy-MM'));
+  
+  // Initialize with previous month (default)
+  const defaultMonth = format(subMonths(new Date(), 1), 'yyyy-MM');
+  const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
   const [generating, setGenerating] = useState(false);
   const [reportData, setReportData] = useState(null);
 
-  const [month, year] = selectedMonth.split('-').map(Number);
+  // Parse selected month safely
+  const [year, month] = selectedMonth.split('-').map(Number);
+  
+  // Compute the selected month's start and end dates
+  const selectedMonthStart = startOfMonth(new Date(year, month - 1, 1));
+  const selectedMonthEnd = endOfMonth(selectedMonthStart);
+  const today = new Date();
+  
+  // Check if selected month is in the future
+  const isFutureMonth = isAfter(selectedMonthStart, today);
 
   const { isLoading } = useQuery({
     queryKey: ['scan-data-integrity'],
@@ -31,6 +43,13 @@ export default function MonthlyReports() {
   });
 
   const handleGenerateReport = async () => {
+    // Validate: prevent future months
+    if (isFutureMonth) {
+      toast.error('Future dates unavailable. Please select the current month or earlier.');
+      setReportData(null);
+      return;
+    }
+
     setGenerating(true);
     try {
       const res = await base44.functions.invoke('generateMonthlyReport', {
@@ -45,6 +64,11 @@ export default function MonthlyReports() {
       setGenerating(false);
     }
   };
+
+  // Memoized report title based on selected month
+  const reportTitle = useMemo(() => {
+    return format(new Date(year, month - 1, 1), 'MMMM yyyy');
+  }, [year, month]);
 
   const handleExportPDF = () => {
     if (!reportData) return;
@@ -228,7 +252,7 @@ export default function MonthlyReports() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>{reportData.monthName} Report</CardTitle>
+                <CardTitle>{reportTitle} Report</CardTitle>
               </div>
               <Button
                 onClick={handleExportPDF}
