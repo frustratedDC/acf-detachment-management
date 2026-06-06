@@ -10,10 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Crosshair, Plus, Pencil, Trash2, AlertTriangle, CheckCircle2, Search } from 'lucide-react';
+import { Crosshair, Plus, Pencil, Trash2, AlertTriangle, CheckCircle2, Search, Clock } from 'lucide-react';
 import { format, parseISO, differenceInDays, addMonths, isBefore } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, hasAccess } from '@/lib/accessLevels';
+import { getFormalWeaponName } from '@/lib/weaponNames';
+import WHTAssessmentRequest from '@/components/wht/WHTAssessmentRequest';
 
 const WEAPON_TYPES = ['L98A2', 'L85A2', 'L86A2', 'SA80', 'Other'];
 
@@ -39,6 +41,8 @@ export default function WeaponHandlingTests() {
   const [editingRec, setEditingRec] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState('');
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [requestData, setRequestData] = useState(null);
 
   const { data: allPersonnel = [] } = useQuery({
     queryKey: ['all-personnel'],
@@ -183,19 +187,42 @@ export default function WeaponHandlingTests() {
                       const s = expiryStatus(test.ExpiryDate);
                       const assessor = personnelMap[test.AssessorPNumber];
                       return (
-                        <div key={test.id} className={`flex items-center gap-3 p-2.5 rounded-lg border ${s.urgent ? 'border-destructive/30 bg-destructive/5' : 'bg-muted/30'}`}>
-                          {s.urgent ? <AlertTriangle className="w-4 h-4 text-destructive shrink-0" /> : <CheckCircle2 className="w-4 h-4 text-chart-2 shrink-0" />}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold">{test.WeaponType}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Tested: {format(parseISO(test.TestDate), 'dd MMM yyyy')}
-                              {assessor ? ` · Assessor: ${assessor.Rank || ''} ${assessor.Surname}`.trim() : ''}
-                            </p>
+                        <div key={test.id} className={`flex flex-col sm:flex-row sm:items-center gap-3 p-2.5 rounded-lg border ${s.urgent ? 'border-destructive/30 bg-destructive/5' : 'bg-muted/30'}`}>
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            {s.urgent ? <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" /> : <CheckCircle2 className="w-4 h-4 text-chart-2 shrink-0 mt-0.5" />}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold">{getFormalWeaponName(test.WeaponType)}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Tested: {format(parseISO(test.TestDate), 'dd MMM yyyy')}
+                                {assessor ? ` · Assessor: ${assessor.Rank || ''} ${assessor.Surname}`.trim() : ''}
+                              </p>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Clock className="w-3 h-3 text-muted-foreground" />
+                                <span className={`text-xs font-semibold ${s.urgent ? 'text-destructive' : 'text-chart-2'}`}>
+                                  Expires: {format(parseISO(test.ExpiryDate), 'dd MMM yyyy')} — {s.label}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <Badge variant="outline" className={`text-xs ${s.cls}`}>
-                              Exp: {format(parseISO(test.ExpiryDate), 'dd MMM yyyy')} · {s.label}
-                            </Badge>
+                            {s.urgent && !canEdit && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 text-xs"
+                                onClick={() => {
+                                  setRequestData({
+                                    cadetPNumber: pn,
+                                    cadetName: person ? [person.Rank, person.FirstName, person.Surname].filter(Boolean).join(' ') : pn,
+                                    weaponType: test.WeaponType,
+                                    weaponName: getFormalWeaponName(test.WeaponType),
+                                  });
+                                  setRequestOpen(true);
+                                }}
+                              >
+                                Request Assessment
+                              </Button>
+                            )}
                             {canEdit && (
                               <>
                                 <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(test)}><Pencil className="w-3 h-3" /></Button>
@@ -213,6 +240,17 @@ export default function WeaponHandlingTests() {
           );
         })}
       </div>
+
+      {requestData && (
+        <WHTAssessmentRequest
+          open={requestOpen}
+          onOpenChange={setRequestOpen}
+          cadetPNumber={requestData.cadetPNumber}
+          cadetName={requestData.cadetName}
+          weaponType={requestData.weaponType}
+          weaponName={requestData.weaponName}
+        />
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={v => { if (!v) closeDialog(); }}>
         <DialogContent className="max-w-md">
@@ -238,7 +276,11 @@ export default function WeaponHandlingTests() {
               <Select value={form.WeaponType} onValueChange={v => setForm(p => ({ ...p, WeaponType: v }))}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {WEAPON_TYPES.map(w => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+                  {WEAPON_TYPES.map(w => (
+                    <SelectItem key={w} value={w}>
+                      {w} — {getFormalWeaponName(w)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
