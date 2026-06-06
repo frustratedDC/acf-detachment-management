@@ -9,62 +9,52 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileDown, Printer, Calendar, Loader2 } from 'lucide-react';
+import { FileDown, Printer, Calendar, Loader2, LayoutList, FileText } from 'lucide-react';
 import { format, parseISO, startOfMonth, endOfMonth, addMonths } from 'date-fns';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 import { jsPDF } from 'jspdf';
 
-// ACF Brand Palette
-const ACF = {
-  darkGreen:  [8, 63, 48],      // #083F30
-  greenWash:  [101, 137, 124],  // #65897C
-  green:      [45, 142, 67],    // #2D8E43
-  lightGreen: [111, 176, 67],   // #6FB043
-  yellow:     [244, 233, 17],   // #F4E911
-  orange:     [236, 98, 35],    // #EC6223
-  red:        [230, 28, 59],    // #E61C3B
-  blue:       [21, 157, 196],   // #159DC4
-  white:      [255, 255, 255],
-  black:      [0, 0, 0],
+// ── KRH / ACF Palette ─────────────────────────────────────────────────────────
+const KRH = {
+  navy:   [0, 33, 71],      // #002147
+  gold:   [255, 215, 0],    // #FFD700
+  red:    [200, 16, 46],    // #C8102E
+  white:  [255, 255, 255],
+  black:  [0, 0, 0],
+  silver: [180, 188, 196],
+  light:  [240, 244, 248],
 };
 
 const STAR_LEVEL_COLORS = {
-  'Basic':  ACF.darkGreen,
-  '1 Star': ACF.green,
-  '2 Star': ACF.blue,
-  '3 Star': ACF.orange,
-  '4 Star': ACF.red,
+  'Basic':  [45, 120, 67],
+  '1 Star': [21, 120, 180],
+  '2 Star': [100, 60, 160],
+  '3 Star': [200, 100, 30],
+  '4 Star': KRH.red,
 };
 
-const EVENT_TYPE_COLORS = {
-  'Camp':        ACF.orange,
-  'Competition': ACF.blue,
-  'Admin':       ACF.greenWash,
-  'Other':       ACF.greenWash,
-};
+const STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
 
 export default function TrainingPlanExport() {
-  const [mode, setMode] = useState('month');
+  const [rangeMode, setRangeMode] = useState('month');
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(addMonths(new Date(), 1), 'yyyy-MM-dd'));
+  const [exportFormat, setExportFormat] = useState('condensed'); // 'condensed' | 'detailed'
   const [generating, setGenerating] = useState(false);
 
   const { data: schedule = [] } = useQuery({
     queryKey: ['schedule-all'],
     queryFn: () => base44.entities.NightlySchedule.filter({}),
   });
-
   const { data: events = [] } = useQuery({
     queryKey: ['calendar-events-all'],
     queryFn: () => base44.entities.CalendarEvent.filter({}),
   });
-
   const { data: personnel = [] } = useQuery({
     queryKey: ['all-personnel'],
     queryFn: () => base44.entities.PersonnelManager.filter({}),
   });
-
   const { data: settings = [] } = useQuery({
     queryKey: ['det-settings'],
     queryFn: () => base44.entities.DetachmentSettings.filter({}),
@@ -72,14 +62,19 @@ export default function TrainingPlanExport() {
 
   const personnelMap = {};
   personnel.forEach(p => { personnelMap[p.PNumber] = p; });
-  const detName = settings.find(s => s.Key === 'detachment_name')?.Value || 'ACF DETACHMENT';
+  const detName = settings.find(s => s.Key === 'detachment_name')?.Value || 'Leigh Detachment';
 
   function getDateRange() {
-    if (mode === 'month') {
+    if (rangeMode === 'month') {
       const base = parseISO(selectedMonth + '-01');
       return { start: format(startOfMonth(base), 'yyyy-MM-dd'), end: format(endOfMonth(base), 'yyyy-MM-dd') };
     }
     return { start: startDate, end: endDate };
+  }
+
+  function getPeriodDescription() {
+    if (rangeMode === 'month') return format(parseISO(selectedMonth + '-01'), 'MMMM yyyy');
+    return `${format(parseISO(startDate + 'T00:00:00'), 'dd MMM yyyy')} – ${format(parseISO(endDate + 'T00:00:00'), 'dd MMM yyyy')}`;
   }
 
   function getInstructorDisplay(pNumber) {
@@ -90,219 +85,310 @@ export default function TrainingPlanExport() {
 
   function getTrainingDates() {
     const { start, end } = getDateRange();
-    const schedDates = [...new Set(schedule.filter(s => s.Date >= start && s.Date <= end).map(s => s.Date))];
-    return schedDates.sort();
+    return [...new Set(schedule.filter(s => s.Date >= start && s.Date <= end).map(s => s.Date))].sort();
   }
 
-  function getPeriodDescription() {
-    if (mode === 'month') return format(parseISO(selectedMonth + '-01'), 'MMMM yyyy');
-    return `${format(parseISO(startDate + 'T00:00:00'), 'dd MMM yyyy')} – ${format(parseISO(endDate + 'T00:00:00'), 'dd MMM yyyy')}`;
+  // ── SHARED: draw KRH page header ─────────────────────────────────────────
+  function drawPageHeader(doc, pageW, periodDesc, subtitle = '') {
+    doc.setFillColor(...KRH.navy);
+    doc.rect(0, 0, pageW, 18, 'F');
+    doc.setFillColor(...KRH.gold);
+    doc.rect(0, 18, pageW, 2.5, 'F');
+    doc.setFillColor(...KRH.red);
+    doc.rect(0, 20.5, pageW, 1.5, 'F');
+
+    doc.setTextColor(...KRH.gold);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TRAINING PROGRAMME', pageW / 2, 8, { align: 'center' });
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...KRH.white);
+    doc.text(`${detName.toUpperCase()}  ·  ${periodDesc.toUpperCase()}${subtitle ? '  ·  ' + subtitle : ''}`, pageW / 2, 14.5, { align: 'center' });
   }
 
-  async function generatePDF() {
-    setGenerating(true);
-    // Always landscape A4 for maximum content per page
+  // ── SHARED: draw KRH page footer ─────────────────────────────────────────
+  function drawPageFooter(doc, pageW, pageH, pageNum, totalPages) {
+    doc.setFillColor(...KRH.navy);
+    doc.rect(0, pageH - 7, pageW, 7, 'F');
+    doc.setFillColor(...KRH.gold);
+    doc.rect(0, pageH - 7, pageW, 1.2, 'F');
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...KRH.silver);
+    doc.text(
+      `${detName}  ·  Issued ${format(new Date(), 'dd/MM/yyyy')}  ·  OFFICIAL  ·  Page ${pageNum} of ${totalPages}`,
+      pageW / 2, pageH - 2.5, { align: 'center' }
+    );
+  }
+
+  // ── CONDENSED: 1-page grid ────────────────────────────────────────────────
+  async function generateCondensed() {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageW = 297;
     const pageH = 210;
-    const margin = 5; // narrow margins for shrink-to-fit
+    const margin = 6;
     const usableW = pageW - margin * 2;
     const periodDesc = getPeriodDescription();
     const trainingDates = getTrainingDates();
     const { start, end } = getDateRange();
 
-    // All calendar events in range (training nights + non-training)
-    const calEventsInRange = events.filter(ev => ev.Date >= start && ev.Date <= end).sort((a, b) => a.Date.localeCompare(b.Date));
-    const starLevels = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
+    drawPageHeader(doc, pageW, periodDesc);
+    let y = 27;
 
-    // ── HEADER ──────────────────────────────────────────────────────
-    doc.setFillColor(...ACF.darkGreen);
-    doc.rect(0, 0, pageW, 20, 'F');
+    // Column definitions: Date | Star Level | P | Code | Subject/Lesson | Lead Instructor | Location
+    const cols = [28, 20, 8, 20, 80, 45, 0]; // last col fills remainder
+    cols[6] = usableW - cols.slice(0, 6).reduce((a, b) => a + b, 0);
+    const headers = ['Date', 'Star Level', 'P', 'Code', 'Lesson / Topic', 'Lead Instructor', 'Room / Location'];
+    const rowH = 5.5;
 
-    // Red accent bar
-    doc.setFillColor(...ACF.red);
-    doc.rect(0, 20, pageW, 3, 'F');
-
-    doc.setTextColor(...ACF.white);
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text('TRAINING PROGRAMME', pageW / 2, 9, { align: 'center' });
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${detName.toUpperCase()}  ·  ${periodDesc.toUpperCase()}`, pageW / 2, 16, { align: 'center' });
-
-    doc.setTextColor(...ACF.black);
-    let y = 28;
-
-    // ── CALENDAR EVENTS SECTION (all events in range) ──────────────
-    if (calEventsInRange.length > 0) {
-      doc.setFillColor(...ACF.greenWash);
-      doc.rect(margin, y, usableW, 5.5, 'F');
-      doc.setFontSize(6.5);
+    // Table header row
+    doc.setFillColor(...KRH.navy);
+    doc.rect(margin, y, usableW, rowH + 0.5, 'F');
+    let cx = margin;
+    headers.forEach((h, i) => {
+      doc.setFontSize(6);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...ACF.white);
-      doc.text('CALENDAR EVENTS & TRAINING NIGHTS', margin + 3, y + 3.8);
-      y += 6.5;
+      doc.setTextColor(...KRH.gold);
+      doc.text(h.toUpperCase(), cx + 1.5, y + 3.8);
+      cx += cols[i];
+    });
+    y += rowH + 0.5;
 
-      const evW = 58;
-      const evH = 5.5;
-      const evChunkSize = Math.floor(usableW / evW);
-      let ex = margin;
-      let evRowY = y;
-      calEventsInRange.forEach((ev, idx) => {
-        if (idx > 0 && idx % evChunkSize === 0) {
-          evRowY += evH + 1.5;
-          ex = margin;
+    let rowCount = 0;
+    if (trainingDates.length === 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text('No training nights scheduled for this period.', pageW / 2, y + 15, { align: 'center' });
+    }
+
+    for (const date of trainingDates) {
+      const daySchedule = schedule.filter(s => s.Date === date).sort((a, b) => a.Period - b.Period || STAR_LEVELS.indexOf(a.AssignedStarLevel) - STAR_LEVELS.indexOf(b.AssignedStarLevel));
+      const dateLabel = format(parseISO(date), 'EEE dd MMM yyyy').toUpperCase();
+
+      for (let di = 0; di < daySchedule.length; di++) {
+        const row = daySchedule[di];
+        const isFirst = di === 0;
+
+        if (y + rowH > pageH - 10) {
+          // Footer for current page (patched later)
+          doc.addPage();
+          drawPageHeader(doc, pageW, periodDesc, 'CONT.');
+          y = 27;
+          // Repeat column header
+          doc.setFillColor(...KRH.navy);
+          doc.rect(margin, y, usableW, rowH + 0.5, 'F');
+          cx = margin;
+          headers.forEach((h, i) => {
+            doc.setFontSize(6);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...KRH.gold);
+            doc.text(h.toUpperCase(), cx + 1.5, y + 3.8);
+            cx += cols[i];
+          });
+          y += rowH + 0.5;
         }
-        const evCol = ev.IsTrainingNight ? ACF.darkGreen : (EVENT_TYPE_COLORS[ev.EventType] || ACF.greenWash);
-        doc.setFillColor(...evCol);
-        doc.roundedRect(ex, evRowY, evW - 2, evH, 1.5, 1.5, 'F');
-        doc.setFontSize(6);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...ACF.white);
-        const evLabel = `${format(parseISO(ev.Date), 'dd MMM')}  ${ev.Title}`;
-        doc.text(evLabel.substring(0, 26), ex + 2, evRowY + 3.6);
-        ex += evW;
-      });
-      y = evRowY + evH + 4;
+
+        const slColor = STAR_LEVEL_COLORS[row.AssignedStarLevel] || KRH.navy;
+        const isEven = rowCount % 2 === 0;
+        if (isEven) {
+          doc.setFillColor(...KRH.light);
+          doc.rect(margin, y, usableW, rowH, 'F');
+        }
+
+        cx = margin;
+        const cells = [
+          isFirst ? dateLabel : '',
+          row.AssignedStarLevel,
+          `P${row.Period}`,
+          row.LessonCode || '—',
+          row.LessonName || '—',
+          getInstructorDisplay(row.InstructorPNumber),
+          row.Location || '—',
+        ];
+
+        cells.forEach((cell, i) => {
+          doc.setFontSize(6.5);
+          doc.setFont('helvetica', i === 0 ? 'bold' : 'normal');
+          if (i === 1) {
+            // Star level pill
+            doc.setFillColor(...slColor);
+            doc.roundedRect(cx + 0.5, y + 0.8, cols[i] - 2, rowH - 1.5, 1, 1, 'F');
+            doc.setTextColor(...KRH.white);
+            doc.setFontSize(5.5);
+            doc.setFont('helvetica', 'bold');
+            doc.text(cell, cx + 1.5, y + 3.5);
+          } else {
+            doc.setTextColor(...KRH.navy);
+            const txt = doc.splitTextToSize(String(cell), cols[i] - 2.5);
+            doc.text(txt, cx + 1.5, y + 3.8);
+          }
+          cx += cols[i];
+        });
+
+        // Thin divider
+        doc.setDrawColor(...KRH.silver);
+        doc.setLineWidth(0.1);
+        doc.line(margin, y + rowH, margin + usableW, y + rowH);
+
+        y += rowH;
+        rowCount++;
+      }
+
+      // Date separator
+      if (trainingDates.indexOf(date) < trainingDates.length - 1) {
+        doc.setDrawColor(...KRH.gold);
+        doc.setLineWidth(0.4);
+        doc.line(margin, y + 0.5, margin + usableW, y + 0.5);
+        y += 2;
+      }
+    }
+
+    // Footers
+    const totalPages = doc.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      drawPageFooter(doc, pageW, pageH, p, totalPages);
+    }
+
+    doc.save(`Training_Condensed_${periodDesc.replace(/\s+/g, '_')}.pdf`);
+  }
+
+  // ── DETAILED: full lesson breakdown ──────────────────────────────────────
+  async function generateDetailed() {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = 210;
+    const pageH = 297;
+    const margin = 12;
+    const usableW = pageW - margin * 2;
+    const periodDesc = getPeriodDescription();
+    const trainingDates = getTrainingDates();
+
+    drawPageHeader(doc, pageW, periodDesc);
+    let y = 27;
+
+    function ensureSpace(needed) {
+      if (y + needed > pageH - 12) {
+        doc.addPage();
+        drawPageHeader(doc, pageW, periodDesc, 'CONT.');
+        y = 27;
+      }
     }
 
     if (trainingDates.length === 0) {
       doc.setFontSize(9);
       doc.setTextColor(120, 120, 120);
-      doc.text('No training nights scheduled for this period.', pageW / 2, y + 10, { align: 'center' });
+      doc.text('No training nights scheduled for this period.', pageW / 2, y + 20, { align: 'center' });
     }
 
     for (const date of trainingDates) {
-      const dateStr = format(parseISO(date), 'EEEE dd MMMM yyyy').toUpperCase();
       const daySchedule = schedule.filter(s => s.Date === date).sort((a, b) => a.Period - b.Period);
+      const dateLabel = format(parseISO(date), 'EEEE dd MMMM yyyy').toUpperCase();
 
-      // Estimate height
-      let estimatedH = 10;
-      for (const sl of starLevels) {
-        const rows = daySchedule.filter(s => s.AssignedStarLevel === sl);
-        if (rows.length > 0) estimatedH += 7 + 6 + rows.length * 7;
-      }
-
-      if (y + estimatedH > pageH - 8) {
-        doc.addPage();
-        // Repeat header
-        doc.setFillColor(...ACF.darkGreen);
-        doc.rect(0, 0, pageW, 20, 'F');
-        doc.setFillColor(...ACF.red);
-        doc.rect(0, 20, pageW, 3, 'F');
-        doc.setTextColor(...ACF.white);
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text('TRAINING PROGRAMME', pageW / 2, 9, { align: 'center' });
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`${detName.toUpperCase()}  ·  ${periodDesc.toUpperCase()} (cont.)`, pageW / 2, 16, { align: 'center' });
-        doc.setTextColor(...ACF.black);
-        y = 28;
-      }
-
-      // Date banner — ACF light green background, dark green text
-      doc.setFillColor(...ACF.lightGreen);
-      doc.roundedRect(margin, y, usableW, 8, 3, 3, 'F');
-      doc.setFontSize(8.5);
+      // Date banner
+      ensureSpace(12);
+      doc.setFillColor(...KRH.navy);
+      doc.roundedRect(margin, y, usableW, 9, 2, 2, 'F');
+      doc.setFillColor(...KRH.gold);
+      doc.roundedRect(margin, y + 9 - 2, 4, 2, 0, 0, 'F'); // gold left tab
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...ACF.darkGreen);
-      doc.text(dateStr, margin + 4, y + 5.5);
-      y += 10;
+      doc.setTextColor(...KRH.gold);
+      doc.text(dateLabel, margin + 6, y + 6);
+      y += 12;
 
-      for (const sl of starLevels) {
-        const rows = daySchedule.filter(s => s.AssignedStarLevel === sl);
-        if (rows.length === 0) continue;
+      for (const row of daySchedule) {
+        const slColor = STAR_LEVEL_COLORS[row.AssignedStarLevel] || KRH.navy;
 
-        const slColor = STAR_LEVEL_COLORS[sl] || ACF.darkGreen;
+        ensureSpace(60);
 
-        // Star level pill
+        // Lesson card header
         doc.setFillColor(...slColor);
-        doc.roundedRect(margin, y, usableW, 6, 2, 2, 'F');
-        doc.setFontSize(7);
+        doc.roundedRect(margin, y, usableW, 8, 1.5, 1.5, 'F');
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...ACF.white);
-        doc.text(`${sl.toUpperCase()}`, margin + 3, y + 4.2);
-        y += 7;
+        doc.setTextColor(...KRH.white);
+        doc.text(`P${row.Period}  ·  ${row.AssignedStarLevel}  ·  ${row.LessonCode || ''}`, margin + 3, y + 5.5);
+        doc.setFontSize(8.5);
+        doc.text(row.LessonName || 'Untitled Lesson', margin + 80, y + 5.5);
+        y += 9;
 
-        // Column widths — optimised for landscape A4 with narrow margins
-        const cols = [10, 18, 80, 42, 38, 28, 71];
-        const headers = ['Per.', 'Code', 'Lesson', 'Instructor', 'Location', 'Dress', 'Notes'];
-        const rowH = 6;
+        // Sub-section rows
+        const sections = [
+          {
+            label: 'SUBJECT TITLE & SCOPE',
+            value: `${row.LessonName || '—'}  |  Star Level: ${row.AssignedStarLevel}  |  Period: ${row.Period}  |  Code: ${row.LessonCode || '—'}`,
+          },
+          {
+            label: 'LEARNING OBJECTIVES',
+            value: row.Notes
+              ? row.Notes
+              : 'Cadets will be able to demonstrate understanding of the subject matter as defined in the ACF Cadet Training Programme (CTP). Objectives are delivered IAW the relevant star level syllabus requirements.',
+          },
+          {
+            label: 'INSTRUCTOR REQUIREMENTS & RESOURCES',
+            value: `Lead: ${getInstructorDisplay(row.InstructorPNumber)}${row.Instructor2PNumber ? '  |  Support: ' + getInstructorDisplay(row.Instructor2PNumber) : ''}  |  Location: ${row.Location || 'TBC'}  |  Dress: ${row.DressCode || 'TBC'}  |  Resources: Lesson plan, any required training aids per CTP.`,
+          },
+          {
+            label: 'SAFETY & RISK ASSESSMENT NOTES',
+            value: 'Instructor to conduct Dynamic Risk Assessment (DRA) prior to lesson commencement. Ensure all cadets are briefed on safety precautions relevant to this subject. Any concerns to be escalated to the Detachment Commander immediately. Standard ACF safety protocols apply.',
+          },
+        ];
 
-        // Header row
-        doc.setFillColor(240, 244, 240);
-        doc.roundedRect(margin, y, usableW, rowH, 1, 1, 'F');
-        let cx = margin;
-        headers.forEach((h, i) => {
-          doc.setFontSize(6.5);
+        for (const sec of sections) {
+          const valueLines = doc.splitTextToSize(sec.value, usableW - 5);
+          const secH = 5 + valueLines.length * 4.5 + 3;
+          ensureSpace(secH);
+
+          // Label bar
+          doc.setFillColor(235, 240, 248);
+          doc.rect(margin, y, usableW, 5, 'F');
+          doc.setFontSize(6);
           doc.setFont('helvetica', 'bold');
-          doc.setTextColor(...ACF.darkGreen);
-          doc.text(h, cx + 1.5, y + 4.2);
-          cx += cols[i];
-        });
-        y += rowH;
+          doc.setTextColor(...KRH.navy);
+          doc.text(sec.label, margin + 2, y + 3.5);
+          y += 5;
 
-        rows.forEach((row, ri) => {
-          const cells = [
-            `P${row.Period}`,
-            row.LessonCode || '—',
-            row.LessonName || '—',
-            getInstructorDisplay(row.InstructorPNumber),
-            row.Location || '—',
-            row.DressCode || '—',
-            row.Notes || '',
-          ];
+          // Value
+          doc.setFontSize(7.5);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(40, 40, 60);
+          doc.text(valueLines, margin + 2, y + 4);
+          y += valueLines.length * 4.5 + 3;
 
-          doc.setFontSize(7);
-          const noteLines = doc.splitTextToSize(cells[6], cols[6] - 3);
-          const lessonLines = doc.splitTextToSize(cells[2], cols[2] - 3);
-          const lines = Math.max(noteLines.length, lessonLines.length, 1);
-          const rh = Math.max(rowH, lines * 4.2 + 2.5);
+          // Thin divider
+          doc.setDrawColor(...KRH.silver);
+          doc.setLineWidth(0.1);
+          doc.line(margin, y, margin + usableW, y);
+        }
 
-          if (ri % 2 === 0) {
-            doc.setFillColor(250, 253, 250);
-            doc.roundedRect(margin, y, usableW, rh, 1, 1, 'F');
-          }
-
-          cx = margin;
-          cells.forEach((cell, i) => {
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(7);
-            doc.setTextColor(...ACF.darkGreen);
-            const txt = doc.splitTextToSize(String(cell || ''), cols[i] - 3);
-            doc.text(txt, cx + 1.5, y + 4.2);
-            cx += cols[i];
-          });
-
-          doc.setDrawColor(200, 220, 210);
-          doc.setLineWidth(0.15);
-          doc.line(margin, y + rh, margin + usableW, y + rh);
-          y += rh;
-        });
-        y += 2;
+        // Gold accent bottom border for lesson card
+        doc.setDrawColor(...KRH.gold);
+        doc.setLineWidth(0.5);
+        doc.line(margin, y + 1, margin + usableW, y + 1);
+        y += 5;
       }
-      y += 3;
+      y += 4;
     }
 
-    // ── FOOTER ──────────────────────────────────────────────────────
+    // Footers
     const totalPages = doc.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
-      doc.setFillColor(...ACF.darkGreen);
-      doc.rect(0, pageH - 7, pageW, 7, 'F');
-      doc.setFontSize(6.5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...ACF.lightGreen);
-      doc.text(
-        `Generated ${format(new Date(), 'dd/MM/yyyy HH:mm')}  ·  ${detName}  ·  OFFICIAL  ·  Page ${p} of ${totalPages}`,
-        pageW / 2, pageH - 2.5, { align: 'center' }
-      );
+      drawPageFooter(doc, pageW, pageH, p, totalPages);
     }
 
-    doc.save(`Training_Programme_${periodDesc.replace(/\s+/g, '_').replace(/–/g, '-')}.pdf`);
-    setGenerating(false);
+    doc.save(`Training_Detailed_${periodDesc.replace(/\s+/g, '_')}.pdf`);
+  }
+
+  async function handleExport() {
+    setGenerating(true);
+    try {
+      if (exportFormat === 'condensed') await generateCondensed();
+      else await generateDetailed();
+    } finally {
+      setGenerating(false);
+    }
   }
 
   const trainingDates = getTrainingDates();
@@ -314,17 +400,18 @@ export default function TrainingPlanExport() {
     <AccessGate level={ACCESS_LEVELS.DET_INSTRUCTOR}>
       <PageHeader
         title="Training Programme Export"
-        description="Generate PDF training programmes for display"
+        description="Generate condensed or detailed PDF training programmes"
         icon={FileDown}
         actions={
-          <Button onClick={generatePDF} disabled={generating}>
+          <Button onClick={handleExport} disabled={generating} style={{ background: '#002147' }}>
             {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Printer className="w-4 h-4 mr-2" />}
-            {generating ? 'Generating...' : 'Export PDF'}
+            {generating ? 'Generating…' : 'Export PDF'}
           </Button>
         }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        {/* Settings panel */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
@@ -332,48 +419,93 @@ export default function TrainingPlanExport() {
               Export Settings
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
+
+            {/* Format toggle */}
             <div>
-              <Label>Export Mode</Label>
-              <Select value={mode} onValueChange={setMode}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <Label className="text-xs font-semibold mb-2 block">Export Format</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setExportFormat('condensed')}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all text-xs ${
+                    exportFormat === 'condensed'
+                      ? 'border-primary bg-primary/5 text-primary'
+                      : 'border-border text-muted-foreground hover:border-primary/40'
+                  }`}
+                >
+                  <LayoutList className="w-5 h-5" />
+                  <span className="font-semibold">Condensed</span>
+                  <span className="text-center leading-tight opacity-70">At-a-glance grid · Notice board</span>
+                </button>
+                <button
+                  onClick={() => setExportFormat('detailed')}
+                  className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all text-xs ${
+                    exportFormat === 'detailed'
+                      ? 'border-primary bg-primary/5 text-primary'
+                      : 'border-border text-muted-foreground hover:border-primary/40'
+                  }`}
+                >
+                  <FileText className="w-5 h-5" />
+                  <span className="font-semibold">Detailed</span>
+                  <span className="text-center leading-tight opacity-70">Full lesson plans · Governance</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Range mode */}
+            <div>
+              <Label className="text-xs">Period Mode</Label>
+              <Select value={rangeMode} onValueChange={setRangeMode}>
+                <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="month">By Month</SelectItem>
                   <SelectItem value="range">Date Range</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {mode === 'month' ? (
+
+            {rangeMode === 'month' ? (
               <div>
-                <Label>Month</Label>
-                <Input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="mt-1" />
+                <Label className="text-xs">Month</Label>
+                <Input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="mt-1 h-8 text-xs" />
               </div>
             ) : (
               <>
                 <div>
-                  <Label>Start Date</Label>
-                  <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1" />
+                  <Label className="text-xs">Start Date</Label>
+                  <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="mt-1 h-8 text-xs" />
                 </div>
                 <div>
-                  <Label>End Date</Label>
-                  <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="mt-1" />
+                  <Label className="text-xs">End Date</Label>
+                  <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="mt-1 h-8 text-xs" />
                 </div>
               </>
             )}
-            <div className="text-xs text-muted-foreground space-y-0.5">
-              <p>{trainingDates.length} training night{trainingDates.length !== 1 ? 's' : ''} in period</p>
-              <p>{previewEvents.filter(e => !e.IsTrainingNight).length} other calendar events</p>
-              <p className="text-primary font-medium">Output: Landscape A4 · ACF branding</p>
+
+            {/* Format description */}
+            <div className="rounded-lg p-3 text-xs space-y-1.5" style={{ background: '#002147', color: '#FFD700' }}>
+              {exportFormat === 'condensed' ? (
+                <>
+                  <p className="font-bold">Condensed (Landscape A4)</p>
+                  <p style={{ color: 'rgba(255,215,0,0.7)' }}>Single-table grid: Date · Star Level · Period · Code · Lesson · Instructor · Location. Ideal for notice boards and briefings.</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold">Detailed (Portrait A4)</p>
+                  <p style={{ color: 'rgba(255,215,0,0.7)' }}>Per-lesson cards with Subject Title, Learning Objectives, Instructor Requirements and Safety/Risk Assessment notes. Compliant with detachment governance.</p>
+                </>
+              )}
+              <p style={{ color: 'rgba(255,215,0,0.5)' }}>{trainingDates.length} training night{trainingDates.length !== 1 ? 's' : ''} in period</p>
             </div>
           </CardContent>
         </Card>
 
+        {/* Preview panel */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">Preview — {getPeriodDescription()}</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Calendar events preview */}
             {previewEvents.filter(e => !e.IsTrainingNight).length > 0 && (
               <div className="mb-4">
                 <p className="text-xs font-bold text-muted-foreground uppercase mb-2">Calendar Events</p>
@@ -394,17 +526,18 @@ export default function TrainingPlanExport() {
                   const daySchedule = previewSchedule.filter(s => s.Date === date).sort((a, b) => a.Period - b.Period);
                   return (
                     <div key={date}>
-                      <p className="text-xs font-bold text-muted-foreground uppercase mb-1">
-                        {format(parseISO(date), 'EEE dd MMM yyyy')}
+                      <p className="text-xs font-bold mb-1 px-2 py-1 rounded" style={{ background: '#002147', color: '#FFD700' }}>
+                        {format(parseISO(date), 'EEE dd MMM yyyy').toUpperCase()}
                       </p>
                       <div className="space-y-1">
                         {daySchedule.map(row => (
-                          <div key={row.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 text-sm px-3">
-                            <Badge variant="outline" className="text-xs shrink-0">P{row.Period}</Badge>
-                            <Badge variant="secondary" className="text-xs shrink-0">{row.AssignedStarLevel}</Badge>
-                            <span className="font-mono text-xs text-muted-foreground">{row.LessonCode}</span>
-                            <span className="flex-1 truncate text-xs">{row.LessonName}</span>
-                            <span className="text-xs text-muted-foreground shrink-0">{getInstructorDisplay(row.InstructorPNumber)}</span>
+                          <div key={row.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-xs">
+                            <Badge variant="outline" className="text-xs shrink-0 h-5">P{row.Period}</Badge>
+                            <Badge variant="secondary" className="text-xs shrink-0 h-5">{row.AssignedStarLevel}</Badge>
+                            <span className="font-mono text-muted-foreground">{row.LessonCode}</span>
+                            <span className="flex-1 truncate">{row.LessonName}</span>
+                            <span className="text-muted-foreground shrink-0">{getInstructorDisplay(row.InstructorPNumber)}</span>
+                            {row.Location && <span className="text-muted-foreground shrink-0 hidden sm:block">{row.Location}</span>}
                           </div>
                         ))}
                       </div>
