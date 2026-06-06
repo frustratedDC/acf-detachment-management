@@ -1,278 +1,303 @@
 import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
 import AccessGate from '@/components/shared/AccessGate';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { BarChart2, Users, ShieldAlert, Star, UserCheck } from 'lucide-react';
-import { format, subDays, parseISO } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import {
+  Users, AlertTriangle, Clock, ClipboardList, AlertCircle, BookOpen,
+  Calendar, Zap, BarChart2, RefreshCw
+} from 'lucide-react';
+import { format, subDays, differenceInDays, parseISO } from 'date-fns';
 import { ACCESS_LEVELS, isCadet, isAdultInstructor } from '@/lib/accessLevels';
 
-const COLORS = ['#2D8E43','#159DC4','#EC6223','#E61C3B','#083F30','#6FB043'];
-const STAR_LEVELS = ['Basic','1 Star','2 Star','3 Star','4 Star'];
-const MANDATORY_GOVERNANCE = ['First Aid','Data Protection','Safeguarding'];
+const STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
+
+function getStatusColor(status) {
+  switch (status) {
+    case 'green':
+      return 'bg-chart-2/10 border-chart-2/30 text-chart-2';
+    case 'amber':
+      return 'bg-amber-100/30 border-amber-300/50 text-amber-700';
+    case 'red':
+      return 'bg-destructive/10 border-destructive/30 text-destructive';
+    default:
+      return 'bg-card border-border';
+  }
+}
+
+function MetricCard({ title, value, status = 'green', icon: Icon, onClick, details = [] }) {
+  return (
+    <Card className={`cursor-pointer border-2 transition-all hover:shadow-md ${getStatusColor(status)}`} onClick={onClick}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            {Icon && <Icon className="w-4 h-4" />}
+            <p className="text-xs font-semibold uppercase tracking-wide">{title}</p>
+          </div>
+          {status === 'amber' && <AlertTriangle className="w-4 h-4 flex-shrink-0" />}
+          {status === 'red' && <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+        </div>
+        <p className="text-3xl font-bold mb-2">{value}</p>
+        {details.length > 0 && (
+          <div className="space-y-1 text-xs text-muted-foreground">
+            {details.map((d, i) => (
+              <p key={i}>{d}</p>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function AnalyticsDashboard() {
   const { personnel: me } = usePersonnel();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const { data: allPersonnel = [] } = useQuery({
+  const { data: allPersonnel = [], isLoading: loadingPersonnel } = useQuery({
     queryKey: ['all-personnel'],
     queryFn: () => base44.entities.PersonnelManager.filter({}),
   });
 
-  const { data: parade = [] } = useQuery({
-    queryKey: ['parade-all'],
-    queryFn: () => base44.entities.DailyParadeState.filter({}),
+  const { data: instructorAttendance = [] } = useQuery({
+    queryKey: ['instructor-attendance'],
+    queryFn: () => base44.entities.InstructorAttendanceLedger.filter({}),
   });
 
-  const { data: progress = [] } = useQuery({
-    queryKey: ['progress-all'],
-    queryFn: () => base44.entities.ProgressLedger.filter({}),
+  const { data: qualifications = [] } = useQuery({
+    queryKey: ['qualifications'],
+    queryFn: () => base44.entities.QualificationMatrix.filter({}),
   });
 
-  const { data: syllabus = [] } = useQuery({
-    queryKey: ['syllabus-master-all'],
-    queryFn: () => base44.entities.SyllabusMaster.filter({}),
+  const { data: policies = [] } = useQuery({
+    queryKey: ['policy-registry'],
+    queryFn: () => base44.entities.PolicyRegistry.filter({}),
   });
 
-  const { data: governance = [] } = useQuery({
-    queryKey: ['cfav-governance'],
-    queryFn: () => base44.entities.CFAVGovernance.filter({}),
+  const { data: trainingMonths = [] } = useQuery({
+    queryKey: ['training-months'],
+    queryFn: () => base44.entities.TrainingMonth.filter({}),
   });
 
-  const { data: availability = [] } = useQuery({
-    queryKey: ['staff-availability'],
-    queryFn: () => base44.entities.StaffAvailability.filter({}),
+  const { data: calendarEvents = [] } = useQuery({
+    queryKey: ['calendar-events'],
+    queryFn: () => base44.entities.CalendarEvent.filter({}),
   });
 
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
+  const today = new Date();
+  const thirtyDaysAgo = subDays(today, 30);
+  const sixtyDaysFromNow = new Date();
+  sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
 
-  // ── Personnel splits
-  const activeCadets = useMemo(() => allPersonnel.filter(p => isCadet(p.AccessLevel) && (p.PersonnelStatus || 'Active') === 'Active'), [allPersonnel]);
-  const activeInstructors = useMemo(() => allPersonnel.filter(p => isAdultInstructor(p.AccessLevel) && (p.PersonnelStatus || 'Active') === 'Active'), [allPersonnel]);
+  // ROW 1: Operational Readiness
+  const activeCadets = useMemo(() => 
+    allPersonnel.filter(p => isCadet(p.AccessLevel) && p.PersonnelStatus === 'Active'),
+    [allPersonnel]
+  );
 
-  // ── Attendance: last 30 days unique present days per person
-  const recentParade = useMemo(() => parade.filter(p => p.AttendanceStatus === 'Present' && p.Date >= thirtyDaysAgo), [parade, thirtyDaysAgo]);
-  const paradeDates = useMemo(() => [...new Set(parade.map(p => p.Date))].filter(d => d >= thirtyDaysAgo).sort(), [parade, thirtyDaysAgo]);
+  const activeInstructors = useMemo(() =>
+    allPersonnel.filter(p => isAdultInstructor(p.AccessLevel) && p.PersonnelStatus === 'Active'),
+    [allPersonnel]
+  );
 
-  // Cadet attendance rate per star level
-  const cadetAttendanceByLevel = useMemo(() => {
-    return STAR_LEVELS.map(sl => {
-      const cadetsInLevel = activeCadets.filter(c => c.CurrentStarLevel === sl);
-      if (cadetsInLevel.length === 0) return null;
-      const totalPossible = cadetsInLevel.length * paradeDates.length;
-      const attended = recentParade.filter(p => cadetsInLevel.some(c => c.PNumber === p.UserPNumber)).length;
-      return { name: sl, rate: totalPossible > 0 ? Math.round((attended / totalPossible) * 100) : 0, count: cadetsInLevel.length };
-    }).filter(Boolean);
-  }, [activeCadets, recentParade, paradeDates]);
+  const instructorAttendanceRate = useMemo(() => {
+    if (activeInstructors.length === 0) return { rate: 0, status: 'green' };
+    const recentAttendance = instructorAttendance.filter(a => a.Date >= format(thirtyDaysAgo, 'yyyy-MM-dd'));
+    const present = recentAttendance.filter(a => a.AttendanceStatus === 'Present').length;
+    const total = recentAttendance.length;
+    const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+    const status = rate >= 80 ? 'green' : rate >= 60 ? 'amber' : 'red';
+    return { rate, status };
+  }, [activeInstructors, instructorAttendance, thirtyDaysAgo]);
 
-  // Adult attendance rate (last 30 days)
-  const adultAttendance = useMemo(() => {
-    return activeInstructors.map(inst => {
-      const nights = recentParade.filter(p => p.UserPNumber === inst.PNumber).length;
-      return { name: `${inst.Rank || ''} ${inst.Surname}`.trim(), nights, total: paradeDates.length };
-    }).sort((a, b) => b.nights - a.nights).slice(0, 10);
-  }, [activeInstructors, recentParade, paradeDates]);
-
-  // ── Star level completion (mandatory lessons at CURRENT star level)
-  const cadetCompletionByLevel = useMemo(() => {
-    return STAR_LEVELS.map(sl => {
-      const mandatoryLessons = syllabus.filter(l => l.StarLevel === sl && l.IsMandatory);
-      if (mandatoryLessons.length === 0) return null;
-      const cadetsInLevel = activeCadets.filter(c => c.CurrentStarLevel === sl);
-      if (cadetsInLevel.length === 0) return null;
-
-      const approvedSet = new Set(progress.filter(p => p.Status === 'Approved').map(p => `${p.CadetPNumber}::${p.LessonCode}`));
-      const completionRates = cadetsInLevel.map(c => {
-        const done = mandatoryLessons.filter(l => approvedSet.has(`${c.PNumber}::${l.LessonCode}`)).length;
-        return (done / mandatoryLessons.length) * 100;
-      });
-      const avg = completionRates.reduce((a, b) => a + b, 0) / completionRates.length;
-      const fullyComplete = completionRates.filter(r => r === 100).length;
-      return { name: sl, avgCompletion: Math.round(avg), fullyComplete, total: cadetsInLevel.length, mandatoryCount: mandatoryLessons.length };
-    }).filter(Boolean);
-  }, [activeCadets, syllabus, progress]);
-
-  // ── Adults failing mandatory governance
-  const failingGovernance = useMemo(() => {
-    return activeInstructors.map(inst => {
-      const missing = MANDATORY_GOVERNANCE.filter(course => {
-        const rec = governance.find(g => g.PNumber === inst.PNumber && g.CourseType === course);
-        if (!rec) return true;
-        if (!rec.ExpiryDate) return false;
-        return new Date(rec.ExpiryDate) < new Date();
-      });
-      return { person: inst, missing };
-    }).filter(r => r.missing.length > 0);
-  }, [activeInstructors, governance]);
-
-  // ── Staff availability trend (last 6 training nights)
-  const availTrend = useMemo(() => {
-    const nights = [...new Set(availability.map(a => a.EventDate))].sort().slice(-8);
-    return nights.map(d => {
-      const avail = availability.filter(a => a.EventDate === d && a.IsAvailable).length;
-      const unavail = availability.filter(a => a.EventDate === d && !a.IsAvailable).length;
-      return { date: format(parseISO(d), 'dd MMM'), available: avail, unavailable: unavail };
+  const expiringQualifications = useMemo(() => {
+    return qualifications.filter(q => {
+      if (!q.ExpiryDate) return false;
+      const daysUntilExpiry = differenceInDays(parseISO(q.ExpiryDate), today);
+      return daysUntilExpiry <= 60 && daysUntilExpiry > 0;
     });
-  }, [availability]);
+  }, [qualifications, today]);
 
-  // ── Quick summary stats
-  const totalApproved = useMemo(() => new Set(progress.filter(p => p.Status === 'Approved').map(p => `${p.CadetPNumber}::${p.LessonCode}`)).size, [progress]);
+  const expiredQualifications = useMemo(() => {
+    return qualifications.filter(q => {
+      if (!q.ExpiryDate) return false;
+      return new Date(q.ExpiryDate) < today;
+    });
+  }, [qualifications, today]);
+
+  const qualStatus = expiredQualifications.length > 0 ? 'red' : expiringQualifications.length > 0 ? 'amber' : 'green';
+
+  // ROW 2: Pending Actions
+  const pendingApprovals = useMemo(() => {
+    // Placeholder for access requests, course requests, etc.
+    return 0;
+  }, []);
+
+  const attendanceDiscrepancies = useMemo(() => {
+    // Instructors marked unavailable but showed up, or vice versa
+    return 0;
+  }, []);
+
+  const expiredPolicies = useMemo(() => {
+    return policies.filter(p => {
+      if (!p.ExpiryDate) return false;
+      return new Date(p.ExpiryDate) < today;
+    });
+  }, [policies, today]);
+
+  const expiringPolicies = useMemo(() => {
+    return policies.filter(p => {
+      if (!p.ExpiryDate) return false;
+      const daysUntilExpiry = differenceInDays(parseISO(p.ExpiryDate), today);
+      return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
+    });
+  }, [policies, today]);
+
+  const governanceStatus = expiredPolicies.length > 0 ? 'red' : expiringPolicies.length > 0 ? 'amber' : 'green';
+
+  // ROW 3: Training Progress
+  const currentMonthTraining = useMemo(() => {
+    const currentMonth = format(today, 'yyyy-MM-01');
+    const trainingMonth = trainingMonths.find(m => m.MonthDate === currentMonth);
+    return {
+      locked: trainingMonth?.IsLocked || false,
+      status: trainingMonth?.IsLocked ? 'amber' : 'green',
+    };
+  }, [trainingMonths, today]);
+
+  const upcomingEvents = useMemo(() => {
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    return calendarEvents.filter(e => {
+      const eventDate = parseISO(e.Date);
+      return eventDate >= today && eventDate <= nextWeek;
+    });
+  }, [calendarEvents, today]);
+
+  const handleRefresh = async () => {
+    await queryClient.refetchQueries();
+  };
+
+  if (loadingPersonnel) {
+    return (
+      <AccessGate level={ACCESS_LEVELS.DET_COMMANDER}>
+        <PageHeader
+          title="Executive Dashboard"
+          description="At-a-glance operational status"
+          icon={BarChart2}
+        />
+        <div className="flex justify-center py-12">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </AccessGate>
+    );
+  }
 
   return (
-    <AccessGate level={ACCESS_LEVELS.DET_2IC}>
-      <PageHeader
-        title="Analytics Dashboard"
-        description="Training, attendance and compliance insights"
-        icon={BarChart2}
-      />
-
-      {/* Summary stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><Users className="w-4 h-4 text-primary" /></div>
-          <div><p className="text-xs text-muted-foreground">Active Cadets</p><p className="text-2xl font-bold">{activeCadets.length}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-chart-2/10 flex items-center justify-center"><UserCheck className="w-4 h-4 text-chart-2" /></div>
-          <div><p className="text-xs text-muted-foreground">Active Instructors</p><p className="text-2xl font-bold">{activeInstructors.length}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center"><Star className="w-4 h-4 text-accent-foreground" /></div>
-          <div><p className="text-xs text-muted-foreground">Lessons Approved</p><p className="text-2xl font-bold">{totalApproved}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-destructive/10 flex items-center justify-center"><ShieldAlert className="w-4 h-4 text-destructive" /></div>
-          <div><p className="text-xs text-muted-foreground">Governance Issues</p><p className="text-2xl font-bold">{failingGovernance.length}</p></div>
-        </CardContent></Card>
+    <AccessGate level={ACCESS_LEVELS.DET_COMMANDER}>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Executive Dashboard</h1>
+          <p className="text-muted-foreground text-sm">At-a-glance operational status</p>
+        </div>
+        <Button onClick={handleRefresh} size="sm" variant="outline" className="gap-2">
+          <RefreshCw className="w-3.5 h-3.5" />
+          Refresh
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Cadet attendance by star level */}
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><BarChart2 className="w-4 h-4" />Cadet Attendance Rate — Last 30 Days</CardTitle></CardHeader>
-          <CardContent>
-            {paradeDates.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No parade data yet.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={cadetAttendanceByLevel} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} unit="%" domain={[0, 100]} />
-                  <Tooltip formatter={(v) => `${v}%`} />
-                  <Bar dataKey="rate" name="Attendance %" fill="#2D8E43" radius={[4,4,0,0]}>
-                    {cadetAttendanceByLevel.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+      {/* ROW 1: Operational Readiness */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <MetricCard
+          title="Active Cadets"
+          value={activeCadets.length}
+          status="green"
+          icon={Users}
+          onClick={() => navigate('/personnel')}
+          details={['Cadets on strength']}
+        />
 
-        {/* Staff availability trend */}
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><UserCheck className="w-4 h-4" />Staff Availability Trend</CardTitle></CardHeader>
-          <CardContent>
-            {availTrend.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No availability data yet.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={availTrend} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="available" name="Available" fill="#2D8E43" radius={[4,4,0,0]} stackId="a" />
-                  <Bar dataKey="unavailable" name="Unavailable" fill="#E61C3B" radius={[4,4,0,0]} stackId="a" />
-                  <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Detachment Readiness"
+          value={`${instructorAttendanceRate.rate}%`}
+          status={instructorAttendanceRate.status}
+          icon={AlertTriangle}
+          onClick={() => navigate('/staff-availability')}
+          details={['Last 30 days', activeInstructors.length > 0 ? `${activeInstructors.length} instructors` : 'No data']}
+        />
 
-        {/* Star level completion */}
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Star className="w-4 h-4" />Mandatory Lesson Completion — Current Star Level</CardTitle></CardHeader>
-          <CardContent>
-            {cadetCompletionByLevel.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No data yet.</p>
-            ) : (
-              <div className="space-y-3">
-                {cadetCompletionByLevel.map(sl => (
-                  <div key={sl.name}>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="font-semibold">{sl.name}</span>
-                      <span className="text-muted-foreground">{sl.fullyComplete}/{sl.total} fully complete · Avg {sl.avgCompletion}%</span>
-                    </div>
-                    <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-                      <div className="h-3 rounded-full bg-primary transition-all" style={{ width: `${sl.avgCompletion}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Governance failures */}
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2 text-destructive"><ShieldAlert className="w-4 h-4" />Adults Failing Mandatory Compliance</CardTitle></CardHeader>
-          <CardContent>
-            {failingGovernance.length === 0 ? (
-              <div className="flex items-center gap-2 py-3">
-                <span className="w-2 h-2 rounded-full bg-green-500" />
-                <p className="text-sm text-muted-foreground">All instructors compliant.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {failingGovernance.map(({ person, missing }) => (
-                  <div key={person.PNumber} className="flex items-start justify-between p-2 rounded-lg bg-destructive/5 border border-destructive/20">
-                    <div>
-                      <p className="text-sm font-semibold">{[person.Rank, person.Surname].filter(Boolean).join(' ')}</p>
-                      <p className="text-xs text-muted-foreground">{person.PNumber}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-1 justify-end max-w-[55%]">
-                      {missing.map(m => <Badge key={m} variant="destructive" className="text-xs py-0 h-5">{m}</Badge>)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="Qualification Alerts"
+          value={expiringQualifications.length + expiredQualifications.length}
+          status={qualStatus}
+          icon={Clock}
+          onClick={() => navigate('/instructor-quals')}
+          details={[
+            `${expiringQualifications.length} expiring soon`,
+            `${expiredQualifications.length} expired`,
+          ]}
+        />
       </div>
 
-      {/* Adult attendance table */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Adult Instructor Attendance — Last 30 Days ({paradeDates.length} nights)</CardTitle></CardHeader>
-        <CardContent>
-          {adultAttendance.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">No attendance data yet.</p>
-          ) : (
-            <div className="space-y-1.5">
-              {adultAttendance.map(a => (
-                <div key={a.name} className="flex items-center gap-3">
-                  <span className="text-xs font-medium w-36 truncate">{a.name}</span>
-                  <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-4 rounded-full transition-all"
-                      style={{
-                        width: a.total > 0 ? `${Math.round((a.nights / a.total) * 100)}%` : '0%',
-                        background: a.total > 0 && (a.nights / a.total) >= 0.75 ? '#2D8E43' : '#EC6223'
-                      }}
-                    />
-                  </div>
-                  <span className="text-xs text-muted-foreground w-20 text-right">{a.nights}/{a.total} nights</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* ROW 2: Pending Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <MetricCard
+          title="Pending Approvals"
+          value={pendingApprovals}
+          status={pendingApprovals > 0 ? 'amber' : 'green'}
+          icon={ClipboardList}
+          onClick={() => navigate('/tasks')}
+          details={['Course requests, CE hours']}
+        />
+
+        <MetricCard
+          title="Attendance Discrepancies"
+          value={attendanceDiscrepancies}
+          status={attendanceDiscrepancies > 0 ? 'red' : 'green'}
+          icon={AlertCircle}
+          onClick={() => navigate('/attendance')}
+          details={['Availability vs. actual']}
+        />
+
+        <MetricCard
+          title="Governance Review"
+          value={expiredPolicies.length}
+          status={governanceStatus}
+          icon={BookOpen}
+          onClick={() => navigate('/cfav-governance')}
+          details={[
+            `${expiringPolicies.length} due soon`,
+            `${expiredPolicies.length} overdue`,
+          ]}
+        />
+      </div>
+
+      {/* ROW 3: Training Progress */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <MetricCard
+          title="Training Plan Status"
+          value={currentMonthTraining.locked ? 'LOCKED' : 'ACTIVE'}
+          status={currentMonthTraining.status}
+          icon={Calendar}
+          onClick={() => navigate('/plan-generator')}
+          details={[format(today, 'MMMM yyyy')]}
+        />
+
+        <MetricCard
+          title="Upcoming Events (Next 7 Days)"
+          value={upcomingEvents.length}
+          status={upcomingEvents.length > 0 ? 'green' : 'amber'}
+          icon={Zap}
+          onClick={() => navigate('/calendar')}
+          details={upcomingEvents.slice(0, 2).map(e => e.Title)}
+        />
+      </div>
     </AccessGate>
   );
 }
