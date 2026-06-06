@@ -71,8 +71,8 @@ export default function BulkProgressEntry() {
 
   // ── View mode ──────────────────────────────────────────────────────────────
   const [mode, setMode] = useState('matrix'); // 'matrix' | 'bulk-award'
-  const [starLevel, setStarLevel] = useState('1 Star');
-  const [subjectFilter, setSubjectFilter] = useState('all');
+  const [starLevel, setStarLevel] = useState('');       // mandatory — table hidden until set
+  const [subjectFilter, setSubjectFilter] = useState(''); // mandatory — table hidden until set
   const [search, setSearch] = useState('');
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [hideCompleted, setHideCompleted] = useState(false);
@@ -117,14 +117,14 @@ export default function BulkProgressEntry() {
   const isAutoApproved = (me?.AccessLevel ?? 0) >= ACCESS_LEVELS.DET_2IC;
 
   const subjectsForLevel = useMemo(() =>
-    [...new Set(syllabus.filter(l => l.StarLevel === starLevel).map(l => l.SubjectName))].sort(),
+    starLevel ? [...new Set(syllabus.filter(l => l.StarLevel === starLevel).map(l => l.SubjectName))].sort() : [],
     [syllabus, starLevel]
   );
 
   const displayLessons = useMemo(() => {
+    if (!starLevel || !subjectFilter) return [];
     let filtered = syllabus.filter(l =>
-      l.StarLevel === starLevel &&
-      (subjectFilter === 'all' || l.SubjectName === subjectFilter)
+      l.StarLevel === starLevel && l.SubjectName === subjectFilter
     );
 
     if (sortBy === 'mandatory-first') {
@@ -145,11 +145,14 @@ export default function BulkProgressEntry() {
   );
 
   const cadets = useMemo(() => {
+    if (!starLevel || !subjectFilter) return [];
     let filtered = allActiveCadets.filter(c =>
-      !search ||
-      c.Surname?.toLowerCase().includes(search.toLowerCase()) ||
-      c.FirstName?.toLowerCase().includes(search.toLowerCase()) ||
-      c.PNumber?.toLowerCase().includes(search.toLowerCase())
+      // Only show cadets whose current star level matches the selected level
+      c.CurrentStarLevel === starLevel &&
+      (!search ||
+        c.Surname?.toLowerCase().includes(search.toLowerCase()) ||
+        c.FirstName?.toLowerCase().includes(search.toLowerCase()) ||
+        c.PNumber?.toLowerCase().includes(search.toLowerCase()))
     );
     if (hideCompleted) {
       filtered = filtered.filter(c =>
@@ -157,7 +160,7 @@ export default function BulkProgressEntry() {
       );
     }
     return filtered;
-  }, [allActiveCadets, search, hideCompleted, displayLessons, approvedSet]);
+  }, [allActiveCadets, starLevel, subjectFilter, search, hideCompleted, displayLessons, approvedSet]);
 
   // ── Matrix helpers ──────────────────────────────────────────────────────────
   function isChecked(pnum, lessonCode) { return !!(pending[pnum]?.[lessonCode]); }
@@ -414,93 +417,122 @@ export default function BulkProgressEntry() {
       {/* ── MATRIX MODE FILTERS ────────────────────────────────────── */}
       {mode === 'matrix' && (
         <>
-          <div className="flex flex-wrap items-end gap-3 mb-4">
-            <div>
-              <Label className="text-xs mb-1 block">Star Level</Label>
-              <Select value={starLevel} onValueChange={v => { setStarLevel(v); setSubjectFilter('all'); setPending({}); }}>
-                <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STAR_LEVELS.map(sl => <SelectItem key={sl} value={sl}>{sl}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs mb-1 block">Subject</Label>
-              <Select value={subjectFilter} onValueChange={v => { setSubjectFilter(v); setPending({}); }}>
-                <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Subjects</SelectItem>
-                  {subjectsForLevel.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs mb-1 block">Sort By</Label>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-40 h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mandatory-first">Mandatory First</SelectItem>
-                  <SelectItem value="subject-az">Subject (A–Z)</SelectItem>
-                  <SelectItem value="code-asc">Lesson Code (↑)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs mb-1 block">Completion Date</Label>
-              <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-8 w-36 text-xs" />
-            </div>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input placeholder="Search cadets..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 w-40 text-xs" />
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setHideCompleted(v => !v)}
-              className={hideCompleted ? 'border-primary text-primary' : ''}
-            >
-              {hideCompleted ? <Eye className="w-3.5 h-3.5 mr-1" /> : <EyeOff className="w-3.5 h-3.5 mr-1" />}
-              {hideCompleted ? 'Show All' : 'Hide Completed'}
-            </Button>
-            {subjectFilter !== 'all' && (
-              <Button size="sm" variant="outline" onClick={() => {
-                setPending(prev => {
-                  const next = { ...prev };
-                  cadets.forEach(c => {
-                    const row = { ...(next[c.PNumber] || {}) };
-                    displayLessons.forEach(l => {
-                      if (!approvedSet.has(`${c.PNumber}::${l.LessonCode}`) && !pendingDbSet.has(`${c.PNumber}::${l.LessonCode}`)) {
-                        row[l.LessonCode] = true;
-                      }
-                    });
-                    next[c.PNumber] = row;
-                  });
-                  return next;
-                });
-              }}>
-                ✓ Complete Whole Subject
-              </Button>
-            )}
-            <div className="ml-auto">
-              <Button
-                onClick={() => submitMutation.mutate()}
-                disabled={totalTicked === 0 || submitMutation.isPending}
-                size="sm"
-              >
-                <Save className="w-4 h-4 mr-1.5" />
-                {submitMutation.isPending ? 'Saving...' : `Save ${totalTicked} Completion${totalTicked !== 1 ? 's' : ''}`}
-                {isAutoApproved ? ' (Auto-Approved)' : ' (Pending)'}
-              </Button>
-            </div>
-          </div>
+          {/* Mandatory filter bar */}
+          <Card className="mb-4">
+            <CardContent className="p-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <div>
+                  <Label className="text-xs mb-1 block font-semibold">Filter by Star Level <span className="text-destructive">*</span></Label>
+                  <Select value={starLevel} onValueChange={v => { setStarLevel(v); setSubjectFilter(''); setPending({}); }}>
+                    <SelectTrigger className="w-32 h-8 text-xs">
+                      <SelectValue placeholder="Select…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STAR_LEVELS.map(sl => <SelectItem key={sl} value={sl}>{sl}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block font-semibold">Filter by Subject <span className="text-destructive">*</span></Label>
+                  <Select value={subjectFilter} onValueChange={v => { setSubjectFilter(v); setPending({}); }} disabled={!starLevel}>
+                    <SelectTrigger className="w-44 h-8 text-xs">
+                      <SelectValue placeholder={starLevel ? 'Select subject…' : 'Select star level first'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjectsForLevel.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs mb-1 block">Date</Label>
+                  <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-8 w-36 text-xs" />
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input placeholder="Search cadets…" value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 w-36 text-xs" />
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setHideCompleted(v => !v)}
+                  className={hideCompleted ? 'border-primary text-primary' : ''}
+                >
+                  {hideCompleted ? <Eye className="w-3.5 h-3.5 mr-1" /> : <EyeOff className="w-3.5 h-3.5 mr-1" />}
+                  {hideCompleted ? 'Show All' : 'Hide Done'}
+                </Button>
+                {(starLevel || subjectFilter) && (
+                  <Button size="sm" variant="ghost" onClick={() => { setStarLevel(''); setSubjectFilter(''); setSearch(''); setPending({}); setHideCompleted(false); }}>
+                    ✕ Clear Filters
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-          {displayLessons.length === 0 ? (
+          {/* Gate: show prompt until both filters are set */}
+          {(!starLevel || !subjectFilter) ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <ClipboardCheck className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">Select a Star Level and Subject to load the entry table.</p>
+              <p className="text-xs mt-1">Both filters are required before entries can be made.</p>
+            </div>
+          ) : cadets.length === 0 && displayLessons.length > 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <AlertTriangle className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">No eligible cadets found for {starLevel} — {subjectFilter}.</p>
+              <p className="text-xs mt-1">No active cadets are currently at the <strong>{starLevel}</strong> level.</p>
+            </div>
+          ) : displayLessons.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-12">No lessons found for selected filters.</p>
           ) : (
             <Card>
               <CardContent className="p-0 overflow-x-auto">
                 <table className="w-full text-xs border-collapse">
                   <thead>
+                    {/* Bulk Action row */}
+                    <tr className="bg-accent/10 border-b border-accent/30">
+                      <th className="text-left p-2 sticky left-0 bg-accent/10 z-10 min-w-[160px]">
+                        <span className="text-xs font-semibold text-accent-foreground">Bulk Action</span>
+                      </th>
+                      <th colSpan={displayLessons.length} className="p-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs border-accent/50"
+                            onClick={() => {
+                              setPending(prev => {
+                                const next = { ...prev };
+                                cadets.forEach(c => {
+                                  const row = { ...(next[c.PNumber] || {}) };
+                                  displayLessons.forEach(l => {
+                                    if (!approvedSet.has(`${c.PNumber}::${l.LessonCode}`) && !pendingDbSet.has(`${c.PNumber}::${l.LessonCode}`)) {
+                                      row[l.LessonCode] = true;
+                                    }
+                                  });
+                                  next[c.PNumber] = row;
+                                });
+                                return next;
+                              });
+                            }}
+                          >
+                            ✓ Apply Pass to All
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs"
+                            onClick={() => setPending({})}
+                            disabled={totalTicked === 0}
+                          >
+                            ✕ Clear All
+                          </Button>
+                          {totalTicked > 0 && (
+                            <span className="text-xs text-muted-foreground">{totalTicked} ticked</span>
+                          )}
+                        </div>
+                      </th>
+                    </tr>
                     <tr className="bg-muted border-b">
                       <th className="text-left p-3 font-semibold sticky left-0 bg-muted z-10 min-w-[160px]">
                         Cadet
@@ -584,11 +616,23 @@ export default function BulkProgressEntry() {
             </Card>
           )}
 
-          <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
-            <span><span className="text-chart-2">✓</span> Already approved</span>
-            <span><span className="text-yellow-500">⏳</span> Pending approval</span>
-            <span className="text-destructive">* = Mandatory lesson</span>
-            <span>Click cadet name to toggle all · Click lesson header to toggle column</span>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+              <span><span className="text-chart-2">✓</span> Approved</span>
+              <span><span className="text-yellow-500">⏳</span> Pending</span>
+              <span className="text-destructive">* Mandatory</span>
+              <span>Tap name/header to toggle column</span>
+            </div>
+            <Button
+              onClick={() => submitMutation.mutate()}
+              disabled={totalTicked === 0 || submitMutation.isPending}
+              size="sm"
+            >
+              <Save className="w-4 h-4 mr-1.5" />
+              {submitMutation.isPending
+                ? 'Saving…'
+                : `Save ${totalTicked} Entr${totalTicked !== 1 ? 'ies' : 'y'}${isAutoApproved ? ' (Auto-Approved)' : ' (Pending)'}`}
+            </Button>
           </div>
         </>
       )}
