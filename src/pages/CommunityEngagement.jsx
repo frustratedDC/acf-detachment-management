@@ -35,7 +35,9 @@ export default function CommunityEngagement() {
   const [form, setForm] = useState({ Hours: "", Description: "", Date: format(new Date(), "yyyy-MM-dd") });
 
   const myCEAccess = hasAccess(me?.AccessLevel ?? 0, ACCESS_LEVELS.CADET_NCO) || me?.CEAccess === true;
-  const canSubmitCE = me?.role === 'admin' || hasAccess(me?.AccessLevel ?? 0, ACCESS_LEVELS.DET_2IC);
+  // Any user with CE access can submit; L4+ submissions are auto-approved
+  const canSubmitCE = myCEAccess;
+  const isAutoApproved = hasAccess(me?.AccessLevel ?? 0, ACCESS_LEVELS.DET_2IC) || me?.role === 'admin';
 
   // Check for existing access request
   useEffect(() => {
@@ -81,13 +83,14 @@ export default function CommunityEngagement() {
       Hours: parseFloat(form.Hours),
       Description: form.Description,
       Date: form.Date,
-      Status: "Pending",
+      Status: isAutoApproved ? "Approved" : "Pending",
+      ApprovedByPNumber: isAutoApproved ? me.PNumber : undefined,
     }),
     onSuccess: (newEntry) => {
       setEntries(prev => [...prev, newEntry]);
       setShowForm(false);
       setForm({ Hours: "", Description: "", Date: format(new Date(), "yyyy-MM-dd") });
-      toast.success("CE hours submitted — awaiting instructor approval.");
+      toast.success(isAutoApproved ? "CE hours added and approved." : "CE hours submitted — awaiting instructor approval.");
       queryClient.invalidateQueries({ queryKey: ["ce-ledger"] });
     },
     onError: () => toast.error("Failed to submit CE hours."),
@@ -218,7 +221,7 @@ export default function CommunityEngagement() {
         <Card className="border-primary/30">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Log Community Engagement Hours</CardTitle>
-            <CardDescription>Submitted hours require instructor approval before they count toward your total.</CardDescription>
+            <CardDescription>{isAutoApproved ? "As DC/2IC, hours you add are automatically approved." : "Submitted hours require instructor approval before they count toward your total."}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
