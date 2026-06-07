@@ -53,8 +53,18 @@ export default function MarkCompleteButton({ date, scheduleEntries, accessLevel 
 
   const noParadeData = open && !loadingParade && paradeState.length === 0;
 
+  // Deduplicate entries by LessonCode+StarLevel so we don't double-credit
+  const deduplicatedEntries = scheduleEntries.reduce((acc, entry) => {
+    const key = `${entry.LessonCode}__${entry.AssignedStarLevel}`;
+    if (!acc.seen.has(key) && entry.LessonCode) {
+      acc.seen.add(key);
+      acc.entries.push(entry);
+    }
+    return acc;
+  }, { seen: new Set(), entries: [] }).entries;
+
   // Build preview per lesson
-  const preview = scheduleEntries.map(entry => {
+  const preview = deduplicatedEntries.map(entry => {
     const eligibleCadets = allPersonnel.filter(p =>
       p.Type === 'Cadet' &&
       (p.PersonnelStatus || 'Active') === 'Active' &&
@@ -81,7 +91,7 @@ export default function MarkCompleteButton({ date, scheduleEntries, accessLevel 
             LessonCode: entry.LessonCode,
             Status: 'Approved',
             CompletionDate: date,
-            InstructorPNumber: entry.InstructorPNumber || '',
+            InstructorPNumber: entry.InstructorPNumber || entry.Instructor2PNumber || 'SYSTEM',
           });
         });
       });
