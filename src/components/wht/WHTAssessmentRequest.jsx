@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { usePersonnel } from '@/lib/usePersonnel';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,9 +10,12 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Send, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
+import { format } from 'date-fns';
 
 export default function WHTAssessmentRequest({ open, onOpenChange, cadetPNumber, cadetName, weaponType, weaponName }) {
-  const [form, setForm] = useState({ reason: '', preferredInstructorPNumber: '' });
+  const { personnel: me } = usePersonnel();
+  const [preferredInstructor, setPreferredInstructor] = useState('');
+  const [notes, setNotes] = useState('');
 
   const { data: instructors = [] } = useQuery({
     queryKey: ['instructors-for-wht'],
@@ -21,27 +25,27 @@ export default function WHTAssessmentRequest({ open, onOpenChange, cadetPNumber,
 
   const requestMutation = useMutation({
     mutationFn: async () => {
-      if (!form.reason || !form.preferredInstructorPNumber) {
-        throw new Error('Please fill in all fields');
-      }
-      
-      // Create a task/notification for the instructor
-      // Using a custom approach since we don't have a dedicated request entity
-      await base44.entities.TaskList?.create?.({
-        Title: `WHT Assessment Request: ${cadetName} - ${weaponName}`,
-        Description: `${cadetName} (${cadetPNumber}) has requested a WHT assessment for ${weaponName}. Reason: ${form.reason}`,
-        AssignedToPNumber: form.preferredInstructorPNumber,
+      const instructorName = instructors.find(i => i.PNumber === preferredInstructor);
+      const nameStr = instructorName ? [instructorName.Rank, instructorName.FirstName, instructorName.Surname].filter(Boolean).join(' ') : preferredInstructor;
+      await base44.entities.CourseRequest.create({
+        PNumber: cadetPNumber || me?.PNumber,
+        RequestorName: cadetName || [me?.Rank, me?.FirstName, me?.Surname].filter(Boolean).join(' '),
+        CourseName: `WHT Assessment — ${weaponName}`,
+        PreferredSemester: '',
+        Reason: [
+          `WHT assessment request for ${cadetName || me?.PNumber}.`,
+          `Weapon: ${weaponName}`,
+          preferredInstructor ? `Preferred assessor: ${nameStr}` : '',
+          notes ? `Notes: ${notes}` : '',
+        ].filter(Boolean).join('\n'),
         Status: 'Pending',
-        Priority: 'Medium',
-        DueDate: new Date().toISOString().split('T')[0],
-      }).catch(() => {
-        // If TaskList doesn't exist, just notify via toast
-        return true;
+        DateRequested: format(new Date(), 'yyyy-MM-dd'),
       });
     },
     onSuccess: () => {
-      toast.success('Request submitted to instructor');
-      setForm({ reason: '', preferredInstructorPNumber: '' });
+      toast.success('Assessment request submitted — an instructor will be in contact.');
+      setPreferredInstructor('');
+      setNotes('');
       onOpenChange(false);
     },
     onError: (err) => toast.error(`Failed: ${err.message}`),
@@ -69,14 +73,14 @@ export default function WHTAssessmentRequest({ open, onOpenChange, cadetPNumber,
           </div>
 
           <div>
-            <Label className="text-sm mb-1 block">Preferred Instructor</Label>
-            <Select value={form.preferredInstructorPNumber} onValueChange={v => setForm(f => ({ ...f, preferredInstructorPNumber: v }))}>
+            <Label className="text-sm mb-1 block">Preferred Instructor <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Select value={preferredInstructor} onValueChange={setPreferredInstructor}>
               <SelectTrigger>
-                <SelectValue placeholder="Select instructor..." />
+                <SelectValue placeholder="Any available instructor" />
               </SelectTrigger>
               <SelectContent>
                 {instructors
-                  .filter(i => i.AccessLevel >= ACCESS_LEVELS.DET_INSTRUCTOR)
+                  .filter(i => i.AccessLevel >= ACCESS_LEVELS.DET_INSTRUCTOR && (i.PersonnelStatus || 'Active') === 'Active')
                   .map(i => (
                     <SelectItem key={i.PNumber} value={i.PNumber}>
                       {[i.Rank, i.FirstName, i.Surname].filter(Boolean).join(' ')}
@@ -87,34 +91,26 @@ export default function WHTAssessmentRequest({ open, onOpenChange, cadetPNumber,
           </div>
 
           <div>
-            <Label className="text-sm mb-1 block">Reason (optional)</Label>
+            <Label className="text-sm mb-1 block">Notes <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <Textarea
-              placeholder="e.g., Previous qualification expired, want to maintain proficiency..."
-              value={form.reason}
-              onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
+              placeholder="e.g. Previous qualification expired, want to maintain proficiency..."
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
               className="min-h-[80px]"
             />
           </div>
 
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button
               onClick={() => requestMutation.mutate()}
-              disabled={requestMutation.isPending || !form.preferredInstructorPNumber}
+              disabled={requestMutation.isPending}
               className="gap-2"
             >
               {requestMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Sending...
-                </>
+                <><Loader2 className="w-4 h-4 animate-spin" />Sending...</>
               ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  Submit Request
-                </>
+                <><Send className="w-4 h-4" />Submit Request</>
               )}
             </Button>
           </div>

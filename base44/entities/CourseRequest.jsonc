@@ -1,0 +1,80 @@
+{
+  "name": "CourseRequest",
+  "type": "object",
+  "properties": {
+    "PNumber": {
+      "type": "string",
+      "description": "PNumber of the requestor"
+    },
+    "RequestorName": {
+      "type": "string",
+      "description": "Display name of the requestor"
+    },
+    "CourseName": {
+      "type": "string",
+      "description": "Name of the course requested"
+    },
+    "PreferredSemester": {
+      "type": "string",
+      "description": "Preferred attendance semester"
+    },
+    "Reason": {
+      "type": "string",
+      "description": "Reason for the request and prerequisites met"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Approved",
+        "Rejected",
+        "Withdrawn"
+      ],
+      "default": "Pending",
+      "description": "Current status of the request"
+    },
+    "DateRequested": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the request was submitted"
+    },
+    "RespondedByPNumber": {
+      "type": "string",
+      "description": "PNumber of responding instructor"
+    },
+    "ResponseNotes": {
+      "type": "string",
+      "description": "DC/2IC response notes"
+    }
+  },
+  "required": [
+    "PNumber",
+    "CourseName",
+    "Reason"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "data.PNumber": "{{user.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

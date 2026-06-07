@@ -2,10 +2,13 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import PageHeader from "@/components/shared/PageHeader";
+import AccessGate from "@/components/shared/AccessGate";
 import { BookOpen } from "lucide-react";
+import { ACCESS_LEVELS } from "@/lib/accessLevels";
 
 export default function Accounts() {
   return (
+    <AccessGate level={ACCESS_LEVELS.DET_2IC}>
     <div className="min-h-screen">
       <PageHeader title="Accounts" description="Detachment financial management" icon={BookOpen} />
       <Card>
@@ -20,5 +23,6 @@ export default function Accounts() {
         </CardContent>
       </Card>
     </div>
+    </AccessGate>
   );
 }

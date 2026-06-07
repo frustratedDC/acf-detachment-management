@@ -1,0 +1,100 @@
+{
+  "name": "IssueReport",
+  "type": "object",
+  "properties": {
+    "PNumber": {
+      "type": "string",
+      "description": "PNumber of the reporter"
+    },
+    "ReporterName": {
+      "type": "string",
+      "description": "Display name of the reporter"
+    },
+    "Title": {
+      "type": "string",
+      "description": "Brief summary of the issue"
+    },
+    "Category": {
+      "type": "string",
+      "enum": [
+        "IT Support",
+        "Facilities",
+        "Training / Syllabus",
+        "Uniform / Equipment",
+        "Welfare",
+        "Other"
+      ],
+      "description": "Issue category"
+    },
+    "Urgency": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "default": "Medium",
+      "description": "Urgency level"
+    },
+    "Description": {
+      "type": "string",
+      "description": "Detailed description of the issue"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Open",
+        "In Progress",
+        "Resolved",
+        "Closed"
+      ],
+      "default": "Open",
+      "description": "Current status"
+    },
+    "DateReported": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the issue was reported"
+    },
+    "RespondedByPNumber": {
+      "type": "string",
+      "description": "PNumber of the DC who responded"
+    },
+    "ResponseNotes": {
+      "type": "string",
+      "description": "DC response notes"
+    }
+  },
+  "required": [
+    "PNumber",
+    "Title",
+    "Category",
+    "Urgency",
+    "Description"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "data.PNumber": "{{user.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

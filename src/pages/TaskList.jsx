@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil, Shirt, ShieldCheck, HeartHandshake, PlusCircle, Loader2 } from 'lucide-react';
+import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil, Shirt, ShieldCheck, HeartHandshake, PlusCircle, Loader2, BookOpen, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ACCESS_LEVELS, hasAccess } from '@/lib/accessLevels';
@@ -71,6 +71,19 @@ export default function TaskList() {
     queryKey: ['ce-requests'],
     queryFn: () => base44.entities.CommunityEngagementLedger.filter({ Status: 'Pending' }),
   });
+
+  const { data: courseRequests = [] } = useQuery({
+    queryKey: ['course-requests-all'],
+    queryFn: () => base44.entities.CourseRequest.list('-created_date', 200),
+  });
+
+  const { data: issueReports = [] } = useQuery({
+    queryKey: ['issue-reports-all'],
+    queryFn: () => base44.entities.IssueReport.list('-created_date', 200),
+  });
+
+  const pendingCourseRequests = courseRequests.filter(r => r.Status === 'Pending');
+  const openIssues = issueReports.filter(r => r.Status === 'Open');
 
   const isDC = hasAccess(me?.AccessLevel ?? 0, ACCESS_LEVELS.DET_COMMANDER);
 
@@ -167,6 +180,22 @@ export default function TaskList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lesson-change-requests'] });
       toast.success('Change request updated');
+    },
+  });
+
+  const resolveCourseRequestMutation = useMutation({
+    mutationFn: ({ id, status }) => base44.entities.CourseRequest.update(id, { Status: status, RespondedByPNumber: me?.PNumber || '' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['course-requests-all'] });
+      toast.success('Course request updated');
+    },
+  });
+
+  const resolveIssueMutation = useMutation({
+    mutationFn: ({ id, status }) => base44.entities.IssueReport.update(id, { Status: status, RespondedByPNumber: me?.PNumber || '' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issue-reports-all'] });
+      toast.success('Issue report updated');
     },
   });
 
@@ -268,6 +297,14 @@ export default function TaskList() {
           <TabsTrigger value="ce-requests" className="gap-1">
             <HeartHandshake className="w-3.5 h-3.5" />
             CE Hours ({ceRequests.length})
+          </TabsTrigger>
+          <TabsTrigger value="course-requests" className="gap-1">
+            <BookOpen className="w-3.5 h-3.5" />
+            Courses ({pendingCourseRequests.length})
+          </TabsTrigger>
+          <TabsTrigger value="issues" className="gap-1">
+            <AlertCircle className="w-3.5 h-3.5" />
+            Issues ({openIssues.length})
           </TabsTrigger>
           {isDC && (
             <TabsTrigger value="bulk-ce" className="gap-1">
@@ -461,6 +498,76 @@ export default function TaskList() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="course-requests">
+          <Card>
+            <CardContent className="p-2">
+              {courseRequests.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground text-sm">No course requests.</p>
+              ) : (
+                <div className="space-y-2">
+                  {courseRequests.map(req => (
+                    <div key={req.id} className="p-3 rounded-lg border hover:bg-muted/30 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold">{req.RequestorName || req.PNumber} — {req.CourseName}</p>
+                          <p className="text-xs text-muted-foreground">{req.PreferredSemester} · {req.DateRequested}</p>
+                          {req.Reason && <p className="text-xs mt-0.5 text-muted-foreground">{req.Reason}</p>}
+                        </div>
+                        <Badge variant={req.Status === 'Approved' ? 'default' : req.Status === 'Rejected' ? 'destructive' : 'outline'} className="text-xs shrink-0">{req.Status}</Badge>
+                      </div>
+                      {req.Status === 'Pending' && (
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="text-chart-2 hover:text-chart-2" onClick={() => resolveCourseRequestMutation.mutate({ id: req.id, status: 'Approved' })}>
+                            <Check className="w-3.5 h-3.5 mr-1" />Approve
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => resolveCourseRequestMutation.mutate({ id: req.id, status: 'Rejected' })}>
+                            <X className="w-3.5 h-3.5 mr-1" />Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="issues">
+          <Card>
+            <CardContent className="p-2">
+              {issueReports.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground text-sm">No issue reports.</p>
+              ) : (
+                <div className="space-y-2">
+                  {issueReports.map(issue => (
+                    <div key={issue.id} className="p-3 rounded-lg border hover:bg-muted/30 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold">{issue.ReporterName || issue.PNumber} — {issue.Title}</p>
+                          <p className="text-xs text-muted-foreground">{issue.Category} · {issue.Urgency} urgency · {issue.DateReported}</p>
+                          {issue.Description && <p className="text-xs mt-0.5 text-muted-foreground">{issue.Description}</p>}
+                        </div>
+                        <Badge variant={issue.Status === 'Resolved' ? 'default' : issue.Status === 'Closed' ? 'secondary' : 'outline'} className="text-xs shrink-0">{issue.Status}</Badge>
+                      </div>
+                      {(issue.Status === 'Open' || issue.Status === 'In Progress') && (
+                        <div className="flex gap-2">
+                          {issue.Status === 'Open' && (
+                            <Button size="sm" variant="outline" onClick={() => resolveIssueMutation.mutate({ id: issue.id, status: 'In Progress' })}>
+                              <Clock className="w-3.5 h-3.5 mr-1" />In Progress
+                            </Button>
+                          )}
+                          <Button size="sm" variant="outline" className="text-chart-2 hover:text-chart-2" onClick={() => resolveIssueMutation.mutate({ id: issue.id, status: 'Resolved' })}>
+                            <Check className="w-3.5 h-3.5 mr-1" />Resolve
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>

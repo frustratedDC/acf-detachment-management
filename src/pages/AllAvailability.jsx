@@ -99,7 +99,7 @@ export default function AllAvailability() {
   }, [visibleAvailability]);
 
   return (
-    <AccessGate level={ACCESS_LEVELS.GENERAL}>
+    <AccessGate level={ACCESS_LEVELS.DET_INSTRUCTOR}>
       <PageHeader
         title="All Instructor Availability"
         description={isInstructor ? 'Your availability record' : 'Centralized staff availability tracking'}
