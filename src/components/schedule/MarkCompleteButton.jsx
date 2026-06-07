@@ -4,30 +4,36 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Loader2, Users } from 'lucide-react';
+import { CheckCircle2, Loader2, Users, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { ACCESS_LEVELS } from '@/lib/accessLevels';
 
-export default function MarkCompleteButton({ date, scheduleEntries }) {
+/**
+ * Mark Night Complete — Det 2IC+ only.
+ * For each scheduled lesson on this date:
+ *   1. Find cadets at the correct star level who were marked Present in DailyParadeState.
+ *   2. Skip cadets who already have an Approved ProgressLedger record for this lesson.
+ *   3. Bulk-create Approved records for all eligible cadets.
+ */
+export default function MarkCompleteButton({ date, scheduleEntries, accessLevel = 0 }) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  // Load parade state for that date to find who was present
   const { data: paradeState = [], isLoading: loadingParade } = useQuery({
     queryKey: ['parade', date],
     queryFn: () => base44.entities.DailyParadeState.filter({ Date: date }),
     enabled: open,
   });
 
-  // Load all cadets
-  const { data: allPersonnel = [] } = useQuery({
+  const { data: allPersonnel = [], isLoading: loadingPersonnel } = useQuery({
     queryKey: ['all-personnel'],
     queryFn: () => base44.entities.PersonnelManager.filter({}),
     enabled: open,
   });
 
-  // Load existing progress to avoid duplicates
   const lessonCodes = [...new Set(scheduleEntries.map(e => e.LessonCode).filter(Boolean))];
-  const { data: existingProgress = [] } = useQuery({
+
+  const { data: existingProgress = [], isLoading: loadingProgress } = useQuery({
     queryKey: ['progress-batch-check', date],
     queryFn: async () => {
       const results = await Promise.all(
@@ -38,16 +44,27 @@ export default function MarkCompleteButton({ date, scheduleEntries }) {
     enabled: open && lessonCodes.length > 0,
   });
 
-  const presentPNumbers = new Set(paradeState.filter(p => p.AttendanceStatus === 'Present').map(p => p.UserPNumber));
+  const isLoading = loadingParade || loadingPersonnel || (lessonCodes.length > 0 && loadingProgress);
 
-  // Build preview: for each scheduled lesson, which eligible cadets would get credited
+  // Cadets marked Present
+  const presentPNumbers = new Set(
+    paradeState.filter(p => p.AttendanceStatus === 'Present').map(p => p.UserPNumber)
+  );
+
+  const noParadeData = open && !loadingParade && paradeState.length === 0;
+
+  // Build preview per lesson
   const preview = scheduleEntries.map(entry => {
     const eligibleCadets = allPersonnel.filter(p =>
       p.Type === 'Cadet' &&
       (p.PersonnelStatus || 'Active') === 'Active' &&
       p.CurrentStarLevel === entry.AssignedStarLevel &&
       presentPNumbers.has(p.PNumber) &&
-      !existingProgress.find(ep => ep.CadetPNumber === p.PNumber && ep.LessonCode === entry.LessonCode && ep.Status === 'Approved')
+      !existingProgress.find(ep =>
+        ep.CadetPNumber === p.PNumber &&
+        ep.LessonCode === entry.LessonCode &&
+        ep.Status === 'Approved'
+      )
     );
     return { entry, eligibleCadets };
   }).filter(({ eligibleCadets }) => eligibleCadets.length > 0);
@@ -75,9 +92,15 @@ export default function MarkCompleteButton({ date, scheduleEntries }) {
     onSuccess: () => {
       toast.success(`Night marked complete — ${totalRecords} progress records created`);
       queryClient.invalidateQueries({ queryKey: ['progress'] });
+      queryClient.invalidateQueries({ queryKey: ['all-progress'] });
+      queryClient.invalidateQueries({ queryKey: ['progress-batch-check', date] });
       setOpen(false);
     },
+    onError: (err) => toast.error(`Failed: ${err.message}`),
   });
+
+  // Hard gate — below Det 2IC sees nothing
+  if (accessLevel < ACCESS_LEVELS.DET_2IC) return null;
 
   return (
     <>
@@ -100,21 +123,34 @@ export default function MarkCompleteButton({ date, scheduleEntries }) {
             </DialogTitle>
           </DialogHeader>
 
-          {loadingParade ? (
+          {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
             <div className="space-y-4 mt-2">
               <p className="text-sm text-muted-foreground">
-                This will automatically create <strong>Approved</strong> progress records in the Progress Ledger for all cadets who were marked <strong>Present</strong> in the parade state on this date.
+                Creates <strong>Approved</strong> progress records for all cadets marked <strong>Present</strong> in tonight's parade state, for each lesson at their star level.
               </p>
 
-              {preview.length === 0 ? (
-                <div className="p-4 rounded-lg bg-muted/50 text-center text-sm text-muted-foreground">
-                  No eligible cadets found. Either no cadets were marked present, or all progress has already been recorded.
+              {/* No parade state warning */}
+              {noParadeData && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">No parade state recorded for this date.</p>
+                    <p className="text-xs mt-0.5">Complete the Parade State before marking nights complete, or progress records cannot be assigned.</p>
+                  </div>
                 </div>
-              ) : (
+              )}
+
+              {!noParadeData && preview.length === 0 && (
+                <div className="p-4 rounded-lg bg-muted/50 text-center text-sm text-muted-foreground">
+                  No eligible cadets — either no cadets were present or all progress has already been recorded.
+                </div>
+              )}
+
+              {preview.length > 0 && (
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {preview.map(({ entry, eligibleCadets }) => (
                     <div key={entry.id} className="p-2.5 rounded-lg border bg-muted/30 text-xs">
@@ -122,14 +158,14 @@ export default function MarkCompleteButton({ date, scheduleEntries }) {
                         <span className="font-semibold">{entry.LessonName || entry.LessonCode}</span>
                         <Badge variant="outline" className="text-xs">{entry.AssignedStarLevel}</Badge>
                       </div>
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
                         <Users className="w-3 h-3" />
                         <span>{eligibleCadets.length} cadet{eligibleCadets.length !== 1 ? 's' : ''} will be credited</span>
                       </div>
-                      <div className="flex flex-wrap gap-1 mt-1">
+                      <div className="flex flex-wrap gap-1">
                         {eligibleCadets.map(c => (
                           <Badge key={c.PNumber} variant="secondary" className="text-xs">
-                            {c.Surname}
+                            {c.Rank ? `${c.Rank} ` : ''}{c.Surname}
                           </Badge>
                         ))}
                       </div>

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useAvailability } from '@/lib/useAvailability';
 import { usePersonnel } from '@/lib/usePersonnel';
 import PageHeader from '@/components/shared/PageHeader';
 import AccessGate from '@/components/shared/AccessGate';
@@ -35,12 +36,8 @@ export default function StaffAvailability() {
     queryFn: () => base44.entities.CalendarEvent.filter({}),
   });
 
-  // Use InstructorAvailability — the single canonical availability entity
-  const { data: availability = [] } = useQuery({
-    queryKey: ['instructor-availability'],
-    queryFn: () => base44.entities.InstructorAvailability.list(),
-    refetchOnWindowFocus: true,
-  });
+  // Unified availability — merges new InstructorAvailability + legacy StaffAvailability
+  const { availability } = useAvailability();
 
   const { data: scheduleEntries = [] } = useQuery({
     queryKey: ['schedule-all'],

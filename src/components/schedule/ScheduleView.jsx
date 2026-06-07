@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useAvailability } from '@/lib/useAvailability';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -68,7 +69,7 @@ function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, ava
         </CardTitle>
         <div className="flex items-center gap-1">
           {isDCOrAbove && !isLocked && (
-            <MarkCompleteButton date={date} scheduleEntries={entries} />
+            <MarkCompleteButton date={date} scheduleEntries={entries} accessLevel={accessLevel} />
           )}
           {canEdit && !isLocked && (
             <>
@@ -201,10 +202,7 @@ export default function ScheduleView({ schedule, isLoading, canEdit, onEdit, onD
     queryFn: () => base44.entities.PersonnelManager.filter({}),
   });
 
-  const { data: availability = [] } = useQuery({
-    queryKey: ['instructor-availability'],
-    queryFn: () => base44.entities.InstructorAvailability.list(),
-  });
+  const { availability } = useAvailability();
 
   const personnelMap = useMemo(() => {
     const m = {}; allPersonnel.forEach(p => { m[p.PNumber] = p; }); return m;

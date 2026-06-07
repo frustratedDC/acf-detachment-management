@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useAvailability } from '@/lib/useAvailability';
 import { usePersonnel } from '@/lib/usePersonnel';
 import PageHeader from '@/components/shared/PageHeader';
 import AccessGate from '@/components/shared/AccessGate';
@@ -25,10 +26,8 @@ export default function AllAvailability() {
   const [newStatus, setNewStatus] = useState('Available');
   const [newReason, setNewReason] = useState('');
 
-  const { data: availability = [] } = useQuery({
-    queryKey: ['instructor-availability'],
-    queryFn: () => base44.entities.InstructorAvailability.list(),
-  });
+  // Unified availability — merges new InstructorAvailability + legacy StaffAvailability
+  const { availability } = useAvailability();
 
   const { data: personnel = [] } = useQuery({
     queryKey: ['all-personnel'],
