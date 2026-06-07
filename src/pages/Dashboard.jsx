@@ -69,9 +69,21 @@ export default function Dashboard() {
     enabled: hasAccess(level, ACCESS_LEVELS.CADET_NCO),
   });
 
-  const { data: pendingTasks = [] } = useQuery({
+  const { data: pendingProgress = [] } = useQuery({
     queryKey: ['pending-tasks'],
     queryFn: () => base44.entities.ProgressLedger.filter({ Status: 'Pending' }),
+    enabled: hasAccess(level, ACCESS_LEVELS.DET_2IC),
+  });
+
+  const { data: pendingCE = [] } = useQuery({
+    queryKey: ['pending-ce-dash'],
+    queryFn: () => base44.entities.CommunityEngagementLedger.filter({ Status: 'Pending' }),
+    enabled: hasAccess(level, ACCESS_LEVELS.DET_2IC),
+  });
+
+  const { data: pendingAccess = [] } = useQuery({
+    queryKey: ['pending-access-dash'],
+    queryFn: () => base44.entities.AccessRequest.filter({ Status: 'Pending' }),
     enabled: hasAccess(level, ACCESS_LEVELS.DET_2IC),
   });
 
@@ -132,15 +144,15 @@ export default function Dashboard() {
     .filter(e => e.Status === 'Approved')
     .reduce((s, e) => s + (e.Hours || 0), 0);
 
-  // My WHT records
+  const pendingTaskCount = pendingProgress.length + pendingCE.length + pendingAccess.length;
 
+  // My WHT records
   const { data: myWHTs = [] } = useQuery({
     queryKey: ['wht-mine', personnel?.PNumber],
     queryFn: () => base44.entities.WeaponHandlingTest.filter({ PNumber: personnel?.PNumber }),
     enabled: !!personnel?.PNumber,
   });
 
-  const today2 = format(new Date(), 'yyyy-MM-dd');
   const expiringWHTs = myWHTs.filter(w => {
     if (!w.ExpiryDate) return false;
     const daysLeft = Math.ceil((new Date(w.ExpiryDate) - new Date()) / 86400000);
@@ -168,7 +180,7 @@ export default function Dashboard() {
           <StatCard title="Present Tonight" value={presentCount} icon={ClipboardList} color="bg-chart-2/10 text-chart-2" to="/parade" />
         )}
         {hasAccess(level, ACCESS_LEVELS.DET_2IC) && (
-          <StatCard title="Pending Approvals" value={pendingTasks.length} icon={CheckCircle2} color="bg-accent/20 text-accent-foreground" to="/tasks" />
+          <StatCard title="Pending Approvals" value={pendingTaskCount} icon={CheckCircle2} color="bg-accent/20 text-accent-foreground" to="/tasks" />
         )}
         {hasAccess(level, ACCESS_LEVELS.DET_COMMANDER) && (
           <StatCard title="Personnel" value={allPersonnel.length} icon={Users} color="bg-chart-5/10 text-chart-5" to="/personnel" />

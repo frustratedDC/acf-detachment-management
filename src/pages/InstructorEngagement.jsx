@@ -45,10 +45,7 @@ export default function InstructorEngagement() {
   }, [instructors, ledger]);
 
   const flagged = stats.filter(s => s.score !== null && s.score < LOW_THRESHOLD);
-  const totalSessions = ledger.length > 0 ? Math.max(...ledger.map(l => {
-    const byDate = new Set(ledger.map(x => x.Date));
-    return byDate.size;
-  })) : 0;
+  const totalSessions = new Set(ledger.map(l => l.Date)).size;
 
   return (
     <AccessGate level={ACCESS_LEVELS.DET_COMMANDER}>
