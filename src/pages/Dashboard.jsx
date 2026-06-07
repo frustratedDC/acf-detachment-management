@@ -87,6 +87,18 @@ export default function Dashboard() {
     enabled: hasAccess(level, ACCESS_LEVELS.DET_2IC),
   });
 
+  const { data: pendingCourses = [] } = useQuery({
+    queryKey: ['pending-courses-dash'],
+    queryFn: () => base44.entities.CourseRequest.filter({ Status: 'Pending' }),
+    enabled: hasAccess(level, ACCESS_LEVELS.DET_2IC),
+  });
+
+  const { data: openIssues = [] } = useQuery({
+    queryKey: ['open-issues-dash'],
+    queryFn: () => base44.entities.IssueReport.filter({ Status: 'Open' }),
+    enabled: hasAccess(level, ACCESS_LEVELS.DET_2IC),
+  });
+
   const { data: allPersonnel = [] } = useQuery({
     queryKey: ['personnel-count'],
     queryFn: () => base44.entities.PersonnelManager.filter({}),
@@ -144,7 +156,7 @@ export default function Dashboard() {
     .filter(e => e.Status === 'Approved')
     .reduce((s, e) => s + (e.Hours || 0), 0);
 
-  const pendingTaskCount = pendingProgress.length + pendingCE.length + pendingAccess.length;
+  const pendingTaskCount = pendingProgress.length + pendingCE.length + pendingAccess.length + pendingCourses.length + openIssues.length;
 
   // My WHT records
   const { data: myWHTs = [] } = useQuery({
