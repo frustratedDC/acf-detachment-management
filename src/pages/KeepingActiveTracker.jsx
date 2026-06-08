@@ -28,7 +28,7 @@ const STEPS = [
 
 const DEFAULT_ACTIVITIES = ["WarmUp", "BroadJump", "Squats", "PressUps", "Shuttle", "CoolDown"];
 
-export default function KeepingActiveTracker() {
+export default function KeepingActiveTracker({ hideHeader = false }) {
   // ── ALL hooks must be at the top, unconditionally ──────────────────────────
   const { personnel: me } = usePersonnel();
   const queryClient = useQueryClient();
@@ -198,7 +198,7 @@ export default function KeepingActiveTracker() {
     }
     return (
       <div>
-        <PageHeader title="Logbook" description="Log and score KA fitness sessions" icon={Dumbbell} />
+        {!hideHeader && <PageHeader title="Logbook" description="Log and score KA fitness sessions" icon={Dumbbell} />}
         <Card className="max-w-md mx-auto mt-8">
           <CardContent className="py-10 text-center space-y-4">
             <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mx-auto">
@@ -238,11 +238,7 @@ export default function KeepingActiveTracker() {
   // ── Main tracker UI ────────────────────────────────────────────────────────
   return (
     <div>
-      <PageHeader
-        title="Logbook"
-        description="Log and score KA fitness sessions"
-        icon={Dumbbell}
-      />
+      {!hideHeader && <PageHeader title="Logbook" description="Log and score KA fitness sessions" icon={Dumbbell} />}
 
       {/* Mode tabs */}
       <div className="flex gap-2 mb-6 flex-wrap">
