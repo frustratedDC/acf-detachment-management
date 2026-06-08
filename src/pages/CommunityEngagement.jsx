@@ -13,6 +13,7 @@ import { HeartHandshake, Lock, Send, PlusCircle, Clock, CheckCircle2, X, Star } 
 import { toast } from "sonner";
 import { ACCESS_LEVELS, hasAccess } from "@/lib/accessLevels";
 import { format } from "date-fns";
+import BulkCEEntry from "@/components/ce/BulkCEEntry";
 
 // CE hour requirements per star level
 export const CE_REQUIREMENTS = {
@@ -267,6 +268,9 @@ export default function CommunityEngagement() {
           </CardContent>
         </Card>
       )}
+
+      {/* Bulk CE Entry — DC/2IC only */}
+      {hasAccess(me?.AccessLevel ?? 0, ACCESS_LEVELS.DET_2IC) && <BulkCEEntry />}
 
       {/* Entries log */}
       <Card>

@@ -7,12 +7,8 @@ import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil, Shirt, ShieldCheck, HeartHandshake, PlusCircle, Loader2, BookOpen, AlertCircle } from 'lucide-react';
+import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil, Shirt, ShieldCheck, HeartHandshake, BookOpen, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ACCESS_LEVELS, hasAccess } from '@/lib/accessLevels';
@@ -84,32 +80,6 @@ export default function TaskList() {
 
   const pendingCourseRequests = courseRequests.filter(r => r.Status === 'Pending');
   const openIssues = issueReports.filter(r => r.Status === 'Open');
-
-  const isDC = hasAccess(me?.AccessLevel ?? 0, ACCESS_LEVELS.DET_COMMANDER);
-
-  // Bulk CE form state
-  const [bulkCEForm, setBulkCEForm] = useState({ CadetPNumber: '', Hours: '', Description: '', Date: format(new Date(), 'yyyy-MM-dd') });
-
-  const bulkCEMutation = useMutation({
-    mutationFn: async () => {
-      const cadet = personnel.find(p => p.PNumber === bulkCEForm.CadetPNumber);
-      await base44.entities.CommunityEngagementLedger.create({
-        CadetPNumber: bulkCEForm.CadetPNumber,
-        CadetName: cadet ? [cadet.Rank, cadet.FirstName, cadet.Surname].filter(Boolean).join(' ') : bulkCEForm.CadetPNumber,
-        Hours: parseFloat(bulkCEForm.Hours),
-        Description: bulkCEForm.Description,
-        Date: bulkCEForm.Date,
-        Status: 'Approved',
-        ApprovedByPNumber: me?.PNumber,
-      });
-    },
-    onSuccess: () => {
-      toast.success('CE hours added and approved');
-      setBulkCEForm({ CadetPNumber: '', Hours: '', Description: '', Date: format(new Date(), 'yyyy-MM-dd') });
-      queryClient.invalidateQueries({ queryKey: ['ce-requests'] });
-    },
-    onError: () => toast.error('Failed to add CE hours'),
-  });
 
   const approveCEMutation = useMutation({
     mutationFn: (entry) => base44.entities.CommunityEngagementLedger.update(entry.id, {
@@ -306,12 +276,7 @@ export default function TaskList() {
             <AlertCircle className="w-3.5 h-3.5" />
             Issues ({openIssues.length})
           </TabsTrigger>
-          {isDC && (
-            <TabsTrigger value="bulk-ce" className="gap-1">
-              <PlusCircle className="w-3.5 h-3.5" />
-              Add CE (DC)
-            </TabsTrigger>
-          )}
+
         </TabsList>
 
         <TabsContent value="pending">
@@ -573,80 +538,7 @@ export default function TaskList() {
             </CardContent>
           </Card>
         </TabsContent>
-        {isDC && (
-          <TabsContent value="bulk-ce">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <HeartHandshake className="w-4 h-4 text-primary" />
-                  Bulk Add Community Engagement Hours (DC Only)
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">Hours added here are immediately approved and count toward the cadet's total.</p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label>Cadet</Label>
-                    <Select value={bulkCEForm.CadetPNumber} onValueChange={val => setBulkCEForm(f => ({ ...f, CadetPNumber: val }))}>
-                      <SelectTrigger><SelectValue placeholder="Select cadet…" /></SelectTrigger>
-                      <SelectContent>
-                        {personnel
-                          .filter(p => p.Type === 'Cadet' && (p.PersonnelStatus || 'Active') === 'Active')
-                          .sort((a, b) => a.Surname.localeCompare(b.Surname))
-                          .map(p => (
-                            <SelectItem key={p.PNumber} value={p.PNumber}>
-                              {p.Rank ? `${p.Rank} ` : ''}{p.Surname}{p.FirstName ? `, ${p.FirstName}` : ''} ({p.PNumber})
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label>Hours</Label>
-                    <Input
-                      type="number"
-                      min="0.5"
-                      step="0.5"
-                      placeholder="e.g. 2.5"
-                      value={bulkCEForm.Hours}
-                      onChange={e => setBulkCEForm(f => ({ ...f, Hours: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label>Date</Label>
-                  <Input
-                    type="date"
-                    value={bulkCEForm.Date}
-                    onChange={e => setBulkCEForm(f => ({ ...f, Date: e.target.value }))}
-                    className="w-48"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Description of Activity</Label>
-                  <Textarea
-                    placeholder="Describe the community engagement activity…"
-                    value={bulkCEForm.Description}
-                    onChange={e => setBulkCEForm(f => ({ ...f, Description: e.target.value }))}
-                    className="min-h-[80px]"
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    onClick={() => bulkCEMutation.mutate()}
-                    disabled={!bulkCEForm.CadetPNumber || !bulkCEForm.Hours || !bulkCEForm.Description || bulkCEMutation.isPending}
-                  >
-                    {bulkCEMutation.isPending ? (
-                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
-                    ) : (
-                      <><Check className="w-4 h-4 mr-2" />Add &amp; Approve Hours</>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
+
       </Tabs>
     </AccessGate>
   );

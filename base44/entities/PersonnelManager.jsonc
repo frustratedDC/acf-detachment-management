@@ -50,7 +50,7 @@
     "PromotionDate": {
       "type": "string",
       "format": "date",
-      "description": "Date the cadet was last promoted to their CurrentStarLevel. Used to calculate KA points for the current level."
+      "description": "Date the cadet was last promoted to their CurrentStarLevel."
     },
     "PersonnelStatus": {
       "type": "string",
@@ -144,6 +144,11 @@
       "type": "boolean",
       "default": false,
       "description": "If true, this cadet has been granted explicit access to the Community Engagement Tracker by an Adult Instructor, regardless of rank."
+    },
+    "CEHours": {
+      "type": "number",
+      "default": 0,
+      "description": "Running total of CE hours incremented when bulk CE entries are submitted. Separate from KA logic."
     }
   },
   "required": [
