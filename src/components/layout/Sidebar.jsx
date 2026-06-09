@@ -24,22 +24,28 @@ const NAV_GROUPS = [
     label: 'Dashboard',
     icon: LayoutDashboard,
     items: [
-      { path: '/',             label: 'Command Hub',       icon: LayoutDashboard, level: 1 },
-      { path: '/notices',      label: 'Notices',           icon: Megaphone,       level: 1 },
-      { path: '/calendar',     label: 'Monthly Calendar',  icon: CalendarDays,    level: 1 },
+      { path: '/',             label: 'Command Hub',       icon: LayoutDashboard, level: 0 },
+      { path: '/notices',      label: 'Notices',           icon: Megaphone,       level: 0 },
+      { path: '/calendar',     label: 'Monthly Calendar',  icon: CalendarDays,    level: 0 },
+      { path: '/healthy-minds',label: 'Healthy Minds',     icon: HeartHandshake,  level: 0 },
       { path: '/tasks',        label: 'DC/2IC Task List',  icon: ClipboardList,   level: 1 },
-      { path: '/healthy-minds',label: 'Healthy Minds',     icon: HeartHandshake,  level: 1 },
     ],
   },
 
-  // ── 2. Me ────────────────────────────────────────────────────────────────────
+  // ── 2. Me (cadet-facing, level 0+) ──────────────────────────────────────────
   {
     label: 'Me',
     icon: UserCheck,
     items: [
-      { path: '/my-availability',  label: 'My Availability',   icon: CalendarCheck,  level: 1 },
-      { path: '/my-qualifications',label: 'My Qualifications', icon: GraduationCap,  level: 1 },
-      { path: '/my-governance',    label: 'My Governance',     icon: ShieldCheck,    level: 1 },
+      { path: '/my-progress',       label: 'My Progress',       icon: TrendingUp,     level: 0 },
+      { path: '/community-engagement', label: 'CE / KA',        icon: Dumbbell,       level: 0 },
+      { path: '/uniform-exchange',  label: 'Uniform Requests',  icon: Shirt,          level: 0 },
+      { path: '/course-request',    label: 'Course Requests',   icon: BookOpen,       level: 0 },
+      { path: '/report-issue',      label: 'Report an Issue',   icon: AlertCircle,    level: 0 },
+      { path: '/forms-resources',   label: 'Forms & Resources', icon: FolderOpen,     level: 0 },
+      { path: '/my-availability',   label: 'My Availability',   icon: CalendarCheck,  level: 1 },
+      { path: '/my-qualifications', label: 'My Qualifications', icon: GraduationCap,  level: 1 },
+      { path: '/my-governance',     label: 'My Governance',     icon: ShieldCheck,    level: 1 },
     ],
   },
 
