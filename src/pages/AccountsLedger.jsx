@@ -10,19 +10,8 @@ import { BookOpen, Plus, Download, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import LedgerTable from "@/components/accounts/LedgerTable";
 import TransactionModal from "@/components/accounts/TransactionModal";
-
-function computeSummary(entries, pcBF, bankBF) {
-  let pc = parseFloat(pcBF) || 0;
-  let bank = parseFloat(bankBF) || 0;
-  entries.forEach(e => {
-    const isPettyCash = e.AccountType === "PettyCash";
-    const isBank = e.AccountType === "Bank";
-    const isCredit = e.Type === "RV";
-    if (isPettyCash) pc += isCredit ? e.Amount : -e.Amount;
-    if (isBank) bank += isCredit ? e.Amount : -e.Amount;
-  });
-  return { pc, bank };
-}
+import AccountsSettingsPanel from "@/components/accounts/AccountsSettingsPanel";
+import CSVImportPanel from "@/components/accounts/CSVImportPanel";
 
 function exportCSV(entries, pcBF, bankBF, startDate, endDate) {
   let pcBal = parseFloat(pcBF) || 0;
@@ -44,10 +33,15 @@ function exportCSV(entries, pcBF, bankBF, startDate, endDate) {
     const bankDebit = isBank && !isCredit ? e.Amount : "";
     if (isPettyCash) pcBal += (isPettyCash && isCredit ? e.Amount : 0) - (isPettyCash && !isCredit ? e.Amount : 0);
     if (isBank) bankBal += (isBank && isCredit ? e.Amount : 0) - (isBank && !isCredit ? e.Amount : 0);
-    return [e.Date, e.SerialNo, `"${(e.Details || "").replace(/"/g, '""')}"`, e.VoucherNo || "", pcCredit, pcDebit, pcBal.toFixed(2), bankCredit, bankDebit, bankBal.toFixed(2)].join(",");
+    return [
+      e.Date, e.SerialNo, `"${(e.Details || "").replace(/"/g, '""')}"`,
+      e.VoucherNo || "", pcCredit, pcDebit, pcBal.toFixed(2),
+      bankCredit, bankDebit, bankBal.toFixed(2),
+      e.AssignedPNumber || "", `"${(e.AssignedName || "").replace(/"/g, '""')}"`
+    ].join(",");
   });
 
-  const header = "DATE,SERIAL NO,DETAILS,VOUCHER OR CHEQUE NO,PETTY CASH CREDIT,PETTY CASH DEBIT,PETTY CASH BALANCE,BANK CREDIT,BANK DEBIT,BANK BALANCE";
+  const header = "DATE,SERIAL NO,DETAILS,VOUCHER OR CHEQUE NO,PETTY CASH CREDIT,PETTY CASH DEBIT,PETTY CASH BALANCE,BANK CREDIT,BANK DEBIT,BANK BALANCE,ASSIGNED PNUMBER,ASSIGNED NAME";
   const csv = [header, ...rows].join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
@@ -58,22 +52,53 @@ function exportCSV(entries, pcBF, bankBF, startDate, endDate) {
   URL.revokeObjectURL(url);
 }
 
+const PAGE_SIZE = 30;
+
 export default function AccountsLedger() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
-  const [pcBroughtForward, setPcBroughtForward] = useState("0.00");
-  const [bankBroughtForward, setBankBroughtForward] = useState("0.00");
+  const [settings, setSettings] = useState({ pcBF: "0.00", bankBF: "0.00", rvStart: "1", pvStart: "1" });
   const [exportStart, setExportStart] = useState(format(new Date(new Date().getFullYear(), 0, 1), "yyyy-MM-dd"));
   const [exportEnd, setExportEnd] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [page, setPage] = useState(1);
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["accounts"],
-    queryFn: () => base44.entities.Accounts.list("Date", 500),
+    queryFn: () => base44.entities.Accounts.list("Date", 2000),
   });
 
-  const sorted = useMemo(() => [...entries].sort((a, b) => a.Date.localeCompare(b.Date) || a.SerialNo.localeCompare(b.SerialNo)), [entries]);
+  const sorted = useMemo(() =>
+    [...entries].sort((a, b) => a.Date.localeCompare(b.Date) || (a.SerialNo || "").localeCompare(b.SerialNo || "")),
+    [entries]
+  );
 
-  const { pc: pcBalance, bank: bankBalance } = useMemo(() => computeSummary(sorted, pcBroughtForward, bankBroughtForward), [sorted, pcBroughtForward, bankBroughtForward]);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const paginated = useMemo(() => sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [sorted, page]);
+
+  // Compute running balance up to start of current page so LedgerTable starts correctly
+  const bfForPage = useMemo(() => {
+    let pc = parseFloat(settings.pcBF) || 0;
+    let bank = parseFloat(settings.bankBF) || 0;
+    const prior = sorted.slice(0, (page - 1) * PAGE_SIZE);
+    prior.forEach(e => {
+      const isCredit = e.Type === "RV";
+      if (e.AccountType === "PettyCash") pc += isCredit ? e.Amount : -e.Amount;
+      if (e.AccountType === "Bank") bank += isCredit ? e.Amount : -e.Amount;
+    });
+    return { pc: pc.toFixed(2), bank: bank.toFixed(2) };
+  }, [sorted, page, settings]);
+
+  // Overall balances for summary cards (always from full sorted set)
+  const { pc: pcBalance, bank: bankBalance } = useMemo(() => {
+    let pc = parseFloat(settings.pcBF) || 0;
+    let bank = parseFloat(settings.bankBF) || 0;
+    sorted.forEach(e => {
+      const isCredit = e.Type === "RV";
+      if (e.AccountType === "PettyCash") pc += isCredit ? e.Amount : -e.Amount;
+      if (e.AccountType === "Bank") bank += isCredit ? e.Amount : -e.Amount;
+    });
+    return { pc, bank };
+  }, [sorted, settings]);
 
   function handleSaved() {
     queryClient.invalidateQueries({ queryKey: ["accounts"] });
@@ -112,52 +137,28 @@ export default function AccountsLedger() {
         </Card>
       </div>
 
-      {/* Brought Forward + Export Controls */}
+      {/* Opening Balances & Starting Serials */}
+      <AccountsSettingsPanel onSettingsChange={setSettings} />
+
+      {/* CSV Import */}
+      <CSVImportPanel onImported={handleSaved} />
+
+      {/* Export Controls */}
       <Card className="mb-6">
         <CardContent className="pt-4">
-          <div className="flex flex-wrap gap-6 items-end">
+          <p className="text-sm font-semibold mb-2">Export to CSV</p>
+          <div className="flex gap-2 items-end flex-wrap">
             <div>
-              <p className="text-sm font-semibold mb-2">Balances Brought Forward</p>
-              <div className="flex gap-3">
-                <div>
-                  <Label className="text-xs">Petty Cash (£)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={pcBroughtForward}
-                    onChange={e => setPcBroughtForward(e.target.value)}
-                    className="mt-1 w-28"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Bank (£)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={bankBroughtForward}
-                    onChange={e => setBankBroughtForward(e.target.value)}
-                    className="mt-1 w-28"
-                  />
-                </div>
-              </div>
+              <Label className="text-xs">Start Date</Label>
+              <Input type="date" value={exportStart} onChange={e => setExportStart(e.target.value)} className="mt-1 w-36" />
             </div>
-
-            <div className="border-l pl-6">
-              <p className="text-sm font-semibold mb-2">Export to CSV</p>
-              <div className="flex gap-2 items-end flex-wrap">
-                <div>
-                  <Label className="text-xs">Start Date</Label>
-                  <Input type="date" value={exportStart} onChange={e => setExportStart(e.target.value)} className="mt-1 w-36" />
-                </div>
-                <div>
-                  <Label className="text-xs">End Date</Label>
-                  <Input type="date" value={exportEnd} onChange={e => setExportEnd(e.target.value)} className="mt-1 w-36" />
-                </div>
-                <Button variant="outline" onClick={() => exportCSV(sorted, pcBroughtForward, bankBroughtForward, exportStart, exportEnd)}>
-                  <Download className="w-4 h-4 mr-1.5" />Export Selected Range to CSV
-                </Button>
-              </div>
+            <div>
+              <Label className="text-xs">End Date</Label>
+              <Input type="date" value={exportEnd} onChange={e => setExportEnd(e.target.value)} className="mt-1 w-36" />
             </div>
+            <Button variant="outline" onClick={() => exportCSV(sorted, settings.pcBF, settings.bankBF, exportStart, exportEnd)}>
+              <Download className="w-4 h-4 mr-1.5" />Export Selected Range
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -168,11 +169,28 @@ export default function AccountsLedger() {
           <RefreshCw className="w-5 h-5 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <LedgerTable
-          entries={sorted}
-          pcBroughtForward={pcBroughtForward}
-          bankBroughtForward={bankBroughtForward}
-        />
+        <>
+          <LedgerTable
+            entries={paginated}
+            pcBroughtForward={bfForPage.pc}
+            bankBroughtForward={bfForPage.bank}
+          />
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <p className="text-xs text-muted-foreground">
+                Page {page} of {totalPages} &nbsp;·&nbsp; {sorted.length} total entries
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(1)}>First</Button>
+                <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
+                <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+                <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(totalPages)}>Last</Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <TransactionModal
@@ -180,6 +198,7 @@ export default function AccountsLedger() {
         onClose={() => setModalOpen(false)}
         entries={sorted}
         onSaved={handleSaved}
+        settings={settings}
       />
     </div>
   );

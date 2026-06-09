@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState } from 'react';
+import MyPaymentsWidget from "@/components/accounts/MyPaymentsWidget";
 import {
   isAssessment,
   isSubjectComplete,
@@ -272,6 +273,9 @@ export default function MyProgress() {
           </CardContent>
         </Card>
       )}
+
+      {/* My Payments */}
+      <MyPaymentsWidget pnum={pnum} />
 
       {/* Syllabus Completion */}
       {!isAdult && (

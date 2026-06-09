@@ -8,19 +8,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
-function nextSerial(entries, type) {
+function nextSerial(entries, type, startAt = 1) {
   const matching = entries.filter(e => e.Type === type && e.SerialNo?.startsWith(type + "-"));
-  if (matching.length === 0) return `${type}-001`;
+  const start = parseInt(startAt, 10) || 1;
+  if (matching.length === 0) return `${type}-${String(start).padStart(3, "0")}`;
   const nums = matching.map(e => {
     const n = parseInt(e.SerialNo.split("-")[1] || "0", 10);
     return isNaN(n) ? 0 : n;
   });
-  const next = Math.max(...nums) + 1;
+  const next = Math.max(start - 1, Math.max(...nums)) + 1;
   return `${type}-${String(next).padStart(3, "0")}`;
 }
 
-export default function TransactionModal({ open, onClose, entries, onSaved }) {
+export default function TransactionModal({ open, onClose, entries, onSaved, settings = {} }) {
   const [type, setType] = useState("RV");
   const [accountType, setAccountType] = useState("PettyCash");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -28,14 +30,21 @@ export default function TransactionModal({ open, onClose, entries, onSaved }) {
   const [details, setDetails] = useState("");
   const [voucherNo, setVoucherNo] = useState("");
   const [isNAAFI, setIsNAAFI] = useState(false);
+  const [assignedPNumber, setAssignedPNumber] = useState("");
+  const [assignedName, setAssignedName] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedEntry, setSavedEntry] = useState(null);
 
-  const serialNo = nextSerial(entries, type);
+  const { data: personnel = [] } = useQuery({
+    queryKey: ["personnel-active-list"],
+    queryFn: () => base44.entities.PersonnelManager.filter({ PersonnelStatus: "Active" }),
+    enabled: open,
+  });
 
-  useEffect(() => {
-    if (!open) { setSavedEntry(null); }
-  }, [open]);
+  const startAt = type === "RV" ? (settings.rvStart ?? 1) : (settings.pvStart ?? 1);
+  const serialNo = nextSerial(entries, type, startAt);
+
+  useEffect(() => { if (!open) setSavedEntry(null); }, [open]);
 
   useEffect(() => {
     if (isNAAFI) {
@@ -47,6 +56,13 @@ export default function TransactionModal({ open, onClose, entries, onSaved }) {
       if (voucherNo === "NAAFI") setVoucherNo("");
     }
   }, [isNAAFI]);
+
+  function handlePersonSelect(pnum) {
+    setAssignedPNumber(pnum);
+    const p = personnel.find(x => x.PNumber === pnum);
+    if (p) setAssignedName(`${p.Rank || ""} ${p.FirstName || ""} ${p.Surname || ""}`.trim());
+    else setAssignedName("");
+  }
 
   async function handleSubmit() {
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
@@ -66,13 +82,15 @@ export default function TransactionModal({ open, onClose, entries, onSaved }) {
       AccountType: accountType,
       Amount: parseFloat(parseFloat(amount).toFixed(2)),
       IsNAAFI: isNAAFI,
+      AssignedPNumber: assignedPNumber || "",
+      AssignedName: assignedName || "",
     };
     const saved = await base44.entities.Accounts.create(record);
     setSaving(false);
     toast.success(`${serialNo} saved.`);
     onSaved(saved);
     setSavedEntry({ ...record, id: saved.id });
-    if (isNAAFI) { handleClose(); }
+    if (isNAAFI) handleClose();
   }
 
   function handleClose() {
@@ -80,6 +98,7 @@ export default function TransactionModal({ open, onClose, entries, onSaved }) {
     setDate(format(new Date(), "yyyy-MM-dd"));
     setAmount(""); setDetails(""); setVoucherNo("");
     setIsNAAFI(false); setSavedEntry(null);
+    setAssignedPNumber(""); setAssignedName("");
     onClose();
   }
 
@@ -162,6 +181,24 @@ export default function TransactionModal({ open, onClose, entries, onSaved }) {
               </div>
             </div>
 
+            {/* Assigned person */}
+            <div>
+              <Label>Assign to Cadet / CFAV <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Select value={assignedPNumber || "__none__"} onValueChange={v => handlePersonSelect(v === "__none__" ? "" : v)}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select person (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
+                  {personnel.map(p => (
+                    <SelectItem key={p.PNumber} value={p.PNumber}>
+                      {p.Rank} {p.FirstName} {p.Surname} ({p.PNumber})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <Button className="w-full" onClick={handleSubmit} disabled={saving}>
               {saving ? "Saving…" : "Save Transaction"}
             </Button>
@@ -193,6 +230,7 @@ function VoucherPreview({ entry }) {
           <tr><td className="font-semibold">Date</td><td>{entry.Date}</td></tr>
           <tr><td className="font-semibold">Account</td><td>{entry.AccountType === "PettyCash" ? "Petty Cash" : "Bank"}</td></tr>
           <tr><td className="font-semibold">Voucher No.</td><td>{entry.VoucherNo}</td></tr>
+          {entry.AssignedName && <tr><td className="font-semibold">Assigned To</td><td>{entry.AssignedName}</td></tr>}
         </tbody>
       </table>
       <div className="border rounded p-2 bg-muted/30">
@@ -229,6 +267,7 @@ function buildVoucherHtml(entry) {
   <tr><td>Date</td><td>${entry.Date}</td></tr>
   <tr><td>Account</td><td>${entry.AccountType === "PettyCash" ? "Petty Cash" : "Bank"}</td></tr>
   <tr><td>Voucher / Cheque No.</td><td>${entry.VoucherNo}</td></tr>
+  ${entry.AssignedName ? `<tr><td>Assigned To</td><td>${entry.AssignedName}</td></tr>` : ""}
   </table>
   <div class="particulars"><strong>Particulars:</strong><br/>${entry.Details}</div>
   <div class="amount">TOTAL: £${entry.Amount.toFixed(2)}</div>

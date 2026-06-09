@@ -47,6 +47,14 @@
     "ReceiptUrl": {
       "type": "string",
       "description": "Optional link to rendered voucher/receipt image"
+    },
+    "AssignedPNumber": {
+      "type": "string",
+      "description": "PNumber of the cadet/CFAV assigned to this payment (optional)"
+    },
+    "AssignedName": {
+      "type": "string",
+      "description": "Display name of the assigned cadet/CFAV"
     }
   },
   "required": [
@@ -64,9 +72,16 @@
       }
     },
     "read": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.AssignedPNumber": "{{user.PNumber}}"
+        }
+      ]
     },
     "update": {
       "user_condition": {
