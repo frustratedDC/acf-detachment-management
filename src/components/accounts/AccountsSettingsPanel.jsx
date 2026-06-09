@@ -12,6 +12,9 @@ const KEYS = {
   BANK_BF: "accounts_bank_brought_forward",
   RV_START: "accounts_rv_start",
   PV_START: "accounts_pv_start",
+  DC_RANK: "dc_rank",
+  DC_NAME: "dc_name",
+  DC_TITLE: "dc_title",
 };
 
 export default function AccountsSettingsPanel({ onSettingsChange }) {
@@ -19,6 +22,9 @@ export default function AccountsSettingsPanel({ onSettingsChange }) {
   const [bankBF, setBankBF] = useState("0.00");
   const [rvStart, setRvStart] = useState("1");
   const [pvStart, setPvStart] = useState("1");
+  const [dcRank, setDcRank] = useState("");
+  const [dcName, setDcName] = useState("");
+  const [dcTitle, setDcTitle] = useState("Detachment Commander");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -29,7 +35,11 @@ export default function AccountsSettingsPanel({ onSettingsChange }) {
       const bank = get(KEYS.BANK_BF) ?? "0.00";
       const rv = get(KEYS.RV_START) ?? "1";
       const pv = get(KEYS.PV_START) ?? "1";
+      const dcr = get(KEYS.DC_RANK) ?? "";
+      const dcn = get(KEYS.DC_NAME) ?? "";
+      const dct = get(KEYS.DC_TITLE) ?? "Detachment Commander";
       setPcBF(pc); setBankBF(bank); setRvStart(rv); setPvStart(pv);
+      setDcRank(dcr); setDcName(dcn); setDcTitle(dct);
       onSettingsChange?.({ pcBF: pc, bankBF: bank, rvStart: rv, pvStart: pv });
     }
     load();
@@ -51,6 +61,9 @@ export default function AccountsSettingsPanel({ onSettingsChange }) {
       upsert(KEYS.BANK_BF, bankBF, "Bank opening balance (brought forward)"),
       upsert(KEYS.RV_START, rvStart, "Starting RV serial number"),
       upsert(KEYS.PV_START, pvStart, "Starting PV serial number"),
+      upsert(KEYS.DC_RANK, dcRank, "Detachment Commander rank (for receipts)"),
+      upsert(KEYS.DC_NAME, dcName, "Detachment Commander name (for receipts)"),
+      upsert(KEYS.DC_TITLE, dcTitle, "Detachment Commander title (for receipts)"),
     ]);
     setSaving(false);
     toast.success("Accounts settings saved.");
@@ -90,6 +103,23 @@ export default function AccountsSettingsPanel({ onSettingsChange }) {
               <div>
                 <Label className="text-xs">PV starts at</Label>
                 <Input type="number" min="1" step="1" value={pvStart} onChange={e => setPvStart(e.target.value)} className="mt-1 w-24" />
+              </div>
+            </div>
+          </div>
+          <div className="border-l pl-6">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Receipt Sign-off (DC Details)</p>
+            <div className="flex gap-3 flex-wrap">
+              <div>
+                <Label className="text-xs">DC Rank</Label>
+                <Input value={dcRank} onChange={e => setDcRank(e.target.value)} placeholder="e.g. Maj" className="mt-1 w-24" />
+              </div>
+              <div>
+                <Label className="text-xs">DC Name</Label>
+                <Input value={dcName} onChange={e => setDcName(e.target.value)} placeholder="e.g. J Smith" className="mt-1 w-36" />
+              </div>
+              <div>
+                <Label className="text-xs">DC Title</Label>
+                <Input value={dcTitle} onChange={e => setDcTitle(e.target.value)} placeholder="Detachment Commander" className="mt-1 w-48" />
               </div>
             </div>
           </div>

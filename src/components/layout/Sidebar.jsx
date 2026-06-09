@@ -39,7 +39,7 @@ const NAV_GROUPS = [
     items: [
       { path: '/my-progress',       label: 'My Progress',       icon: TrendingUp,     level: 0 },
       { path: '/my-logbooks',       label: 'My Logbook',        icon: BookMarked,     level: 0 },
-      { path: '/accounts-ledger',   label: 'My Payments',       icon: ReceiptText,    level: 0 },
+      { path: '/my-payments',        label: 'My Payments',       icon: ReceiptText,    level: 0 },
       { path: '/forms-resources',   label: 'Forms & Resources', icon: FolderOpen,     level: 0 },
       { path: '/my-availability',   label: 'My Availability',   icon: CalendarCheck,  level: 1 },
       { path: '/my-qualifications', label: 'My Qualifications', icon: GraduationCap,  level: 1 },
