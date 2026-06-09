@@ -42,7 +42,7 @@ const NAV_GROUPS = [
       { path: '/uniform-exchange',  label: 'Uniform Requests',  icon: Shirt,          level: 0 },
       { path: '/course-request',    label: 'Course Requests',   icon: BookOpen,       level: 0 },
       { path: '/report-issue',      label: 'Report an Issue',   icon: AlertCircle,    level: 0 },
-      { path: '/forms-resources',   label: 'Forms & Resources', icon: FolderOpen,     level: 0 },
+      { path: '/forms-resources',   label: 'Forms & Resources', icon: FolderOpen,     level: 4 },
       { path: '/my-availability',   label: 'My Availability',   icon: CalendarCheck,  level: 1 },
       { path: '/my-qualifications', label: 'My Qualifications', icon: GraduationCap,  level: 1 },
       { path: '/my-governance',     label: 'My Governance',     icon: ShieldCheck,    level: 1 },
