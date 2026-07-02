@@ -71,7 +71,6 @@ const NAV_GROUPS = [
     items: [
       { path: '/personnel',          label: 'CFAV Nominal Roll',   icon: UserCog,       level: 3 },
       { path: '/instructor-quals',   label: 'CFAV Qualifications', icon: BadgeCheck,    level: 3 },
-      { path: '/cfav-governance',    label: 'CFAV Governance',     icon: ShieldCheck,   level: 3 },
       { path: '/all-availability',   label: 'CFAV Availability',   icon: CalendarCheck, level: 3 },
       { path: '/instructor-engagement', label: 'Engagement Log',   icon: Swords,        level: 5 },
       { path: '/my-availability',    label: 'My Availability',     icon: CalendarCheck, level: 3, adultOnly: true },

@@ -26,7 +26,6 @@ import HelpWiki from '@/pages/HelpWiki';
 import TrainingPlanExport from '@/pages/TrainingPlanExport';
 import TrainingCalendar from '@/pages/TrainingCalendar';
 import BulkProgressEntry from '@/pages/BulkProgressEntry';
-import CFAVGovernance from '@/pages/CFAVGovernance';
 import ImportantNotices from '@/pages/ImportantNotices';
 import WeaponHandlingTests from '@/pages/WeaponHandlingTests';
 import StaffAvailability from '@/pages/StaffAvailability';
@@ -82,7 +81,6 @@ const AppContent = () => {
         <Route path="/calendar" element={<TrainingCalendar />} />
         <Route path="/training-calendar" element={<TrainingCalendar />} />
         <Route path="/bulk-progress" element={<BulkProgressEntry />} />
-        <Route path="/cfav-governance" element={<CFAVGovernance />} />
         <Route path="/notices" element={<ImportantNotices />} />
         <Route path="/wht" element={<WeaponHandlingTests />} />
         <Route path="/staff-availability" element={<StaffAvailability />} />
