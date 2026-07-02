@@ -10,7 +10,7 @@ import {
   CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, TrendingUp, FolderOpen,
   AlertCircle, Shirt, HeartHandshake, FileText, BookMarked,
   Star, Layers, UserCheck, Swords, Eye, ClipboardPen, UserCog,
-  UsersRound, BadgeCheck, MapPin, ReceiptText, Cog
+  UsersRound, BadgeCheck, MapPin, Cog
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -39,7 +39,6 @@ const NAV_GROUPS = [
     items: [
       { path: '/my-progress',       label: 'My Progress',       icon: TrendingUp,     level: 0 },
       { path: '/my-logbooks',       label: 'My Logbook',        icon: BookMarked,     level: 0 },
-      { path: '/my-payments',        label: 'My Payments',       icon: ReceiptText,    level: 0 },
       { path: '/forms-resources',   label: 'Forms & Resources', icon: FolderOpen,     level: 0 },
       { path: '/my-availability',   label: 'My Availability',   icon: CalendarCheck,  level: 1 },
       { path: '/my-qualifications', label: 'My Qualifications', icon: GraduationCap,  level: 1 },
@@ -107,7 +106,6 @@ const NAV_GROUPS = [
     items: [
       { path: '/analytics',       label: 'Analytics',            icon: BarChart2,  level: 4 },
       { path: '/monthly-reports', label: 'Monthly Reports',      icon: FileText,   level: 4 },
-      { path: '/accounts',        label: 'Accounts',             icon: ReceiptText,level: 4 },
       { path: '/forms-resources', label: 'Forms & Resources (Mgmt)', icon: FolderOpen, level: 4 },
       { path: '/admin',           label: 'Detachment Settings',  icon: Cog,        level: 4 },
     ],

@@ -42,8 +42,6 @@ import FormsResources from '@/pages/FormsResources';
 import MyGovernance from '@/pages/MyGovernance';
 import MyAvailability from '@/pages/MyAvailability';
 import MyQualifications from '@/pages/MyQualifications';
-import Accounts from '@/pages/Accounts';
-import AccountsLedger from '@/pages/AccountsLedger';
 import AllAvailability from '@/pages/AllAvailability';
 import FormCreator from '@/pages/FormCreator';
 import UniformExchange from '@/pages/UniformExchange';
@@ -54,7 +52,6 @@ import CommunityEngagement from '@/pages/CommunityEngagement';
 import InstructorEngagement from '@/pages/InstructorEngagement';
 import MonthlyReports from '@/pages/MonthlyReports';
 import MyLogbooks from '@/pages/MyLogbooks';
-import MyPayments from '@/pages/MyPayments';
 
 const AppContent = () => {
   const { personnel, loading } = usePersonnel();
@@ -101,8 +98,6 @@ const AppContent = () => {
         <Route path="/my-governance" element={<MyGovernance />} />
         <Route path="/my-availability" element={<MyAvailability />} />
         <Route path="/my-qualifications" element={<MyQualifications />} />
-        <Route path="/accounts" element={<Accounts />} />
-        <Route path="/accounts-ledger" element={<AccountsLedger />} />
         <Route path="/all-availability" element={<AllAvailability />} />
         <Route path="/form-creator" element={<FormCreator />} />
         <Route path="/uniform-exchange" element={<UniformExchange />} />
@@ -113,7 +108,6 @@ const AppContent = () => {
         <Route path="/instructor-engagement" element={<InstructorEngagement />} />
         <Route path="/monthly-reports" element={<MonthlyReports />} />
         <Route path="/my-logbooks" element={<MyLogbooks />} />
-        <Route path="/my-payments" element={<MyPayments />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
