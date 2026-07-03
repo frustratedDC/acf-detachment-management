@@ -67,9 +67,9 @@ Deno.serve(async (req) => {
       : 0;
     const cadetDataMissing = monthCadetParade.length === 0 && trainingNightCount > 0;
 
-    // --- INSTRUCTOR ATTENDANCE (InstructorAttendanceLedger, field: InstructorPNumber) ---
-    const monthInstructorLedger = instructorLedger.filter(
-      a => a.Date >= startDate && a.Date <= endDate && instructorPNumbers.has(a.InstructorPNumber)
+    // --- INSTRUCTOR ATTENDANCE (DailyParadeState, field: UserPNumber) ---
+    const monthInstructorLedger = cadetParade.filter(
+      a => a.Date >= startDate && a.Date <= endDate && instructorPNumbers.has(a.UserPNumber)
     );
     const instructorPresent = monthInstructorLedger.filter(a => a.AttendanceStatus === 'Present').length;
     const expectedInstructorAttendance = trainingNightCount * instructors.length;
