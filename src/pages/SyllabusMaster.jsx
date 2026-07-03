@@ -5,26 +5,44 @@ import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { BookOpen, Search } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BookOpen, Search, ChevronDown, ChevronRight } from 'lucide-react';
 import _ from 'lodash';
 import AddLessonDialog from '@/components/syllabus/AddLessonDialog';
 
+const STAR_ORDER = { 'Basic': 0, '1 Star': 1, '2 Star': 2, '3 Star': 3, '4 Star': 4, 'Adult': 5, 'Admin': 6 };
+
 export default function SyllabusMaster() {
   const [search, setSearch] = useState('');
+  const [starFilter, setStarFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('name');
+  const [collapsed, setCollapsed] = useState({});
 
   const { data: lessons = [], isLoading } = useQuery({
     queryKey: ['syllabus-master-all'],
     queryFn: () => base44.entities.SyllabusMaster.filter({}),
   });
 
-  const filtered = lessons.filter(l =>
-    l.LessonCode?.toLowerCase().includes(search.toLowerCase()) ||
-    l.LessonName?.toLowerCase().includes(search.toLowerCase()) ||
-    l.SubjectName?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = lessons.filter(l => {
+    const matchSearch = l.LessonCode?.toLowerCase().includes(search.toLowerCase()) ||
+      l.LessonName?.toLowerCase().includes(search.toLowerCase()) ||
+      l.SubjectName?.toLowerCase().includes(search.toLowerCase());
+    const matchStar = starFilter === 'all' || l.StarLevel === starFilter;
+    return matchSearch && matchStar;
+  });
 
   const grouped = _.groupBy(filtered, 'SubjectName');
   const subjects = Object.keys(grouped).sort();
+
+  function sortLessons(list) {
+    if (sortBy === 'star') return _.sortBy(list, l => STAR_ORDER[l.StarLevel] ?? 99);
+    if (sortBy === 'code') return _.sortBy(list, 'LessonCode');
+    return _.sortBy(list, 'LessonName');
+  }
+
+  function toggleSection(subject) {
+    setCollapsed(p => ({ ...p, [subject]: !p[subject] }));
+  }
 
   return (
     <div>
@@ -33,7 +51,7 @@ export default function SyllabusMaster() {
         description="Read-only view of the training syllabus"
         icon={BookOpen}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -43,6 +61,27 @@ export default function SyllabusMaster() {
                 className="pl-10 w-64"
               />
             </div>
+            <Select value={starFilter} onValueChange={setStarFilter}>
+              <SelectTrigger className="w-36"><SelectValue placeholder="Star Level" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stars</SelectItem>
+                <SelectItem value="Basic">Basic</SelectItem>
+                <SelectItem value="1 Star">1 Star</SelectItem>
+                <SelectItem value="2 Star">2 Star</SelectItem>
+                <SelectItem value="3 Star">3 Star</SelectItem>
+                <SelectItem value="4 Star">4 Star</SelectItem>
+                <SelectItem value="Adult">Adult</SelectItem>
+                <SelectItem value="Admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="Sort by" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Sort: Lesson Name</SelectItem>
+                <SelectItem value="code">Sort: Lesson Code</SelectItem>
+                <SelectItem value="star">Sort: Star Level</SelectItem>
+              </SelectContent>
+            </Select>
             <AddLessonDialog />
           </div>
         }
@@ -61,25 +100,37 @@ export default function SyllabusMaster() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {subjects.map(subject => (
-            <Card key={subject}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">{subject}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1">
-                  {_.sortBy(grouped[subject], 'LessonName').map(lesson => (
-                    <div key={lesson.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors">
-                      <code className="text-xs font-mono bg-muted px-2 py-1 rounded">{lesson.LessonCode}</code>
-                      <span className="text-sm flex-1">{lesson.LessonName}</span>
-                      <Badge variant="outline" className="text-xs">{lesson.StarLevel}</Badge>
-                      {lesson.IsMandatory && <Badge className="bg-accent text-accent-foreground text-xs">Required</Badge>}
+          {subjects.map(subject => {
+            const isCollapsed = !!collapsed[subject];
+            return (
+              <Card key={subject}>
+                <CardHeader
+                  className="pb-2 cursor-pointer select-none"
+                  onClick={() => toggleSection(subject)}
+                >
+                  <CardTitle className="text-base flex items-center gap-2">
+                    {isCollapsed ? <ChevronRight className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                    {subject}
+                    <span className="text-xs font-normal text-muted-foreground">({grouped[subject].length})</span>
+                  </CardTitle>
+                </CardHeader>
+                {!isCollapsed && (
+                  <CardContent>
+                    <div className="space-y-1">
+                      {sortLessons(grouped[subject]).map(lesson => (
+                        <div key={lesson.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors">
+                          <code className="text-xs font-mono bg-muted px-2 py-1 rounded">{lesson.LessonCode}</code>
+                          <span className="text-sm flex-1">{lesson.LessonName}</span>
+                          <Badge variant="outline" className="text-xs">{lesson.StarLevel}</Badge>
+                          {lesson.IsMandatory && <Badge className="bg-accent text-accent-foreground text-xs">Required</Badge>}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
