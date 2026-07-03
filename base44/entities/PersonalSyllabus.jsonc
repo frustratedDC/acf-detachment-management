@@ -12,7 +12,9 @@
         "1 Star",
         "2 Star",
         "3 Star",
-        "4 Star"
+        "4 Star",
+        "Adult",
+        "Admin"
       ]
     },
     "SubjectName": {

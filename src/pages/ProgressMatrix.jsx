@@ -58,6 +58,8 @@ export default function ProgressMatrix() {
                 <SelectItem value="2 Star">2 Star</SelectItem>
                 <SelectItem value="3 Star">3 Star</SelectItem>
                 <SelectItem value="4 Star">4 Star</SelectItem>
+                <SelectItem value="Adult">Adult</SelectItem>
+                <SelectItem value="Admin">Admin</SelectItem>
               </SelectContent>
             </Select>
             <div className="relative">

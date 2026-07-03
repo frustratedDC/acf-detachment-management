@@ -43,9 +43,10 @@
         "2 Star",
         "3 Star",
         "4 Star",
-        "Adult"
+        "Adult",
+        "Admin"
       ],
-      "description": "Current star level. 'Adult' is auto-assigned to Adult Instructors and excluded from cadet progression."
+      "description": "Current star level. 'Adult' is auto-assigned to Adult Instructors and excluded from cadet progression. 'Admin' is for system administrators."
     },
     "PromotionDate": {
       "type": "string",
