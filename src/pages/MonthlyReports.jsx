@@ -112,33 +112,71 @@ export default function MonthlyReports() {
       </div>
 
       <div class="section">
-        <h2>Executive Summary</h2>
+        <h2>Cadets</h2>
         <div class="metrics">
           <div class="metric">
-            <div class="metric-label">Total Cadets</div>
-            <div class="metric-value">${data.summary.totalCadets}</div>
+            <div class="metric-label">Total On Strength</div>
+            <div class="metric-value">${data.cadets.totalOnStrength}</div>
           </div>
           <div class="metric">
-            <div class="metric-label">Total Instructors</div>
-            <div class="metric-value">${data.summary.totalInstructors}</div>
+            <div class="metric-label">Attendance</div>
+            <div class="metric-value">${data.cadets.attendanceRate}%</div>
           </div>
           <div class="metric">
-            <div class="metric-label">Cadet Attendance</div>
-            <div class="metric-value">${data.summary.cadetAttendanceRate}%</div>
+            <div class="metric-label">New Enrolled</div>
+            <div class="metric-value">${data.cadets.newEnrolled}</div>
           </div>
           <div class="metric">
-            <div class="metric-label">Instructor Attendance</div>
-            <div class="metric-value">${data.summary.instructorAttendanceRate}%</div>
+            <div class="metric-label">Strike Offs</div>
+            <div class="metric-value">${data.cadets.strikeOffs}</div>
           </div>
           <div class="metric">
-            <div class="metric-label">Lessons Approved</div>
-            <div class="metric-value">${data.summary.lessonsApproved}</div>
+            <div class="metric-label">Status Changes</div>
+            <div class="metric-value">${data.cadets.statusChanges}</div>
           </div>
           <div class="metric">
-            <div class="metric-label">Expiring Qualifications</div>
-            <div class="metric-value">${data.summary.expiringQualifications}</div>
+            <div class="metric-label">Subjects Completed</div>
+            <div class="metric-value">${data.cadets.totalSubjectsCompleted}</div>
           </div>
         </div>
+        <table>
+          <tr><th>Rank</th><th>Qty</th></tr>
+          ${Object.entries(data.cadets.rankBreakdown).map(([rank, count]) => `<tr><td>${rank}</td><td>${count}</td></tr>`).join('')}
+        </table>
+        <table>
+          <tr><th>Subject Completed</th><th>Qty</th></tr>
+          ${Object.entries(data.cadets.subjectBreakdown).map(([subject, count]) => `<tr><td>${subject}</td><td>${count}</td></tr>`).join('')}
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Adults</h2>
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-label">Total On Strength</div>
+            <div class="metric-value">${data.adults.totalOnStrength}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Attendance</div>
+            <div class="metric-value">${data.adults.attendanceRate}%</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">New Enrolled</div>
+            <div class="metric-value">${data.adults.newEnrolled}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Strike Offs</div>
+            <div class="metric-value">${data.adults.strikeOffs}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Status Changes</div>
+            <div class="metric-value">${data.adults.statusChanges}</div>
+          </div>
+        </div>
+        <table>
+          <tr><th>Rank</th><th>Qty</th></tr>
+          ${Object.entries(data.adults.rankBreakdown).map(([rank, count]) => `<tr><td>${rank}</td><td>${count}</td></tr>`).join('')}
+        </table>
       </div>
 
       <div class="section">
@@ -153,25 +191,13 @@ export default function MonthlyReports() {
             <td>${data.trainingDates}</td>
           </tr>
           <tr>
-            <td>Staff Availability Submissions</td>
-            <td>${data.staffAvailable}</td>
+            <td>Expiring Qualifications</td>
+            <td>${data.expiringQualifications}</td>
           </tr>
-        </table>
-      </div>
-
-      <div class="section">
-        <h2>Subject Completion Breakdown</h2>
-        <table>
           <tr>
-            <th>Subject</th>
-            <th>Lessons Completed</th>
+            <td>Monthly NAAFI Total</td>
+            <td>£${data.naafiTotal.toFixed(2)}</td>
           </tr>
-          ${Object.entries(data.subjectBreakdown).map(([subject, count]) => `
-            <tr>
-              <td>${subject}</td>
-              <td>${count}</td>
-            </tr>
-          `).join('')}
         </table>
       </div>
 
@@ -271,99 +297,169 @@ export default function MonthlyReports() {
               </div>
             )}
 
-            {/* Summary Cards */}
             <TooltipProvider>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <Card>
-                  <CardContent className="p-3">
-                    <p className="text-xs text-muted-foreground">Total Cadets</p>
-                    <p className="text-2xl font-bold">{reportData.summary.totalCadets}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-3">
-                    <p className="text-xs text-muted-foreground">Total Instructors</p>
-                    <p className="text-2xl font-bold">{reportData.summary.totalInstructors}</p>
-                  </CardContent>
-                </Card>
+              {/* Cadets Section */}
+              <div>
+                <h3 className="font-semibold text-sm mb-3">Cadets</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                  <Card>
+                    <CardContent className="p-3">
+                      <p className="text-xs text-muted-foreground">Total On Strength</p>
+                      <p className="text-2xl font-bold">{reportData.cadets.totalOnStrength}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className={reportData.dataFlags?.cadetDataMissing ? 'border-amber-300' : ''}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-1">
+                        <p className="text-xs text-muted-foreground">Attendance</p>
+                        {reportData.dataFlags?.cadetDataMissing && (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <AlertCircle className="w-3 h-3 text-amber-500" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Data missing for {reportData.dataFlags.monthLabel}</p>
+                              <p className="text-xs opacity-70">No parade records found in DailyParadeState</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                      <p className="text-2xl font-bold text-chart-2">{reportData.cadets.attendanceRate}%</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {reportData.cadets.present} / {reportData.cadets.expectedAttendance} expected
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-3">
+                      <p className="text-xs text-muted-foreground">New Enrolled</p>
+                      <p className="text-2xl font-bold">{reportData.cadets.newEnrolled}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-3">
+                      <p className="text-xs text-muted-foreground">Strike Offs</p>
+                      <p className="text-2xl font-bold text-destructive">{reportData.cadets.strikeOffs}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-3">
+                      <p className="text-xs text-muted-foreground">Status Changes</p>
+                      <p className="text-2xl font-bold">{reportData.cadets.statusChanges}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-3">
+                      <p className="text-xs text-muted-foreground">Subjects Completed</p>
+                      <p className="text-2xl font-bold text-accent-foreground">{reportData.cadets.totalSubjectsCompleted}</p>
+                    </CardContent>
+                  </Card>
+                </div>
 
-                {/* Cadet Attendance with data-missing tooltip */}
-                <Card className={reportData.dataFlags?.cadetDataMissing ? 'border-amber-300' : ''}>
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-1">
-                      <p className="text-xs text-muted-foreground">Cadet Attendance</p>
-                      {reportData.dataFlags?.cadetDataMissing && (
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <AlertCircle className="w-3 h-3 text-amber-500" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Data missing for {reportData.dataFlags.monthLabel}</p>
-                            <p className="text-xs opacity-70">No parade records found in DailyParadeState</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
+                <p className="text-xs font-semibold text-muted-foreground mb-2">Rank Breakdown</p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {Object.entries(reportData.cadets.rankBreakdown).map(([rank, count]) => (
+                    <Badge key={rank} variant="outline">{rank}: {count}</Badge>
+                  ))}
+                </div>
+
+                {Object.keys(reportData.cadets.subjectBreakdown).length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">Subjects Completed</p>
+                    <div className="space-y-2">
+                      {Object.entries(reportData.cadets.subjectBreakdown).map(([subject, count]) => (
+                        <div key={subject} className="flex items-center justify-between">
+                          <span className="text-sm">{subject}</span>
+                          <Badge variant="secondary">{count} completed</Badge>
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-2xl font-bold text-chart-2">{reportData.summary.cadetAttendanceRate}%</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {reportData.summary.cadetPresent} / {reportData.summary.expectedCadetAttendance} expected
-                    </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                )}
+              </div>
 
-                {/* Instructor Attendance with data-missing tooltip */}
-                <Card className={reportData.dataFlags?.instructorDataMissing ? 'border-amber-300' : ''}>
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-1">
-                      <p className="text-xs text-muted-foreground">Instructor Attendance</p>
-                      {reportData.dataFlags?.instructorDataMissing && (
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <AlertCircle className="w-3 h-3 text-amber-500" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Data missing for {reportData.dataFlags.monthLabel}</p>
-                            <p className="text-xs opacity-70">No records found in InstructorAttendanceLedger</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
-                    <p className="text-2xl font-bold text-chart-2">{reportData.summary.instructorAttendanceRate}%</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {reportData.summary.instructorPresent} / {reportData.summary.expectedInstructorAttendance} expected
-                    </p>
-                  </CardContent>
-                </Card>
+              {/* Adults Section */}
+              <div className="mt-6">
+                <h3 className="font-semibold text-sm mb-3">Adults</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+                  <Card>
+                    <CardContent className="p-3">
+                      <p className="text-xs text-muted-foreground">Total On Strength</p>
+                      <p className="text-2xl font-bold">{reportData.adults.totalOnStrength}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className={reportData.dataFlags?.instructorDataMissing ? 'border-amber-300' : ''}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-1">
+                        <p className="text-xs text-muted-foreground">Attendance</p>
+                        {reportData.dataFlags?.instructorDataMissing && (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <AlertCircle className="w-3 h-3 text-amber-500" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Data missing for {reportData.dataFlags.monthLabel}</p>
+                              <p className="text-xs opacity-70">No records found in InstructorAttendanceLedger</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                      <p className="text-2xl font-bold text-chart-2">{reportData.adults.attendanceRate}%</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {reportData.adults.present} / {reportData.adults.expectedAttendance} expected
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-3">
+                      <p className="text-xs text-muted-foreground">New Enrolled</p>
+                      <p className="text-2xl font-bold">{reportData.adults.newEnrolled}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-3">
+                      <p className="text-xs text-muted-foreground">Strike Offs</p>
+                      <p className="text-2xl font-bold text-destructive">{reportData.adults.strikeOffs}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-3">
+                      <p className="text-xs text-muted-foreground">Status Changes</p>
+                      <p className="text-2xl font-bold">{reportData.adults.statusChanges}</p>
+                    </CardContent>
+                  </Card>
+                </div>
 
+                <p className="text-xs font-semibold text-muted-foreground mb-2">Rank Breakdown</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(reportData.adults.rankBreakdown).map(([rank, count]) => (
+                    <Badge key={rank} variant="outline">{rank}: {count}</Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Operational Details */}
+              <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-3">
                 <Card>
                   <CardContent className="p-3">
-                    <p className="text-xs text-muted-foreground">Lessons Approved</p>
-                    <p className="text-2xl font-bold text-accent-foreground">{reportData.summary.lessonsApproved}</p>
+                    <p className="text-xs text-muted-foreground">Training Nights</p>
+                    <p className="text-2xl font-bold">{reportData.trainingDates}</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-3">
                     <p className="text-xs text-muted-foreground">Expiring Quals</p>
-                    <p className="text-2xl font-bold text-destructive">{reportData.summary.expiringQualifications}</p>
+                    <p className="text-2xl font-bold text-destructive">{reportData.expiringQualifications}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-3">
+                    <p className="text-xs text-muted-foreground">Monthly NAAFI Total</p>
+                    <p className="text-2xl font-bold">£{reportData.naafiTotal.toFixed(2)}</p>
                   </CardContent>
                 </Card>
               </div>
             </TooltipProvider>
-
-            {/* Subject Breakdown */}
-            {Object.keys(reportData.subjectBreakdown).length > 0 && (
-              <div>
-                <h3 className="font-semibold text-sm mb-3">Subject Completion</h3>
-                <div className="space-y-2">
-                  {Object.entries(reportData.subjectBreakdown).map(([subject, count]) => (
-                    <div key={subject} className="flex items-center justify-between">
-                      <span className="text-sm">{subject}</span>
-                      <Badge variant="secondary">{count} lesson{count !== 1 ? 's' : ''}</Badge>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}

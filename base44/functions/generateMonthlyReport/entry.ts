@@ -28,6 +28,7 @@ Deno.serve(async (req) => {
       syllabusMaster,      // SyllabusMaster: LessonCode -> SubjectName lookup for breakdown
       progressLedger,      // ProgressLedger: lesson approvals (CompletionDate)
       nightlySchedule,     // NightlySchedule: source of truth for expected training nights
+      naafiSales,          // NafiiSale: NAAFI transactions
     ] = await Promise.all([
       base44.asServiceRole.entities.PersonnelManager.filter({}),
       base44.asServiceRole.entities.DailyParadeState.filter({}),
@@ -36,6 +37,7 @@ Deno.serve(async (req) => {
       base44.asServiceRole.entities.SyllabusMaster.filter({}),
       base44.asServiceRole.entities.ProgressLedger.filter({}),
       base44.asServiceRole.entities.NightlySchedule.filter({}),
+      base44.asServiceRole.entities.NafiiSale.filter({}),
     ]);
 
     // Segment active personnel
@@ -76,14 +78,13 @@ Deno.serve(async (req) => {
       : 0;
     const instructorDataMissing = monthInstructorLedger.length === 0 && trainingNightCount > 0;
 
-    // --- LESSONS APPROVED + SUBJECT BREAKDOWN (ProgressLedger, joined to SyllabusMaster for SubjectName) ---
+    // --- SUBJECTS COMPLETED (ProgressLedger, joined to SyllabusMaster for SubjectName) ---
     const lessonCodeToSubject = {};
     syllabusMaster.forEach(l => { lessonCodeToSubject[l.LessonCode] = l.SubjectName; });
 
     const monthApprovedProgress = progressLedger.filter(
       p => p.CompletionDate >= startDate && p.CompletionDate <= endDate && p.Status === 'Approved'
     );
-    const lessonsApproved = monthApprovedProgress.length;
 
     const subjectBreakdown = {};
     monthApprovedProgress.forEach(p => {
@@ -92,11 +93,44 @@ Deno.serve(async (req) => {
         subjectBreakdown[subject] = (subjectBreakdown[subject] || 0) + 1;
       }
     });
+    const totalSubjectsCompleted = Object.values(subjectBreakdown).reduce((sum, c) => sum + c, 0);
 
     // --- EXPIRING QUALIFICATIONS ---
     const expiringQuals = qualifications.filter(
       q => q.ExpiryDate && q.ExpiryDate >= startDate && q.ExpiryDate <= endDate
     ).length;
+
+    // --- RANK BREAKDOWN ---
+    function rankBreakdown(list) {
+      const breakdown = {};
+      list.forEach(p => {
+        const rank = p.Rank || 'Unspecified';
+        breakdown[rank] = (breakdown[rank] || 0) + 1;
+      });
+      return breakdown;
+    }
+
+    // --- STRIKE OFFS / STATUS CHANGES / NEW ENROLLMENTS ---
+    function personnelChanges(type) {
+      const typePersonnel = personnel.filter(p => p.Type === type);
+      const strikeOffs = typePersonnel.filter(
+        p => p.PersonnelStatus === 'Leaver' && p.StatusChangedDate >= startDate && p.StatusChangedDate <= endDate
+      ).length;
+      const statusChanges = typePersonnel.filter(
+        p => p.StatusChangedDate && p.StatusChangedDate >= startDate && p.StatusChangedDate <= endDate
+      ).length;
+      const newEnrolled = typePersonnel.filter(
+        p => p.created_date && format(new Date(p.created_date), 'yyyy-MM-dd') >= startDate && format(new Date(p.created_date), 'yyyy-MM-dd') <= endDate
+      ).length;
+      return { strikeOffs, statusChanges, newEnrolled };
+    }
+
+    const cadetChanges = personnelChanges('Cadet');
+    const adultChanges = personnelChanges('Adult Instructor');
+
+    // --- NAAFI MONTHLY TOTAL ---
+    const monthNaafiSales = naafiSales.filter(s => s.SaleDate >= startDate && s.SaleDate <= endDate);
+    const naafiTotal = monthNaafiSales.reduce((sum, s) => sum + (s.TotalAmount || 0), 0);
 
     const monthLabel = format(new Date(year, month - 1, 1), 'MMMM yyyy');
 
@@ -105,18 +139,26 @@ Deno.serve(async (req) => {
       year,
       monthName: monthLabel,
       generatedDate: format(new Date(), 'yyyy-MM-dd HH:mm:ss'),
-      summary: {
-        totalCadets: cadets.length,
-        totalInstructors: instructors.length,
-        cadetAttendanceRate,
-        instructorAttendanceRate,
-        cadetPresent,
-        expectedCadetAttendance,
-        instructorPresent,
-        expectedInstructorAttendance,
-        lessonsApproved,
-        expiringQualifications: expiringQuals,
+      cadets: {
+        totalOnStrength: cadets.length,
+        rankBreakdown: rankBreakdown(cadets),
+        ...cadetChanges,
+        attendanceRate: cadetAttendanceRate,
+        present: cadetPresent,
+        expectedAttendance: expectedCadetAttendance,
+        subjectBreakdown,
+        totalSubjectsCompleted,
       },
+      adults: {
+        totalOnStrength: instructors.length,
+        rankBreakdown: rankBreakdown(instructors),
+        ...adultChanges,
+        attendanceRate: instructorAttendanceRate,
+        present: instructorPresent,
+        expectedAttendance: expectedInstructorAttendance,
+      },
+      naafiTotal,
+      expiringQualifications: expiringQuals,
       // Data quality flags for UI tooltips
       dataFlags: {
         cadetDataMissing,
@@ -124,9 +166,7 @@ Deno.serve(async (req) => {
         noTrainingNights: trainingNightCount === 0,
         monthLabel,
       },
-      subjectBreakdown,
       trainingDates: trainingNightCount,
-      staffAvailable: instructorPresent,
     };
 
     return Response.json(report);
