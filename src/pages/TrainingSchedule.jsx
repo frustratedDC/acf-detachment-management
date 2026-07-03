@@ -8,6 +8,7 @@ import PageHeader from '@/components/shared/PageHeader';
 import ScheduleEntryForm from '@/components/schedule/ScheduleEntryForm';
 import ScheduleView from '@/components/schedule/ScheduleView';
 import PlanLockBar from '@/components/schedule/PlanLockBar';
+import EventCreateDialog from '@/components/schedule/EventCreateDialog';
 import { Button } from '@/components/ui/button';
 import { Calendar, Plus } from 'lucide-react';
 import { format } from 'date-fns';
@@ -20,6 +21,7 @@ export default function TrainingSchedule() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [showForm, setShowForm] = useState(false);
   const [editingDate, setEditingDate] = useState(null);
+  const [showEventDialog, setShowEventDialog] = useState(false);
 
   const { data: schedule = [], isLoading } = useQuery({
     queryKey: ['schedule-all'],
@@ -56,12 +58,24 @@ export default function TrainingSchedule() {
         icon={Calendar}
         actions={
           canEdit && (
-            <Button onClick={() => { setEditingDate(null); setShowForm(true); }}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Night
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowEventDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Event
+              </Button>
+              <Button onClick={() => { setEditingDate(null); setShowForm(true); }}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Night
+              </Button>
+            </div>
           )
         }
+      />
+
+      <EventCreateDialog
+        open={showEventDialog}
+        onClose={() => setShowEventDialog(false)}
+        myPNumber={personnel?.PNumber}
       />
 
       {/* DC-only Lock Controls */}

@@ -60,6 +60,23 @@
       "type": "boolean",
       "default": false,
       "description": "If true, only Adult Instructors (L3+) can see this event"
+    },
+    "FullPrice": {
+      "type": "number",
+      "description": "Standard full price for this event (optional)"
+    },
+    "FSMPrice": {
+      "type": "number",
+      "description": "Free School Meals / subsidized price for this event (optional)"
+    },
+    "AdultPrice": {
+      "type": "number",
+      "description": "Price applicable to adult staff attendees (optional)"
+    },
+    "GeneratedFromPlan": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if this event was generated via the Training Plan workflow rather than manually"
     }
   },
   "required": [

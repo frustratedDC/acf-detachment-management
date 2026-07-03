@@ -177,8 +177,27 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
         });
       });
       if (records.length > 0) await base44.entities.NightlySchedule.bulkCreate(records);
+
+      // Training Plan is the source of truth for the calendar — sync the linked event
+      const linkedEvents = await base44.entities.CalendarEvent.filter({ Date: formDate, IsTrainingNight: true });
+      if (records.length > 0) {
+        if (linkedEvents.length === 0) {
+          await base44.entities.CalendarEvent.create({
+            Title: 'Training Night', Date: formDate, EventType: 'Training Night',
+            IsTrainingNight: true, GeneratedFromPlan: true,
+          });
+        }
+      } else {
+        for (const ev of linkedEvents) {
+          if (ev.GeneratedFromPlan) await base44.entities.CalendarEvent.delete(ev.id);
+        }
+      }
     },
-    onSuccess: () => { toast.success('Schedule saved'); onSaved(); },
+    onSuccess: () => {
+      toast.success('Schedule saved');
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
+      onSaved();
+    },
   });
 
   function updateEntry(key, field, value) {

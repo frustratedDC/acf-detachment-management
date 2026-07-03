@@ -1,0 +1,66 @@
+{
+  "name": "EventAttendee",
+  "type": "object",
+  "properties": {
+    "EventId": {
+      "type": "string",
+      "description": "ID of the linked CalendarEvent"
+    },
+    "PNumber": {
+      "type": "string",
+      "description": "Personnel number of the attendee"
+    },
+    "Name": {
+      "type": "string",
+      "description": "Display name of the attendee"
+    },
+    "PersonType": {
+      "type": "string",
+      "enum": [
+        "Cadet",
+        "Adult Staff"
+      ],
+      "description": "Whether the attendee is a cadet or adult staff member"
+    },
+    "PriceTier": {
+      "type": "string",
+      "enum": [
+        "Full",
+        "FSM",
+        "Adult",
+        "None"
+      ],
+      "default": "Full",
+      "description": "Which pricing tier applies to this attendee"
+    },
+    "AmountDue": {
+      "type": "number",
+      "default": 0,
+      "description": "Amount owed for this event"
+    },
+    "AmountPaid": {
+      "type": "number",
+      "default": 0,
+      "description": "Amount paid so far"
+    },
+    "IsPaid": {
+      "type": "boolean",
+      "default": false,
+      "description": "True once the attendee's balance for this event has been cleared"
+    },
+    "PaymentDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the payment was last logged"
+    },
+    "PaymentNotes": {
+      "type": "string",
+      "description": "Optional notes about the payment"
+    }
+  },
+  "required": [
+    "EventId",
+    "PNumber",
+    "PersonType"
+  ]
+}

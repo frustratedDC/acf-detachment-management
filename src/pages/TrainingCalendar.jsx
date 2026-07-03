@@ -22,6 +22,7 @@ import {
   addDays, addMonths, subMonths, isSameMonth, isSameDay, parseISO
 } from 'date-fns';
 import TrainingNightPanel from '@/components/calendar/TrainingNightPanel';
+import EventAttendeeManager from '@/components/calendar/EventAttendeeManager';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, isAdultInstructor } from '@/lib/accessLevels';
 
@@ -34,11 +35,6 @@ const EVENT_COLORS = {
 };
 
 const DAYS_OF_WEEK = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-
-const emptyEvent = {
-  Title: '', Date: '', EndDate: '', EventType: 'Training Night',
-  Notes: '', IsTrainingNight: false, AvailabilityDeadline: '', Location: '', ComplianceStatus: null, StaffOnly: false
-};
 
 // Calculate automated compliance for a date
 function calcAutoCompliance(dateStr, personnel, governance, availability) {
@@ -81,9 +77,7 @@ export default function TrainingCalendar() {
   const canEdit = myLevel >= ACCESS_LEVELS.DET_2IC;
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState(null);
-  const [form, setForm] = useState(emptyEvent);
+  const [attendeeManagerEvent, setAttendeeManagerEvent] = useState(null);
   const [availDialogOpen, setAvailDialogOpen] = useState(false);
   const [availEvent, setAvailEvent] = useState(null);
   const [availNote, setAvailNote] = useState('');
@@ -124,21 +118,6 @@ export default function TrainingCalendar() {
   }, [personnel]);
 
   // ── Mutations ────────────────────────────────────────────────────────
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.CalendarEvent.create({ ...data, CreatedByPNumber: me?.PNumber }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['calendar-events'] }); toast.success('Event created'); closeDialog(); },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.CalendarEvent.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['calendar-events'] }); toast.success('Event updated'); closeDialog(); },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.CalendarEvent.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['calendar-events'] }); toast.success('Event deleted'); },
-  });
-
   const complianceOverrideMutation = useMutation({
     mutationFn: ({ id, status }) => base44.entities.CalendarEvent.update(id, { ComplianceStatus: status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['calendar-events'] }),
@@ -166,35 +145,6 @@ export default function TrainingCalendar() {
   });
 
   // ── Calendar helpers ────────────────────────────────────────────────
-  function openCreate(date) {
-    if (!canEdit) return;
-    setForm({ ...emptyEvent, Date: format(date, 'yyyy-MM-dd') });
-    setEditingEvent(null);
-    setDialogOpen(true);
-  }
-
-  function openEdit(ev) {
-    setForm({
-      Title: ev.Title, Date: ev.Date, EndDate: ev.EndDate || '',
-      EventType: ev.EventType, Notes: ev.Notes || '',
-      IsTrainingNight: ev.IsTrainingNight || false,
-      AvailabilityDeadline: ev.AvailabilityDeadline || '',
-      Location: ev.Location || '',
-      ComplianceStatus: ev.ComplianceStatus || null,
-      StaffOnly: ev.StaffOnly || false,
-    });
-    setEditingEvent(ev);
-    setDialogOpen(true);
-  }
-
-  function closeDialog() { setDialogOpen(false); setEditingEvent(null); setForm(emptyEvent); }
-
-  function saveEvent() {
-    if (!form.Title || !form.Date) return;
-    if (editingEvent) updateMutation.mutate({ id: editingEvent.id, data: form });
-    else createMutation.mutate(form);
-  }
-
   function openAvailability(ev) { setAvailEvent(ev); setAvailNote(''); setAvailDialogOpen(true); }
 
   const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -264,14 +214,13 @@ export default function TrainingCalendar() {
                 <Clock className="w-4 h-4 mr-2" />Opening Hours
               </Button>
             )}
-            {canEdit && (
-              <Button onClick={() => openCreate(new Date())}>
-                <Plus className="w-4 h-4 mr-2" />New Event
-              </Button>
-            )}
           </div>
         }
       />
+
+      <p className="text-xs text-muted-foreground -mt-3 mb-4">
+        This calendar is a read-only view generated from the Training Plan. To create or edit events, use the Training Plan page.
+      </p>
 
       {/* Opening hours summary strip */}
       {openDays.length > 0 && (
@@ -327,8 +276,7 @@ export default function TrainingCalendar() {
               return (
                 <div
                   key={day.toISOString()}
-                  className={`bg-card min-h-20 p-1 cursor-pointer hover:bg-muted/30 transition-colors ${!inMonth ? 'opacity-40' : ''}`}
-                  onClick={() => canEdit && openCreate(day)}
+                  className={`bg-card min-h-20 p-1 transition-colors ${!inMonth ? 'opacity-40' : ''}`}
                 >
                   <div className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>
                     {format(day, 'd')}
@@ -344,7 +292,7 @@ export default function TrainingCalendar() {
                           onClick={(e) => {
                             e.stopPropagation();
                             if (ev.IsTrainingNight) { setNightPanelEvent(ev); }
-                            else if (canEdit) { openEdit(ev); }
+                            else if (canEdit) { setAttendeeManagerEvent(ev); }
                             else { openAvailability(ev); }
                           }}
                           title={compIcon?.title}
@@ -414,10 +362,9 @@ export default function TrainingCalendar() {
                         </Button>
                       )}
                       {canEdit && (
-                        <>
-                          <Button size="icon" variant="ghost" onClick={() => openEdit(ev)}><Pencil className="w-3.5 h-3.5" /></Button>
-                          <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteMutation.mutate(ev.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                        </>
+                        <Button size="sm" variant="outline" onClick={() => setAttendeeManagerEvent(ev)}>
+                          <Users className="w-3.5 h-3.5 mr-1" />Attendees
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -436,67 +383,13 @@ export default function TrainingCalendar() {
           })}
       </div>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(v) => { if (!v) closeDialog(); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{editingEvent ? 'Edit Event' : 'New Event'}</DialogTitle></DialogHeader>
-          <div className="space-y-3 mt-2">
-            <div>
-              <Label>Title</Label>
-              <Input value={form.Title} onChange={e => setForm(p => ({ ...p, Title: e.target.value }))} placeholder="Event title" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Date</Label>
-                <Input type="date" value={form.Date} onChange={e => setForm(p => ({ ...p, Date: e.target.value }))} />
-              </div>
-              <div>
-                <Label>End Date (optional)</Label>
-                <Input type="date" value={form.EndDate} onChange={e => setForm(p => ({ ...p, EndDate: e.target.value }))} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Type</Label>
-                <Select value={form.EventType} onValueChange={v => setForm(p => ({ ...p, EventType: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {['Training Night','Camp','Competition','Admin','Other'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Location</Label>
-                <Input value={form.Location} onChange={e => setForm(p => ({ ...p, Location: e.target.value }))} placeholder="Location" />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox id="isTraining" checked={form.IsTrainingNight} onCheckedChange={v => setForm(p => ({ ...p, IsTrainingNight: v }))} />
-              <Label htmlFor="isTraining">This is a Training Night (closes detachment)</Label>
-            </div>
-            {form.IsTrainingNight && (
-              <div>
-                <Label>Availability Submission Deadline</Label>
-                <Input type="date" value={form.AvailabilityDeadline} onChange={e => setForm(p => ({ ...p, AvailabilityDeadline: e.target.value }))} />
-              </div>
-            )}
-            <div className="flex items-center gap-3 p-2 rounded-lg border bg-muted/20">
-              <Checkbox id="staffOnly" checked={form.StaffOnly} onCheckedChange={v => setForm(p => ({ ...p, StaffOnly: v }))} />
-              <Label htmlFor="staffOnly" className="cursor-pointer">Staff only — hide from cadets (L0–L2)</Label>
-            </div>
-            <div>
-              <Label>Notes</Label>
-              <Textarea value={form.Notes} onChange={e => setForm(p => ({ ...p, Notes: e.target.value }))} rows={2} placeholder="Optional notes..." />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={closeDialog}>Cancel</Button>
-              <Button onClick={saveEvent} disabled={!form.Title || !form.Date}>
-                {editingEvent ? 'Update' : 'Create'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Attendee & Payment Manager */}
+      <EventAttendeeManager
+        event={attendeeManagerEvent}
+        open={!!attendeeManagerEvent}
+        onClose={() => setAttendeeManagerEvent(null)}
+        canEdit={canEdit}
+      />
 
       {/* Availability Dialog */}
       <Dialog open={availDialogOpen} onOpenChange={setAvailDialogOpen}>
