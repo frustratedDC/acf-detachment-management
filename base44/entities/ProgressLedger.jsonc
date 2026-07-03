@@ -27,6 +27,10 @@
     "InstructorPNumber": {
       "type": "string",
       "description": "PNumber of the submitting instructor"
+    },
+    "ActivityNotes": {
+      "type": "string",
+      "description": "Optional free-text description, used when this entry represents an ad-hoc activity rather than a formal syllabus lesson"
     }
   },
   "required": [

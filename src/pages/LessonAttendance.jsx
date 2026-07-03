@@ -11,10 +11,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileCheck, Send, Search, Users, Pencil, AlertTriangle, UserX, EyeOff, Eye } from 'lucide-react';
+import { FileCheck, Send, Search, Users, Pencil, AlertTriangle, UserX, EyeOff, Eye, ClipboardList } from 'lucide-react';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import QuickAssignModal from '@/components/attendance/QuickAssignModal';
 
 export default function LessonAttendance() {
   const { personnel: me } = usePersonnel();
@@ -27,6 +28,8 @@ export default function LessonAttendance() {
   const [changeRequestLesson, setChangeRequestLesson] = useState(null);
   const [changeRequestText, setChangeRequestText] = useState('');
   const [changeRequestReason, setChangeRequestReason] = useState('');
+  const [selectedUnassigned, setSelectedUnassigned] = useState([]);
+  const [quickAssignOpen, setQuickAssignOpen] = useState(false);
   const isL4 = (me?.AccessLevel ?? 0) >= ACCESS_LEVELS.DET_2IC;
 
   // L4+ see all lessons for the night; others see only their own
@@ -46,6 +49,12 @@ export default function LessonAttendance() {
   const { data: allPersonnel = [] } = useQuery({
     queryKey: ['all-personnel'],
     queryFn: () => base44.entities.PersonnelManager.filter({}),
+  });
+
+  const { data: syllabus = [] } = useQuery({
+    queryKey: ['syllabus-master'],
+    queryFn: () => base44.entities.SyllabusMaster.filter({}),
+    enabled: isL4,
   });
 
   const [activeLessonIdx, setActiveLessonIdx] = useState(0);
@@ -124,6 +133,27 @@ export default function LessonAttendance() {
     },
   });
 
+  const quickAssignMutation = useMutation({
+    mutationFn: async ({ lessonCode, notes }) => {
+      const isAutoApproved = (me?.AccessLevel ?? 0) >= ACCESS_LEVELS.DET_2IC;
+      const records = selectedUnassigned.map(pnum => ({
+        CadetPNumber: pnum,
+        LessonCode: lessonCode,
+        Status: isAutoApproved ? 'Approved' : 'Pending',
+        CompletionDate: date,
+        InstructorPNumber: me.PNumber,
+        ActivityNotes: notes,
+      }));
+      await base44.entities.ProgressLedger.bulkCreate(records);
+    },
+    onSuccess: () => {
+      toast.success('Cadets assigned');
+      setSelectedUnassigned([]);
+      setQuickAssignOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['progress'] });
+    },
+  });
+
   const changeRequestMutation = useMutation({
     mutationFn: (data) => base44.entities.LessonChangeRequest.create(data),
     onSuccess: () => {
@@ -136,6 +166,12 @@ export default function LessonAttendance() {
 
   function toggleCadet(pnum) {
     setSelectedCadets(prev =>
+      prev.includes(pnum) ? prev.filter(p => p !== pnum) : [...prev, pnum]
+    );
+  }
+
+  function toggleUnassigned(pnum) {
+    setSelectedUnassigned(prev =>
       prev.includes(pnum) ? prev.filter(p => p !== pnum) : [...prev, pnum]
     );
   }
@@ -296,16 +332,32 @@ export default function LessonAttendance() {
               <AlertTriangle className="w-4 h-4" />
               Unassigned Present Cadets ({unassignedPresentCadets.length})
             </CardTitle>
-            <p className="text-xs text-muted-foreground">These cadets are present but their star level has no lesson scheduled tonight. DC/2IC action required.</p>
+            <p className="text-xs text-muted-foreground">These cadets are present but their star level has no lesson scheduled tonight. Select cadets and assign them below.</p>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
+            <div className="space-y-1 mb-3">
               {unassignedPresentCadets.map(c => (
-                <Badge key={c.PNumber} variant="outline" className="text-xs border-amber-400 text-amber-700">
-                  {[c.Rank, c.Surname].filter(Boolean).join(' ')} · {c.CurrentStarLevel}
-                </Badge>
+                <label key={c.PNumber} className="flex items-center gap-3 p-2 rounded-lg hover:bg-amber-100/40 cursor-pointer">
+                  <Checkbox
+                    checked={selectedUnassigned.includes(c.PNumber)}
+                    onCheckedChange={() => toggleUnassigned(c.PNumber)}
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{[c.Rank, c.Surname, c.FirstName].filter(Boolean).join(' ')}</p>
+                    <p className="text-xs text-muted-foreground">{c.PNumber}</p>
+                  </div>
+                  <Badge variant="outline" className="text-xs border-amber-400 text-amber-700">{c.CurrentStarLevel}</Badge>
+                </label>
               ))}
             </div>
+            <Button
+              size="sm"
+              disabled={selectedUnassigned.length === 0}
+              onClick={() => setQuickAssignOpen(true)}
+            >
+              <ClipboardList className="w-4 h-4 mr-2" />
+              Assign Selected ({selectedUnassigned.length})
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -379,6 +431,16 @@ export default function LessonAttendance() {
           )}
         </DialogContent>
       </Dialog>
+
+      <QuickAssignModal
+        open={quickAssignOpen}
+        onOpenChange={setQuickAssignOpen}
+        cadetCount={selectedUnassigned.length}
+        myLessons={myLessons}
+        syllabus={syllabus}
+        isPending={quickAssignMutation.isPending}
+        onConfirm={({ lessonCode, notes }) => quickAssignMutation.mutate({ lessonCode, notes })}
+      />
     </AccessGate>
   );
 }
