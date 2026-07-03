@@ -12,9 +12,10 @@ import { ACCESS_LEVELS, isCadet, isAdultInstructor } from '@/lib/accessLevels';
 import ConflictSidebar from './ConflictSidebar';
 import MarkCompleteButton from './MarkCompleteButton';
 
-const STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
+const STAR_LEVELS = ['Admin', 'Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
 
 const STAR_COLORS = {
+  'Admin':  'bg-slate-50 border-slate-200',
   'Basic':  'bg-emerald-50 border-emerald-200',
   '1 Star': 'bg-blue-50 border-blue-200',
   '2 Star': 'bg-purple-50 border-purple-200',
@@ -29,7 +30,7 @@ const SECTIONS = [
 ];
 
 // ─── Night card ───────────────────────────────────────────────────────────────
-function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, availability, isLocked, myPNumber, accessLevel }) {
+function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, availability, isLocked, myPNumber, accessLevel, dayNotes }) {
   const byStarLevel = _.groupBy(entries, 'AssignedStarLevel');
   const isUserCadet = isCadet(accessLevel);
   const isUserInstructor = isAdultInstructor(accessLevel) && accessLevel < ACCESS_LEVELS.DET_2IC;
@@ -85,6 +86,11 @@ function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, ava
       </CardHeader>
 
       <CardContent>
+        {dayNotes && (
+          <div className="mb-3 p-2 rounded-lg bg-accent/10 border border-accent/20 text-xs text-foreground italic">
+            {dayNotes}
+          </div>
+        )}
         {visibleStars.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">No lessons recorded.</p>
         ) : (
@@ -150,7 +156,7 @@ function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, ava
 }
 
 // ─── Month block ──────────────────────────────────────────────────────────────
-function MonthBlock({ monthKey, dates, groupedByDate, canEdit, onEdit, onDelete, personnelMap, availability, lockedMonths, myPNumber, accessLevel }) {
+function MonthBlock({ monthKey, dates, groupedByDate, canEdit, onEdit, onDelete, personnelMap, availability, lockedMonths, myPNumber, accessLevel, eventsByDate }) {
   const [collapsed, setCollapsed] = useState(false);
   const monthStr = dates[0]?.slice(0, 7);
   const isLocked = lockedMonths.has(monthStr);
@@ -184,6 +190,7 @@ function MonthBlock({ monthKey, dates, groupedByDate, canEdit, onEdit, onDelete,
               isLocked={isLocked}
               myPNumber={myPNumber}
               accessLevel={accessLevel}
+              dayNotes={eventsByDate[date]?.Notes}
             />
           ))}
         </div>
@@ -202,11 +209,20 @@ export default function ScheduleView({ schedule, isLoading, canEdit, onEdit, onD
     queryFn: () => base44.entities.PersonnelManager.filter({}),
   });
 
+  const { data: trainingNightEvents = [] } = useQuery({
+    queryKey: ['calendar-events-training-nights'],
+    queryFn: () => base44.entities.CalendarEvent.filter({ IsTrainingNight: true }),
+  });
+
   const { availability } = useAvailability();
 
   const personnelMap = useMemo(() => {
     const m = {}; allPersonnel.forEach(p => { m[p.PNumber] = p; }); return m;
   }, [allPersonnel]);
+
+  const eventsByDate = useMemo(() => {
+    const m = {}; trainingNightEvents.forEach(ev => { m[ev.Date] = ev; }); return m;
+  }, [trainingNightEvents]);
 
   // Build set of locked month strings (YYYY-MM)
   const lockedMonths = useMemo(() => {
@@ -317,6 +333,7 @@ export default function ScheduleView({ schedule, isLoading, canEdit, onEdit, onD
                       lockedMonths={lockedMonths}
                       myPNumber={myPNumber}
                       accessLevel={accessLevel}
+                      eventsByDate={eventsByDate}
                     />
                   ))}
                 </div>

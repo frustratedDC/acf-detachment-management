@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { subMonths, parseISO, subDays, format as dateFnsFormat } from 'date-fns';
 
-const STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
+const STAR_LEVELS = ['Admin', 'Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
 const PERIODS = [1, 2];
 
 const emptyEntry = () => ({
@@ -73,7 +73,8 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
   const queryClient = useQueryClient();
   const [formDate, setFormDate] = useState(date);
   const [entries, setEntries] = useState({});
-  const [expandedStars, setExpandedStars] = useState({ 'Basic': true, '1 Star': true, '2 Star': true, '3 Star': false, '4 Star': false });
+  const [expandedStars, setExpandedStars] = useState({ 'Admin': false, 'Basic': true, '1 Star': true, '2 Star': true, '3 Star': false, '4 Star': false });
+  const [dayNotes, setDayNotes] = useState('');
 
   const { data: instructors = [] } = useQuery({
     queryKey: ['instructors'],
@@ -107,6 +108,15 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
     queryKey: ['all-syllabus'],
     queryFn: () => base44.entities.SyllabusMaster.filter({}),
   });
+
+  const { data: dayEvents = [] } = useQuery({
+    queryKey: ['calendar-event-date', formDate],
+    queryFn: () => base44.entities.CalendarEvent.filter({ Date: formDate, IsTrainingNight: true }),
+  });
+
+  useEffect(() => {
+    setDayNotes(dayEvents[0]?.Notes || '');
+  }, [dayEvents]);
 
   useEffect(() => {
     const map = {};
@@ -184,8 +194,10 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
         if (linkedEvents.length === 0) {
           await base44.entities.CalendarEvent.create({
             Title: 'Training Night', Date: formDate, EventType: 'Training Night',
-            IsTrainingNight: true, GeneratedFromPlan: true,
+            IsTrainingNight: true, GeneratedFromPlan: true, Notes: dayNotes,
           });
+        } else {
+          await base44.entities.CalendarEvent.update(linkedEvents[0].id, { Notes: dayNotes });
         }
       } else {
         for (const ev of linkedEvents) {
@@ -196,6 +208,7 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
     onSuccess: () => {
       toast.success('Schedule saved');
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar-event-date', formDate] });
       onSaved();
     },
   });
@@ -220,6 +233,17 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
       <CardContent>
         {/* Recent days summary */}
         <RecentDaysSummary schedule={recentSchedule} personnel={allPersonnel} formDate={formDate} />
+
+        {/* Day-level notes */}
+        <div className="mb-4">
+          <Label className="text-xs">Day Notes</Label>
+          <textarea
+            value={dayNotes}
+            onChange={(e) => setDayNotes(e.target.value)}
+            placeholder="Notes for this training night (visible to instructors)"
+            className="mt-1 w-full text-sm rounded-md border border-input bg-transparent px-3 py-2 shadow-sm min-h-[60px]"
+          />
+        </div>
 
         {/* Star level sections — collapsible */}
         <div className="space-y-2">

@@ -30,6 +30,7 @@
     "AssignedStarLevel": {
       "type": "string",
       "enum": [
+        "Admin",
         "Basic",
         "1 Star",
         "2 Star",

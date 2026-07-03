@@ -1,0 +1,39 @@
+{
+  "name": "DetachmentSettings",
+  "type": "object",
+  "properties": {
+    "Key": {
+      "type": "string",
+      "description": "Setting identifier, e.g. detachment_name"
+    },
+    "Value": {
+      "type": "string",
+      "description": "Setting value"
+    },
+    "Description": {
+      "type": "string",
+      "description": "Human-readable description of what this setting controls"
+    }
+  },
+  "required": [
+    "Key"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

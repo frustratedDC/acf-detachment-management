@@ -17,8 +17,9 @@ import { toast } from 'sonner';
 import { ACCESS_LEVELS, isAdultInstructor } from '@/lib/accessLevels';
 import { sortLessons } from '@/lib/lessonSort';
 
-const STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
+const STAR_LEVELS = ['Admin', 'Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
 const STAR_COLORS = {
+  'Admin': 'bg-slate-500 text-white',
   'Basic': 'bg-emerald-900 text-white',
   '1 Star': 'bg-emerald-600 text-white',
   '2 Star': 'bg-blue-500 text-white',
@@ -113,6 +114,33 @@ export default function TrainingPlanGenerator() {
     return monthData.IsLocked === false && monthData.IsArchived === false;
   }
 
+  const lessonsByLevel = useMemo(() => {
+    const byLevel = {};
+    selectedLevels.forEach(sl => {
+      const all = syllabus.filter(l => l.StarLevel === sl && (!mandatoryOnly || l.IsMandatory));
+      const mandatory = sortLessons(all.filter(l => l.IsMandatory));
+      const optional = sortLessons(all.filter(l => !l.IsMandatory));
+      byLevel[sl] = [...mandatory, ...optional];
+    });
+    return byLevel;
+  }, [syllabus, selectedLevels, mandatoryOnly]);
+
+  const plan = useMemo(() => {
+    if (!generated) return [];
+    return generatePlan(trainingNights, lessonsByLevel);
+  }, [generated, trainingNights, lessonsByLevel]);
+
+  // Group plan by month for overview (must be computed before monthsByType uses it)
+  const planByMonth = useMemo(() => {
+    const months = {};
+    plan.forEach(night => {
+      const m = format(parseISO(night.date), 'MMMM yyyy');
+      if (!months[m]) months[m] = [];
+      months[m].push(night);
+    });
+    return months;
+  }, [plan]);
+
   // Split months into current/upcoming and archived
   const monthsByType = useMemo(() => {
     if (!generated) return { current: {}, archived: {} };
@@ -130,22 +158,6 @@ export default function TrainingPlanGenerator() {
     return { current, archived };
   }, [generated, planByMonth, monthsMap]);
 
-  const lessonsByLevel = useMemo(() => {
-    const byLevel = {};
-    selectedLevels.forEach(sl => {
-      const all = syllabus.filter(l => l.StarLevel === sl && (!mandatoryOnly || l.IsMandatory));
-      const mandatory = sortLessons(all.filter(l => l.IsMandatory));
-      const optional = sortLessons(all.filter(l => !l.IsMandatory));
-      byLevel[sl] = [...mandatory, ...optional];
-    });
-    return byLevel;
-  }, [syllabus, selectedLevels, mandatoryOnly]);
-
-  const plan = useMemo(() => {
-    if (!generated) return [];
-    return generatePlan(trainingNights, lessonsByLevel);
-  }, [generated, trainingNights, lessonsByLevel]);
-
   function toggleLevel(sl) {
     setSelectedLevels(prev => prev.includes(sl) ? prev.filter(l => l !== sl) : [...prev, sl]);
     setGenerated(false);
@@ -153,17 +165,6 @@ export default function TrainingPlanGenerator() {
 
   const totalLessons = Object.values(lessonsByLevel).reduce((s, l) => s + l.length, 0);
   const cycleNights = selectedLevels.length > 0 ? Math.ceil(Math.max(...selectedLevels.map(sl => (lessonsByLevel[sl]?.length || 0))) / 2) : 0;
-
-  // Group plan by month for overview
-  const planByMonth = useMemo(() => {
-    const months = {};
-    plan.forEach(night => {
-      const m = format(parseISO(night.date), 'MMMM yyyy');
-      if (!months[m]) months[m] = [];
-      months[m].push(night);
-    });
-    return months;
-  }, [plan]);
 
   return (
     <AccessGate level={ACCESS_LEVELS.DET_2IC}>
