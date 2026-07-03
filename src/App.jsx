@@ -52,6 +52,10 @@ import CommunityEngagement from '@/pages/CommunityEngagement';
 import InstructorEngagement from '@/pages/InstructorEngagement';
 import MonthlyReports from '@/pages/MonthlyReports';
 import MyLogbooks from '@/pages/MyLogbooks';
+import ConflictMonitor from '@/pages/ConflictMonitor';
+import AuditLog from '@/pages/AuditLog';
+import DutyRoster from '@/pages/DutyRoster';
+import InstructorPerformance from '@/pages/InstructorPerformance';
 
 const AppContent = () => {
   const { personnel, loading } = usePersonnel();
@@ -107,6 +111,10 @@ const AppContent = () => {
         <Route path="/instructor-engagement" element={<InstructorEngagement />} />
         <Route path="/monthly-reports" element={<MonthlyReports />} />
         <Route path="/my-logbooks" element={<MyLogbooks />} />
+        <Route path="/conflict-monitor" element={<ConflictMonitor />} />
+        <Route path="/audit-log" element={<AuditLog />} />
+        <Route path="/duty-roster" element={<DutyRoster />} />
+        <Route path="/instructor-performance" element={<InstructorPerformance />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

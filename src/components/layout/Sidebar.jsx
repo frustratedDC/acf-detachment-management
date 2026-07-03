@@ -10,7 +10,7 @@ import {
   CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, TrendingUp, FolderOpen,
   AlertCircle, Shirt, HeartHandshake, FileText, BookMarked,
   Star, Layers, UserCheck, Swords, Eye, ClipboardPen, UserCog,
-  UsersRound, BadgeCheck, MapPin, Cog, Plus
+  UsersRound, BadgeCheck, MapPin, Cog, Plus, Crosshair as CrosshairIcon
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -92,6 +92,7 @@ const NAV_GROUPS = [
       { path: '/personal-syllabus',    label: 'Ad-Hoc Syllabus',      icon: BookOpenCheck,  level: 4 },
       { path: '/plan-generator',       label: 'AI Plan Generator',    icon: Wand2,          level: 3 },
       { path: '/training-plan-export', label: 'Export PDF',           icon: FileDown,       level: 3 },
+      { path: '/conflict-monitor',     label: 'Conflict Monitor',     icon: CrosshairIcon,  level: 4 },
     ],
   },
 
@@ -102,6 +103,8 @@ const NAV_GROUPS = [
     items: [
       { path: '/analytics',       label: 'Analytics',            icon: BarChart2,  level: 4 },
       { path: '/monthly-reports', label: 'Monthly Reports',      icon: FileText,   level: 4 },
+      { path: '/duty-roster',     label: 'Duty Roster',          icon: ClipboardPen, level: 4 },
+      { path: '/instructor-performance', label: 'Instructor Performance', icon: TrendingUp, level: 4 },
       { path: '/forms-resources', label: 'Forms & Resources (Mgmt)', icon: FolderOpen, level: 4 },
     ],
   },
@@ -112,6 +115,7 @@ const NAV_GROUPS = [
     icon: Settings,
     items: [
       { path: '/admin', label: 'Global Settings', icon: Settings, level: 6 },
+      { path: '/audit-log', label: 'System Audit Log', icon: ShieldCheck, level: 6 },
     ],
   },
 ];
