@@ -74,9 +74,6 @@ const NAV_GROUPS = [
       { path: '/instructor-quals',   label: 'CFAV Qualifications', icon: BadgeCheck,    level: 3 },
       { path: '/all-availability',   label: 'CFAV Availability',   icon: CalendarCheck, level: 3 },
       { path: '/instructor-engagement', label: 'Engagement Log',   icon: Swords,        level: 5 },
-      { path: '/my-availability',    label: 'My Availability',     icon: CalendarCheck, level: 3, adultOnly: true },
-      { path: '/my-qualifications',  label: 'My Qualifications',   icon: BadgeCheck,    level: 3, adultOnly: true },
-      { path: '/my-governance',      label: 'My Governance',       icon: ShieldCheck,   level: 3, adultOnly: true },
     ],
   },
 
