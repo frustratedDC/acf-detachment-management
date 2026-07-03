@@ -151,7 +151,7 @@ export default function AllAvailability() {
           <CardContent>
             <div className="space-y-2">
               {rosterForDate
-                .filter(r => !isInstructor || r.PNumber === me?.PNumber)
+                .filter(r => !isInstructor || me?.AccessLevel >= ACCESS_LEVELS.DET_2IC || r.PNumber === me?.PNumber)
                 .map(entry => (
                 <div key={entry.PNumber} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                   <div className="flex-1">
