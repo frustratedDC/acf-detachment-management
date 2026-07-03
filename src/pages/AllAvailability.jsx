@@ -11,7 +11,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { CalendarCheck, Plus, Trash2, Loader2 } from 'lucide-react';
+import { CalendarCheck, Plus, Trash2, Loader2, Pencil } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, isAdultInstructor } from '@/lib/accessLevels';
@@ -25,6 +32,10 @@ export default function AllAvailability() {
   const [newInstructor, setNewInstructor] = useState('');
   const [newStatus, setNewStatus] = useState('Available');
   const [newReason, setNewReason] = useState('');
+
+  const [editRecord, setEditRecord] = useState(null);
+  const [editStatus, setEditStatus] = useState('Available');
+  const [editReason, setEditReason] = useState('');
 
   // Unified availability — merges new InstructorAvailability + legacy StaffAvailability
   const { availability } = useAvailability();
@@ -87,6 +98,27 @@ export default function AllAvailability() {
     },
     onError: (err) => toast.error(err.message),
   });
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      await base44.entities.InstructorAvailability.update(editRecord.id, {
+        Status: editStatus,
+        Reason: editStatus === 'Unavailable' ? editReason : '',
+      });
+    },
+    onSuccess: () => {
+      toast.success('Availability updated');
+      queryClient.invalidateQueries({ queryKey: ['instructor-availability'] });
+      setEditRecord(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const openEdit = (record) => {
+    setEditRecord(record);
+    setEditStatus(record.Status);
+    setEditReason(record.Reason || '');
+  };
 
   // Group by date
   const groupedByDate = useMemo(() => {
@@ -206,14 +238,23 @@ export default function AllAvailability() {
                           </div>
                         </div>
                         {!isInstructor && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => deleteMutation.mutate(record.id)}
-                            disabled={deleteMutation.isPending}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openEdit(record)}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => deleteMutation.mutate(record.id)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                            </Button>
+                          </div>
                         )}
                       </div>
                     ))}
@@ -223,6 +264,50 @@ export default function AllAvailability() {
             ))}
         </div>
       )}
+
+      <Dialog open={!!editRecord} onOpenChange={(open) => !open && setEditRecord(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Availability</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs mb-1 block">Status</Label>
+              <Select value={editStatus} onValueChange={setEditStatus}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Available">Available</SelectItem>
+                  <SelectItem value="Unavailable">Unavailable</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {editStatus === 'Unavailable' && (
+              <div>
+                <Label className="text-xs mb-1 block">Reason</Label>
+                <Input
+                  type="text"
+                  placeholder="e.g. Training, Sick"
+                  value={editReason}
+                  onChange={e => setEditReason(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              size="sm"
+              onClick={() => updateMutation.mutate()}
+              disabled={updateMutation.isPending}
+            >
+              {updateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AccessGate>
   );
 }
