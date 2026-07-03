@@ -10,10 +10,11 @@ import {
   CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, TrendingUp, FolderOpen,
   AlertCircle, Shirt, HeartHandshake, FileText, BookMarked,
   Star, Layers, UserCheck, Swords, Eye, ClipboardPen, UserCog,
-  UsersRound, BadgeCheck, MapPin, Cog
+  UsersRound, BadgeCheck, MapPin, Cog, Plus
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
+import { useTaskModal } from '@/lib/TaskModalContext';
 
 // ── Navigation structure ───────────────────────────────────────────────────────
 // Each group optionally has `separator: true` to render a section divider above it.
@@ -126,6 +127,7 @@ const HELP_ITEM = { path: '/help', label: 'Help & Wiki', icon: HelpCircle };
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
   const location = useLocation();
   const { personnel } = usePersonnel();
+  const { openTaskModal } = useTaskModal();
   const accessLevel = personnel?.AccessLevel ?? 0;
   const isAdult = isAdultInstructor(accessLevel);
 
@@ -290,6 +292,18 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
 
       {/* User footer */}
       <div className="p-2 border-t border-white/10 shrink-0">
+        <button
+          onClick={openTaskModal}
+          className={cn(
+            "w-full flex items-center gap-2.5 px-2.5 py-1.5 mb-1.5 rounded-md text-xs font-semibold transition-colors",
+            collapsed ? "justify-center" : ""
+          )}
+          style={{ background: '#D4AF37', color: '#1A1A1A' }}
+          title="Add To-Do"
+        >
+          <Plus className="w-3.5 h-3.5 shrink-0" />
+          {!collapsed && <span>Add To-Do</span>}
+        </button>
         {!collapsed && personnel && (
           <div className="mb-1.5 px-1">
             <p className="text-xs font-semibold truncate" style={{ color: '#D4AF37' }}>

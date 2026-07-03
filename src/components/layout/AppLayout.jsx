@@ -5,11 +5,14 @@ import { cn } from '@/lib/utils';
 import { usePersonnel } from '@/lib/usePersonnel';
 import { Menu, Eye, X } from 'lucide-react';
 import AttentionBadge from './AttentionBadge';
+import AddTaskModal from '@/components/shared/AddTaskModal';
+import { useTaskModal } from '@/lib/TaskModalContext';
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { viewAs, setViewAs } = usePersonnel();
+  const { open: taskModalOpen, closeTaskModal } = useTaskModal();
 
   return (
     <div className="min-h-screen bg-background">
@@ -86,6 +89,8 @@ export default function AppLayout() {
           <Outlet />
         </div>
       </main>
+
+      <AddTaskModal open={taskModalOpen} onOpenChange={(v) => !v && closeTaskModal()} />
     </div>
   );
 }

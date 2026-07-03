@@ -16,6 +16,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import MyInspections from '@/components/dashboard/MyInspections';
 import KADashboardWidget from '@/components/dashboard/KADashboardWidget';
+import MyToDoWidget from '@/components/dashboard/MyToDoWidget';
 
 const PRIORITY_COLORS = {
   Urgent: 'border-l-4 border-destructive bg-destructive/5',
@@ -370,6 +371,8 @@ export default function Dashboard() {
 
         {/* Right column — Notices + Upcoming Events */}
         <div className="space-y-4">
+          <MyToDoWidget />
+
           {/* Important Notices */}
           <Card>
             <CardHeader className="pb-3">

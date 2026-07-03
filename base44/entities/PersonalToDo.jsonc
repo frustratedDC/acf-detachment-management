@@ -1,0 +1,50 @@
+{
+  "name": "PersonalToDo",
+  "type": "object",
+  "properties": {
+    "Title": {
+      "type": "string"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "Priority": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Medium",
+        "High"
+      ],
+      "default": "Medium"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Open",
+        "Done"
+      ],
+      "default": "Open"
+    },
+    "OwnerPNumber": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "Title",
+    "OwnerPNumber"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

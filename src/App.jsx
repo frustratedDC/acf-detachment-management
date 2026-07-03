@@ -6,6 +6,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { PersonnelProvider, usePersonnel } from '@/lib/usePersonnel';
+import { TaskModalProvider } from '@/lib/TaskModalContext';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -135,7 +136,9 @@ const AuthenticatedApp = () => {
 
   return (
     <PersonnelProvider>
-      <AppContent />
+      <TaskModalProvider>
+        <AppContent />
+      </TaskModalProvider>
     </PersonnelProvider>
   );
 };
