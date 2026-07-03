@@ -51,8 +51,8 @@ export default function PersonalSyllabus() {
   return (
     <div>
       <PageHeader
-        title="My Syllabus"
-        description="Your personal lesson additions"
+        title="Ad-Hoc Syllabus"
+        description="Additional lessons outside the master syllabus"
         icon={BookOpenCheck}
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
