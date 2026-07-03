@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
       cadetParade,         // DailyParadeState: cadet attendance (UserPNumber)
       instructorLedger,    // InstructorAttendanceLedger: instructor attendance (InstructorPNumber)
       qualifications,
-      trainingHistory,     // TrainingHistory: has SubjectName for breakdown
+      syllabusMaster,      // SyllabusMaster: LessonCode -> SubjectName lookup for breakdown
       progressLedger,      // ProgressLedger: lesson approvals (CompletionDate)
       nightlySchedule,     // NightlySchedule: source of truth for expected training nights
     ] = await Promise.all([
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       base44.asServiceRole.entities.DailyParadeState.filter({}),
       base44.asServiceRole.entities.InstructorAttendanceLedger.filter({}),
       base44.asServiceRole.entities.QualificationMatrix.filter({}),
-      base44.asServiceRole.entities.TrainingHistory.filter({}),
+      base44.asServiceRole.entities.SyllabusMaster.filter({}),
       base44.asServiceRole.entities.ProgressLedger.filter({}),
       base44.asServiceRole.entities.NightlySchedule.filter({}),
     ]);
@@ -76,21 +76,22 @@ Deno.serve(async (req) => {
       : 0;
     const instructorDataMissing = monthInstructorLedger.length === 0 && trainingNightCount > 0;
 
-    // --- SUBJECT BREAKDOWN (TrainingHistory has SubjectName) ---
-    const monthTrainingHistory = trainingHistory.filter(
-      t => t.CompletionDate >= startDate && t.CompletionDate <= endDate && t.Status === 'Approved'
+    // --- LESSONS APPROVED + SUBJECT BREAKDOWN (ProgressLedger, joined to SyllabusMaster for SubjectName) ---
+    const lessonCodeToSubject = {};
+    syllabusMaster.forEach(l => { lessonCodeToSubject[l.LessonCode] = l.SubjectName; });
+
+    const monthApprovedProgress = progressLedger.filter(
+      p => p.CompletionDate >= startDate && p.CompletionDate <= endDate && p.Status === 'Approved'
     );
+    const lessonsApproved = monthApprovedProgress.length;
+
     const subjectBreakdown = {};
-    monthTrainingHistory.forEach(t => {
-      if (t.SubjectName) {
-        subjectBreakdown[t.SubjectName] = (subjectBreakdown[t.SubjectName] || 0) + 1;
+    monthApprovedProgress.forEach(p => {
+      const subject = lessonCodeToSubject[p.LessonCode];
+      if (subject) {
+        subjectBreakdown[subject] = (subjectBreakdown[subject] || 0) + 1;
       }
     });
-
-    // --- LESSONS APPROVED (ProgressLedger, filter by CompletionDate) ---
-    const lessonsApproved = progressLedger.filter(
-      p => p.CompletionDate >= startDate && p.CompletionDate <= endDate && p.Status === 'Approved'
-    ).length;
 
     // --- EXPIRING QUALIFICATIONS ---
     const expiringQuals = qualifications.filter(
