@@ -68,10 +68,18 @@ export default function Personnel() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.PersonnelManager.update(id, {
-      ...data,
-      AccessLevel: parseInt(data.AccessLevel)
-    }),
+    mutationFn: ({ id, data }) => {
+      const existing = personnel.find(p => p.id === id);
+      const statusChanged = data.PersonnelStatus && data.PersonnelStatus !== (existing?.PersonnelStatus || 'Active');
+      return base44.entities.PersonnelManager.update(id, {
+        ...data,
+        AccessLevel: parseInt(data.AccessLevel),
+        ...(statusChanged ? {
+          StatusChangedDate: new Date().toISOString().split('T')[0],
+          StatusChangedByPNumber: currentUser?.PNumber,
+        } : {}),
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
       toast.success('Personnel record updated');
