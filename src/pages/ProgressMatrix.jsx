@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Brain, Search } from 'lucide-react';
 import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
 import { sortLessons } from '@/lib/lessonSort';
@@ -16,6 +18,8 @@ import _ from 'lodash';
 export default function ProgressMatrix() {
   const [starFilter, setStarFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [showCompleted, setShowCompleted] = useState(true);
+  const [sortBy, setSortBy] = useState('surname');
 
   const { data: progress = [] } = useQuery({
     queryKey: ['progress-all'],
@@ -43,6 +47,22 @@ export default function ProgressMatrix() {
   const mandatoryLessons = sortLessons(syllabus.filter(l => l.IsMandatory));
   const approvedByUser = _.groupBy(progress.filter(p => p.Status === 'Approved'), 'CadetPNumber');
 
+  const cadetsWithProgress = cadets.map(cadet => {
+    const completed = approvedByUser[cadet.PNumber] || [];
+    const completedCodes = new Set(completed.map(c => c.LessonCode));
+    const relevantMandatory = mandatoryLessons.filter(l => l.StarLevel === cadet.CurrentStarLevel);
+    const completedCount = relevantMandatory.filter(l => completedCodes.has(l.LessonCode)).length;
+    const remaining = relevantMandatory.length - completedCount;
+    const pct = relevantMandatory.length > 0 ? Math.round((completedCount / relevantMandatory.length) * 100) : 0;
+    return { cadet, completedCodes, relevantMandatory, completedCount, remaining, pct };
+  });
+
+  const sortedCadets = _.orderBy(
+    cadetsWithProgress,
+    sortBy === 'surname' ? ['cadet.Surname'] : ['remaining'],
+    sortBy === 'remaining-desc' ? ['desc'] : ['asc']
+  );
+
   return (
     <AccessGate level={ACCESS_LEVELS.DET_INSTRUCTOR}>
       <PageHeader
@@ -64,6 +84,18 @@ export default function ProgressMatrix() {
                 <SelectItem value="Admin">Admin</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="surname">Sort: Surname</SelectItem>
+                <SelectItem value="remaining-asc">Qty Remaining: Low-High</SelectItem>
+                <SelectItem value="remaining-desc">Qty Remaining: High-Low</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-2">
+              <Switch id="show-completed" checked={showCompleted} onCheckedChange={setShowCompleted} />
+              <Label htmlFor="show-completed" className="text-sm whitespace-nowrap">Show Completed</Label>
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 w-48" />
@@ -72,18 +104,16 @@ export default function ProgressMatrix() {
         }
       />
 
-      {cadets.length === 0 ? (
+      {sortedCadets.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">No cadets found.</CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
-          {cadets.map(cadet => {
-            const completed = approvedByUser[cadet.PNumber] || [];
-            const completedCodes = new Set(completed.map(c => c.LessonCode));
-            const relevantMandatory = mandatoryLessons.filter(l => l.StarLevel === cadet.CurrentStarLevel);
-            const completedCount = relevantMandatory.filter(l => completedCodes.has(l.LessonCode)).length;
-            const pct = relevantMandatory.length > 0 ? Math.round((completedCount / relevantMandatory.length) * 100) : 0;
+          {sortedCadets.map(({ cadet, completedCodes, relevantMandatory, completedCount, pct }) => {
+            const lessonsToShow = showCompleted
+              ? relevantMandatory
+              : relevantMandatory.filter(l => !completedCodes.has(l.LessonCode));
 
             return (
               <Card key={cadet.PNumber}>
@@ -109,7 +139,11 @@ export default function ProgressMatrix() {
                     />
                   </div>
                   <div className="mt-4">
-                    <CadetTimeline lessons={relevantMandatory} completedCodes={completedCodes} />
+                    {lessonsToShow.length > 0 ? (
+                      <CadetTimeline lessons={lessonsToShow} completedCodes={completedCodes} />
+                    ) : (
+                      <p className="text-xs text-muted-foreground">All lessons completed.</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
