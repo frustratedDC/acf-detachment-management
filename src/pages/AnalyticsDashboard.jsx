@@ -7,55 +7,14 @@ import { getAuditInfo } from '@/lib/FeatureAuditLog';
 import AccessGate from '@/components/shared/AccessGate';
 import BriefingBar from '@/components/shared/BriefingBar';
 import PageHeader from '@/components/shared/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import MetricCard from '@/components/analytics/MetricCard';
 import {
   Users, AlertTriangle, Clock, ClipboardList, AlertCircle, BookOpen,
   Calendar, Zap, BarChart2, RefreshCw
 } from 'lucide-react';
 import { format, subDays, differenceInDays, parseISO } from 'date-fns';
 import { ACCESS_LEVELS, isCadet, isAdultInstructor } from '@/lib/accessLevels';
-
-const STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
-
-function getStatusColor(status) {
-  switch (status) {
-    case 'green':
-      return 'bg-chart-2/10 border-chart-2/30 text-chart-2';
-    case 'amber':
-      return 'bg-amber-100/30 border-amber-300/50 text-amber-700';
-    case 'red':
-      return 'bg-destructive/10 border-destructive/30 text-destructive';
-    default:
-      return 'bg-card border-border';
-  }
-}
-
-function MetricCard({ title, value, status = 'green', icon: Icon, onClick, details = [] }) {
-  return (
-    <Card className={`cursor-pointer border-2 transition-all hover:shadow-md ${getStatusColor(status)}`} onClick={onClick}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2">
-            {Icon && <Icon className="w-4 h-4" />}
-            <p className="text-xs font-semibold uppercase tracking-wide">{title}</p>
-          </div>
-          {status === 'amber' && <AlertTriangle className="w-4 h-4 flex-shrink-0" />}
-          {status === 'red' && <AlertCircle className="w-4 h-4 flex-shrink-0" />}
-        </div>
-        <p className="text-3xl font-bold mb-2">{value}</p>
-        {details.length > 0 && (
-          <div className="space-y-1 text-xs text-muted-foreground">
-            {details.map((d, i) => (
-              <p key={i}>{d}</p>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function AnalyticsDashboard() {
   const { personnel: me } = usePersonnel();
@@ -92,6 +51,16 @@ export default function AnalyticsDashboard() {
   const { data: calendarEvents = [] } = useQuery({
     queryKey: ['calendar-events'],
     queryFn: () => base44.entities.CalendarEvent.filter({}),
+  });
+
+  const { data: courseRequests = [] } = useQuery({
+    queryKey: ['course-requests-pending'],
+    queryFn: () => base44.entities.CourseRequest.filter({ Status: 'Pending' }),
+  });
+
+  const { data: issueReports = [] } = useQuery({
+    queryKey: ['issue-reports-open'],
+    queryFn: () => base44.entities.IssueReport.filter({}),
   });
 
   const today = new Date();
@@ -138,15 +107,21 @@ export default function AnalyticsDashboard() {
   const qualStatus = expiredQualifications.length > 0 ? 'red' : expiringQualifications.length > 0 ? 'amber' : 'green';
 
   // ROW 2: Pending Actions
-  const pendingApprovals = useMemo(() => {
-    // Placeholder for access requests, course requests, etc.
-    return 0;
-  }, []);
+  const openIssues = useMemo(() =>
+    issueReports.filter(i => i.Status === 'Open' || i.Status === 'In Progress'),
+    [issueReports]
+  );
+
+  const pendingApprovals = courseRequests.length + openIssues.length;
 
   const attendanceDiscrepancies = useMemo(() => {
-    // Instructors marked unavailable but showed up, or vice versa
-    return 0;
-  }, []);
+    // Instructors who no-showed or were late in the last 30 days
+    return instructorAttendance.filter(a =>
+      a.Date >= format(thirtyDaysAgo, 'yyyy-MM-dd') &&
+      a.AttendanceStatus === 'Absent' &&
+      (a.Reason === 'No-Show' || a.Reason === 'Late')
+    ).length;
+  }, [instructorAttendance, thirtyDaysAgo]);
 
   const expiredPolicies = useMemo(() => {
     return policies.filter(p => {
@@ -265,8 +240,8 @@ export default function AnalyticsDashboard() {
           value={pendingApprovals}
           status={pendingApprovals > 0 ? 'amber' : 'green'}
           icon={ClipboardList}
-          onClick={() => navigate('/tasks')}
-          details={['Course requests, CE hours']}
+          onClick={() => navigate('/course-request')}
+          details={[`${courseRequests.length} course requests`, `${openIssues.length} open issues`]}
         />
 
         <MetricCard
@@ -274,8 +249,8 @@ export default function AnalyticsDashboard() {
           value={attendanceDiscrepancies}
           status={attendanceDiscrepancies > 0 ? 'red' : 'green'}
           icon={AlertCircle}
-          onClick={() => navigate('/attendance')}
-          details={['Availability vs. actual']}
+          onClick={() => navigate('/instructor-engagement')}
+          details={['No-shows / late, last 30 days']}
         />
 
         <MetricCard
@@ -283,7 +258,7 @@ export default function AnalyticsDashboard() {
           value={expiredPolicies.length}
           status={governanceStatus}
           icon={BookOpen}
-          onClick={() => navigate('/cfav-governance')}
+          onClick={() => navigate('/my-governance')}
           details={[
             `${expiringPolicies.length} due soon`,
             `${expiredPolicies.length} overdue`,
