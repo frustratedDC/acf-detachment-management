@@ -10,7 +10,7 @@ import {
   CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, TrendingUp, FolderOpen,
   AlertCircle, Shirt, HeartHandshake, FileText, BookMarked,
   Star, Layers, UserCheck, Swords, Eye, ClipboardPen, UserCog,
-  UsersRound, BadgeCheck, MapPin, Cog, Plus, Crosshair as CrosshairIcon
+  UsersRound, BadgeCheck, MapPin, Cog, Plus, Crosshair as CrosshairIcon, ShoppingBag
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -106,6 +106,7 @@ const NAV_GROUPS = [
       { path: '/duty-roster',     label: 'Duty Roster',          icon: ClipboardPen, level: 4 },
       { path: '/instructor-performance', label: 'Instructor Performance', icon: TrendingUp, level: 4 },
       { path: '/forms-resources', label: 'Forms & Resources (Mgmt)', icon: FolderOpen, level: 4 },
+      { path: '/naafi-management', label: 'NAAFI Management', icon: ShoppingBag, level: 4 },
     ],
   },
 

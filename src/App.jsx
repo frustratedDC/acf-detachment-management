@@ -56,6 +56,7 @@ import ConflictMonitor from '@/pages/ConflictMonitor';
 import AuditLog from '@/pages/AuditLog';
 import DutyRoster from '@/pages/DutyRoster';
 import InstructorPerformance from '@/pages/InstructorPerformance';
+import NaafiManagement from '@/pages/NaafiManagement';
 
 const AppContent = () => {
   const { personnel, loading } = usePersonnel();
@@ -115,6 +116,7 @@ const AppContent = () => {
         <Route path="/audit-log" element={<AuditLog />} />
         <Route path="/duty-roster" element={<DutyRoster />} />
         <Route path="/instructor-performance" element={<InstructorPerformance />} />
+        <Route path="/naafi-management" element={<NaafiManagement />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

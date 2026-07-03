@@ -1,0 +1,55 @@
+{
+  "name": "NafiiStock",
+  "type": "object",
+  "properties": {
+    "ItemName": {
+      "type": "string",
+      "description": "Name of the item"
+    },
+    "Category": {
+      "type": "string",
+      "enum": [
+        "Drink",
+        "Snack",
+        "Other"
+      ],
+      "default": "Snack"
+    },
+    "Price": {
+      "type": "number",
+      "description": "Sale price per unit"
+    },
+    "QuantityInStock": {
+      "type": "number",
+      "default": 0,
+      "description": "Current stock level"
+    },
+    "LowStockThreshold": {
+      "type": "number",
+      "default": 5,
+      "description": "Quantity below which the item is flagged as low stock"
+    }
+  },
+  "required": [
+    "ItemName",
+    "Price"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

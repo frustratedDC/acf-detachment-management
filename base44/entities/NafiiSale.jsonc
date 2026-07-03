@@ -1,0 +1,60 @@
+{
+  "name": "NafiiSale",
+  "type": "object",
+  "properties": {
+    "ItemId": {
+      "type": "string",
+      "description": "ID of the NafiiStock item sold"
+    },
+    "ItemName": {
+      "type": "string",
+      "description": "Name of the item sold (snapshot)"
+    },
+    "Quantity": {
+      "type": "number",
+      "default": 1
+    },
+    "UnitPrice": {
+      "type": "number"
+    },
+    "TotalAmount": {
+      "type": "number"
+    },
+    "SoldByPNumber": {
+      "type": "string",
+      "description": "PNumber of the person who processed the sale"
+    },
+    "SaleDate": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "ItemId",
+    "ItemName",
+    "Quantity",
+    "TotalAmount"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
