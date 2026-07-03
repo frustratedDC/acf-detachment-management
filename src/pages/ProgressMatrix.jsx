@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Brain, Search, CheckCircle2, Clock } from 'lucide-react';
+import { Brain, Search } from 'lucide-react';
 import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
+import { sortLessons } from '@/lib/lessonSort';
+import CadetTimeline from '@/components/progress/CadetTimeline';
 import _ from 'lodash';
 
 export default function ProgressMatrix() {
@@ -38,7 +40,7 @@ export default function ProgressMatrix() {
     (p.Surname?.toLowerCase().includes(search.toLowerCase()) || p.PNumber?.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const mandatoryLessons = syllabus.filter(l => l.IsMandatory);
+  const mandatoryLessons = sortLessons(syllabus.filter(l => l.IsMandatory));
   const approvedByUser = _.groupBy(progress.filter(p => p.Status === 'Approved'), 'CadetPNumber');
 
   return (
@@ -106,24 +108,8 @@ export default function ProgressMatrix() {
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {relevantMandatory.map(lesson => (
-                      <span
-                        key={lesson.LessonCode}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
-                          completedCodes.has(lesson.LessonCode)
-                            ? 'bg-chart-2/10 text-chart-2'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        {completedCodes.has(lesson.LessonCode) ? (
-                          <CheckCircle2 className="w-3 h-3" />
-                        ) : (
-                          <Clock className="w-3 h-3" />
-                        )}
-                        {lesson.LessonCode}
-                      </span>
-                    ))}
+                  <div className="mt-4">
+                    <CadetTimeline lessons={relevantMandatory} completedCodes={completedCodes} />
                   </div>
                 </CardContent>
               </Card>
