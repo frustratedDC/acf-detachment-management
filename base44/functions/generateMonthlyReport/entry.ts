@@ -78,22 +78,27 @@ Deno.serve(async (req) => {
       : 0;
     const instructorDataMissing = monthInstructorLedger.length === 0 && trainingNightCount > 0;
 
-    // --- SUBJECTS COMPLETED (ProgressLedger, joined to SyllabusMaster for SubjectName) ---
-    const lessonCodeToSubject = {};
-    syllabusMaster.forEach(l => { lessonCodeToSubject[l.LessonCode] = l.SubjectName; });
+    // --- ASSESSMENTS (SUBJECT COMPLETIONS) COMPLETED, BROKEN DOWN BY STAR LEVEL ---
+    // Assessment lesson codes end in "-A##" (e.g. DRILL-A01). Only these count as subject completions.
+    const lessonCodeToInfo = {};
+    syllabusMaster.forEach(l => { lessonCodeToInfo[l.LessonCode] = l; });
 
     const monthApprovedProgress = progressLedger.filter(
       p => p.CompletionDate >= startDate && p.CompletionDate <= endDate && p.Status === 'Approved'
     );
 
-    const subjectBreakdown = {};
+    // Structure: { [StarLevel]: { [SubjectName]: count } }
+    const assessmentBreakdown = {};
+    let totalSubjectsCompleted = 0;
     monthApprovedProgress.forEach(p => {
-      const subject = lessonCodeToSubject[p.LessonCode];
-      if (subject) {
-        subjectBreakdown[subject] = (subjectBreakdown[subject] || 0) + 1;
-      }
+      if (!/-A\d+$/.test(p.LessonCode)) return;
+      const lessonInfo = lessonCodeToInfo[p.LessonCode];
+      if (!lessonInfo) return;
+      const { StarLevel, SubjectName } = lessonInfo;
+      if (!assessmentBreakdown[StarLevel]) assessmentBreakdown[StarLevel] = {};
+      assessmentBreakdown[StarLevel][SubjectName] = (assessmentBreakdown[StarLevel][SubjectName] || 0) + 1;
+      totalSubjectsCompleted += 1;
     });
-    const totalSubjectsCompleted = Object.values(subjectBreakdown).reduce((sum, c) => sum + c, 0);
 
     // --- EXPIRING QUALIFICATIONS ---
     const expiringQuals = qualifications.filter(
@@ -146,7 +151,7 @@ Deno.serve(async (req) => {
         attendanceRate: cadetAttendanceRate,
         present: cadetPresent,
         expectedAttendance: expectedCadetAttendance,
-        subjectBreakdown,
+        assessmentBreakdown,
         totalSubjectsCompleted,
       },
       adults: {

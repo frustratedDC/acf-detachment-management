@@ -144,8 +144,12 @@ export default function MonthlyReports() {
           ${Object.entries(data.cadets.rankBreakdown).map(([rank, count]) => `<tr><td>${rank}</td><td>${count}</td></tr>`).join('')}
         </table>
         <table>
-          <tr><th>Subject Completed</th><th>Qty</th></tr>
-          ${Object.entries(data.cadets.subjectBreakdown).map(([subject, count]) => `<tr><td>${subject}</td><td>${count}</td></tr>`).join('')}
+          <tr><th>Star Level</th><th>Subject</th><th>Assessments Completed</th></tr>
+          ${Object.entries(data.cadets.assessmentBreakdown).map(([starLevel, subjects]) =>
+            Object.entries(subjects).map(([subject, count], i) => `
+              <tr><td>${i === 0 ? starLevel : ''}</td><td>${subject}</td><td>${count}</td></tr>
+            `).join('')
+          ).join('')}
         </table>
       </div>
 
@@ -363,17 +367,29 @@ export default function MonthlyReports() {
                   ))}
                 </div>
 
-                {Object.keys(reportData.cadets.subjectBreakdown).length > 0 && (
+                {Object.keys(reportData.cadets.assessmentBreakdown).length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-muted-foreground mb-2">Subjects Completed</p>
-                    <div className="space-y-2">
-                      {Object.entries(reportData.cadets.subjectBreakdown).map(([subject, count]) => (
-                        <div key={subject} className="flex items-center justify-between">
-                          <span className="text-sm">{subject}</span>
-                          <Badge variant="secondary">{count} completed</Badge>
-                        </div>
-                      ))}
-                    </div>
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">Assessments Completed</p>
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-1 pr-2 font-semibold">Star Level</th>
+                          <th className="text-left py-1 pr-2 font-semibold">Subject</th>
+                          <th className="text-right py-1 font-semibold">Completed</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(reportData.cadets.assessmentBreakdown).map(([starLevel, subjects]) =>
+                          Object.entries(subjects).map(([subject, count], i) => (
+                            <tr key={`${starLevel}-${subject}`} className="border-b last:border-0">
+                              <td className="py-1 pr-2 text-muted-foreground">{i === 0 ? starLevel : ''}</td>
+                              <td className="py-1 pr-2">{subject}</td>
+                              <td className="py-1 text-right">{count}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
