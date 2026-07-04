@@ -10,7 +10,7 @@ import {
   CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, TrendingUp, FolderOpen,
   AlertCircle, Shirt, HeartHandshake, FileText, BookMarked,
   Star, Layers, UserCheck, Swords, Eye, ClipboardPen, UserCog,
-  UsersRound, BadgeCheck, MapPin, Cog, Plus, Crosshair as CrosshairIcon, ShoppingBag
+  UsersRound, BadgeCheck, MapPin, Cog, Plus, Crosshair as CrosshairIcon, ShoppingBag, UserPlus
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -55,6 +55,7 @@ const NAV_GROUPS = [
     separatorLabel: 'DETACHMENT MANAGEMENT',
     items: [
       { path: '/personnel',           label: 'Cadet Profiles',        icon: Users,         level: 4 },
+      { path: '/new-joiners',         label: 'New Joiners',           icon: UserPlus,      level: 4 },
       { path: '/progress',            label: 'Progress Matrix',       icon: Layers,        level: 3 },
       { path: '/promotion-readiness', label: 'Promotion Readiness',   icon: TrendingUp,    level: 3 },
       { path: '/wht',                 label: 'Cadet WHTs',            icon: Crosshair,     level: 2 },

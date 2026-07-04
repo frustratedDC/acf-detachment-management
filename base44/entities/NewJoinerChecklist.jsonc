@@ -1,0 +1,80 @@
+{
+  "name": "NewJoinerChecklist",
+  "type": "object",
+  "properties": {
+    "CadetPNumber": {
+      "type": "string",
+      "description": "PNumber of the New Joiner personnel record this checklist belongs to"
+    },
+    "InformalChatInvited": {
+      "type": "boolean",
+      "default": false,
+      "description": "Invited for an informal chat"
+    },
+    "InformalChatAttended": {
+      "type": "boolean",
+      "default": false,
+      "description": "Attended the informal chat"
+    },
+    "InductionInvited": {
+      "type": "boolean",
+      "default": false,
+      "description": "Invited to induction"
+    },
+    "InductionAttended": {
+      "type": "boolean",
+      "default": false,
+      "description": "Attended induction"
+    },
+    "OnboardedTrainingNights": {
+      "type": "boolean",
+      "default": false,
+      "description": "Started attending training nights and has been brought onto Cdt numbers for attendance tracking"
+    },
+    "UniformMeasured": {
+      "type": "boolean",
+      "default": false,
+      "description": "Measured for uniform and an Initial Indent uniform request has been logged"
+    },
+    "TrainingNightsCount": {
+      "type": "number",
+      "default": 0,
+      "description": "Automatically tracked count of training nights attended since being onboarded"
+    },
+    "SixTrainingNightsComplete": {
+      "type": "boolean",
+      "default": false,
+      "description": "True once the cadet has attended 6 training nights (auto-set, can be manually overridden)"
+    },
+    "UniformIssued": {
+      "type": "boolean",
+      "default": false,
+      "description": "Uniform has been issued to the New Joiner"
+    }
+  },
+  "required": [
+    "CadetPNumber"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

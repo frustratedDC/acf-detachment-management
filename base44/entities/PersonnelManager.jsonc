@@ -38,6 +38,7 @@
     "CurrentStarLevel": {
       "type": "string",
       "enum": [
+        "New Joiner",
         "Basic",
         "1 Star",
         "2 Star",
@@ -46,7 +47,7 @@
         "Adult",
         "Admin"
       ],
-      "description": "Current star level. 'Adult' is auto-assigned to Adult Instructors and excluded from cadet progression. 'Admin' is for system administrators."
+      "description": "Current star level. 'New Joiner' is a civilian applicant not yet enrolled onto Cadet numbers. 'Adult' is auto-assigned to Adult Instructors and excluded from cadet progression. 'Admin' is for system administrators."
     },
     "PromotionDate": {
       "type": "string",
@@ -57,6 +58,11 @@
       "type": "string",
       "format": "date",
       "description": "Date this person joined the unit/detachment"
+    },
+    "IsTransferee": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if this New Joiner is transferring in from another detachment, rather than a brand new applicant"
     },
     "PersonnelStatus": {
       "type": "string",

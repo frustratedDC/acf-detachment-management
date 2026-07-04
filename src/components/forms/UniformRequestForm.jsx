@@ -21,8 +21,9 @@ const SIZING_FIELDS = [
   { key: 'BootSize', label: 'Boot Size', placeholder: 'e.g. 8 or 42', unit: '' },
 ];
 
-export default function UniformRequestForm({ open, onClose }) {
-  const { personnel } = usePersonnel();
+export default function UniformRequestForm({ open, onClose, targetPersonnel }) {
+  const { personnel: loggedInPersonnel } = usePersonnel();
+  const personnel = targetPersonnel || loggedInPersonnel;
   const [requestType, setRequestType] = useState(null); // 'indent' | 'exchange'
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);

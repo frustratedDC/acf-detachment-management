@@ -60,6 +60,7 @@ import InstructorPerformance from '@/pages/InstructorPerformance';
 import NaafiManagement from '@/pages/NaafiManagement';
 import LogicDashboard from '@/pages/LogicDashboard';
 import PromotionReadiness from '@/pages/PromotionReadiness';
+import NewJoiners from '@/pages/NewJoiners';
 
 const AppContent = () => {
   const { personnel, loading } = usePersonnel();
@@ -123,6 +124,7 @@ const AppContent = () => {
         <Route path="/naafi-management" element={<NaafiManagement />} />
         <Route path="/logic-dashboard" element={<LogicDashboard />} />
         <Route path="/promotion-readiness" element={<PromotionReadiness />} />
+        <Route path="/new-joiners" element={<NewJoiners />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
