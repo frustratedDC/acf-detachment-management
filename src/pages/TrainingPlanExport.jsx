@@ -108,27 +108,30 @@ export default function TrainingPlanExport() {
   }
 
   // ── Draw a single lesson entry block within a column ────────────────────
-  function drawEntry(doc, x, y, w, row) {
+  function drawEntry(doc, x, y, w, row, scale = 1, measureOnly = false) {
     const lines = [];
     if (row) {
-      lines.push({ text: row.AssignedStarLevel, bold: true, color: PALETTE.gold.map((v, i) => Math.round(v * 0.55)), size: 7.5 });
-      lines.push({ text: `${row.SubjectName || row.LessonCode || 'Subject TBC'}`, bold: true, color: PALETTE.green, size: 8.5 });
-      lines.push({ text: row.LessonName || 'Untitled Lesson', bold: false, color: [40, 40, 40], size: 7.5 });
+      lines.push({ text: row.AssignedStarLevel, bold: true, color: PALETTE.gold.map((v, i) => Math.round(v * 0.55)), size: 7.5 * scale });
+      lines.push({ text: `${row.SubjectName || row.LessonCode || 'Subject TBC'}`, bold: true, color: PALETTE.green, size: 8.5 * scale });
+      lines.push({ text: row.LessonName || 'Untitled Lesson', bold: false, color: [40, 40, 40], size: 7.5 * scale });
       const instr = `Instructor: ${getInstructorDisplay(row.InstructorPNumber)}${row.Instructor2PNumber ? '  /  ' + getInstructorDisplay(row.Instructor2PNumber) : ''}`;
-      lines.push({ text: instr, bold: false, color: [80, 80, 80], size: 6.8 });
-      lines.push({ text: `Dress: ${row.DressCode || 'TBC'}`, bold: false, color: [80, 80, 80], size: 6.8 });
+      lines.push({ text: instr, bold: false, color: [80, 80, 80], size: 6.8 * scale });
+      lines.push({ text: `Dress: ${row.DressCode || 'TBC'}`, bold: false, color: [80, 80, 80], size: 6.8 * scale });
     } else {
-      lines.push({ text: 'No Lesson Scheduled', bold: false, color: [150, 150, 150], size: 7.5 });
+      lines.push({ text: 'No Lesson Scheduled', bold: false, color: [150, 150, 150], size: 7.5 * scale });
     }
 
-    let cy = y + 4;
-    const padding = 3;
-    let contentH = 4;
+    let cy = y + 4 * scale;
+    const padding = 3 * scale;
+    let contentH = 4 * scale;
     lines.forEach(l => {
+      doc.setFontSize(l.size);
       const wrapped = doc.splitTextToSize(l.text, w - padding * 2);
-      contentH += wrapped.length * (l.size / 2.2) + 1.3;
+      contentH += wrapped.length * (l.size / 2.2) + 1.3 * scale;
     });
-    const boxH = Math.max(contentH + 2, 22);
+    const boxH = Math.max(contentH + 2 * scale, 22 * scale);
+
+    if (measureOnly) return boxH;
 
     // Card border
     doc.setDrawColor(...PALETTE.green);
@@ -145,115 +148,119 @@ export default function TrainingPlanExport() {
       doc.setTextColor(...l.color);
       const wrapped = doc.splitTextToSize(l.text, w - padding * 2);
       doc.text(wrapped, x + padding, cy);
-      cy += wrapped.length * (l.size / 2.2) + 1.3;
+      cy += wrapped.length * (l.size / 2.2) + 1.3 * scale;
     });
 
     return boxH;
   }
 
-  // ── Main generator: chronological, 2-column (P1 left / P2 right) ────────
+  // ── Main generator: chronological, 2-column (P1 left / P2 right), single page ──
   async function generateProgramme() {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageW = 297;
     const pageH = 210;
-    const margin = 10;
+    const margin = 8;
+    const headerH = 25;
+    const footerH = 8;
+    const availableH = pageH - headerH - footerH - margin;
     const usableW = pageW - margin * 2;
     const gutter = 4;
     const colW = (usableW - gutter) / 2;
     const periodDesc = getPeriodDescription();
     const trainingDates = getTrainingDates();
     const { start, end } = getDateRange();
+    const monthEvents = [...events.filter(ev => ev.Date >= start && ev.Date <= end)].sort((a, b) => a.Date.localeCompare(b.Date));
+
+    // ── Single render pass shared by measurement and drawing, driven by scale ──
+    function renderPass(scale, measureOnly) {
+      let y = measureOnly ? 0 : headerH + margin;
+      const startY = y;
+
+      if (trainingDates.length === 0 && !measureOnly) {
+        doc.setFontSize(9);
+        doc.setTextColor(120, 120, 120);
+        doc.text('No training nights scheduled for this period.', pageW / 2, y + 15, { align: 'center' });
+      }
+
+      for (const date of trainingDates) {
+        const p1 = sortByStarLevel(schedule.filter(s => s.Date === date && s.Period === 1));
+        const p2 = sortByStarLevel(schedule.filter(s => s.Date === date && s.Period === 2));
+        const dateLabel = format(parseISO(date), 'EEEE dd MMMM yyyy').toUpperCase();
+        const rowCount = Math.max(p1.length, p2.length, 1);
+
+        const bannerH = 8 * scale;
+        if (!measureOnly) {
+          doc.setFillColor(...PALETTE.green);
+          doc.roundedRect(margin, y, usableW, bannerH, 1.5, 1.5, 'F');
+          doc.setFillColor(...PALETTE.gold);
+          doc.rect(margin, y + bannerH - 2 * scale, usableW, 2 * scale, 'F');
+          doc.setFontSize(9 * scale);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...PALETTE.gold);
+          doc.text(dateLabel, margin + 3 * scale, y + bannerH / 2 + 1.5 * scale);
+        }
+        y += bannerH + 3 * scale;
+
+        if (!measureOnly) {
+          doc.setFontSize(6.5 * scale);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...PALETTE.burgundy);
+          doc.text('PERIOD 1', margin + 2 * scale, y);
+          doc.text('PERIOD 2', margin + colW + gutter + 2 * scale, y);
+        }
+        y += 2 * scale;
+
+        for (let i = 0; i < rowCount; i++) {
+          const rowY = y;
+          const h1 = drawEntry(doc, margin, rowY, colW, p1[i], scale, measureOnly);
+          const h2 = drawEntry(doc, margin + colW + gutter, rowY, colW, p2[i], scale, measureOnly);
+          y = rowY + Math.max(h1, h2) + 3 * scale;
+        }
+        y += 3 * scale;
+      }
+
+      if (monthEvents.length > 0) {
+        const bannerH = 8 * scale;
+        if (!measureOnly) {
+          doc.setFillColor(...PALETTE.burgundy);
+          doc.roundedRect(margin, y, usableW, bannerH, 1.5, 1.5, 'F');
+          doc.setFontSize(9 * scale);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...PALETTE.gold);
+          doc.text('CALENDAR EVENTS THIS MONTH', margin + 3 * scale, y + bannerH / 2 + 1.5 * scale);
+        }
+        y += bannerH + 3 * scale;
+
+        for (const ev of monthEvents) {
+          const rowH = 7 * scale;
+          if (!measureOnly) {
+            doc.setFontSize(7.5 * scale);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...PALETTE.green);
+            doc.text(format(parseISO(ev.Date), 'dd MMM'), margin + 2 * scale, y + 4 * scale);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(40, 40, 40);
+            doc.text(`${ev.Title}${ev.EventType ? '  (' + ev.EventType + ')' : ''}${ev.Location ? '  ·  ' + ev.Location : ''}`, margin + 22 * scale, y + 4 * scale);
+            doc.setDrawColor(...PALETTE.silver);
+            doc.setLineWidth(0.1);
+            doc.line(margin, y + rowH - scale, margin + usableW, y + rowH - scale);
+          }
+          y += rowH;
+        }
+      }
+
+      return y - startY;
+    }
+
+    // Measure at full scale, then compute a scale factor to fit exactly one page
+    const neededH = renderPass(1, true);
+    const scale = neededH > availableH ? Math.max(availableH / neededH, 0.35) : 1;
 
     drawPageHeader(doc, pageW, periodDesc);
-    let y = 27;
+    renderPass(scale, false);
 
-    function ensureSpace(needed) {
-      if (y + needed > pageH - 12) {
-        doc.addPage();
-        drawPageHeader(doc, pageW, periodDesc, 'CONT.');
-        y = 27;
-      }
-    }
-
-    if (trainingDates.length === 0) {
-      doc.setFontSize(9);
-      doc.setTextColor(120, 120, 120);
-      doc.text('No training nights scheduled for this period.', pageW / 2, y + 15, { align: 'center' });
-    }
-
-    for (const date of trainingDates) {
-      const p1 = sortByStarLevel(schedule.filter(s => s.Date === date && s.Period === 1));
-      const p2 = sortByStarLevel(schedule.filter(s => s.Date === date && s.Period === 2));
-      const dateLabel = format(parseISO(date), 'EEEE dd MMMM yyyy').toUpperCase();
-      const rowCount = Math.max(p1.length, p2.length, 1);
-
-      ensureSpace(10 + rowCount * 24);
-
-      // Date banner
-      doc.setFillColor(...PALETTE.green);
-      doc.roundedRect(margin, y, usableW, 8, 1.5, 1.5, 'F');
-      doc.setFillColor(...PALETTE.gold);
-      doc.rect(margin, y + 6, usableW, 2, 'F');
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...PALETTE.gold);
-      doc.text(dateLabel, margin + 3, y + 5.5);
-      y += 11;
-
-      // Column labels
-      doc.setFontSize(6.5);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...PALETTE.burgundy);
-      doc.text('PERIOD 1', margin + 2, y);
-      doc.text('PERIOD 2', margin + colW + gutter + 2, y);
-      y += 2;
-
-      for (let i = 0; i < rowCount; i++) {
-        ensureSpace(28);
-        const rowY = y;
-        const h1 = drawEntry(doc, margin, rowY, colW, p1[i]);
-        const h2 = drawEntry(doc, margin + colW + gutter, rowY, colW, p2[i]);
-        y = rowY + Math.max(h1, h2) + 3;
-      }
-      y += 3;
-    }
-
-    // Calendar events for the month
-    const monthEvents = events.filter(ev => ev.Date >= start && ev.Date <= end);
-    if (monthEvents.length > 0) {
-      ensureSpace(12);
-      doc.setFillColor(...PALETTE.burgundy);
-      doc.roundedRect(margin, y, usableW, 8, 1.5, 1.5, 'F');
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...PALETTE.gold);
-      doc.text('CALENDAR EVENTS THIS MONTH', margin + 3, y + 5.5);
-      y += 11;
-
-      const sortedEvents = [...monthEvents].sort((a, b) => a.Date.localeCompare(b.Date));
-      for (const ev of sortedEvents) {
-        ensureSpace(8);
-        doc.setFontSize(7.5);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...PALETTE.green);
-        doc.text(format(parseISO(ev.Date), 'dd MMM'), margin + 2, y + 4);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(40, 40, 40);
-        doc.text(`${ev.Title}${ev.EventType ? '  (' + ev.EventType + ')' : ''}${ev.Location ? '  ·  ' + ev.Location : ''}`, margin + 22, y + 4);
-        doc.setDrawColor(...PALETTE.silver);
-        doc.setLineWidth(0.1);
-        doc.line(margin, y + 6, margin + usableW, y + 6);
-        y += 7;
-      }
-    }
-
-    // Footers
-    const totalPages = doc.getNumberOfPages();
     const integrityDate = format(new Date(), 'dd/MM/yyyy HH:mm');
-    for (let p = 1; p <= totalPages; p++) {
-      doc.setPage(p);
-      drawPageFooter(doc, pageW, pageH, p, totalPages, integrityDate);
-    }
+    drawPageFooter(doc, pageW, pageH, 1, 1, integrityDate);
 
     doc.save(`Training_Programme_${periodDesc.replace(/\s+/g, '_')}.pdf`);
   }
