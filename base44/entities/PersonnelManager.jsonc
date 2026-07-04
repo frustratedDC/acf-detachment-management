@@ -155,6 +155,26 @@
       "type": "boolean",
       "default": false,
       "description": "Whether the cadet has completed the additional CE activity required alongside hours for 4 Star CE assessment."
+    },
+    "OCSgtInterviewComplete": {
+      "type": "boolean",
+      "default": false,
+      "description": "OC interview with recommendation for promotion to Sgt completed"
+    },
+    "OCSSgtInterviewComplete": {
+      "type": "boolean",
+      "default": false,
+      "description": "OC interview with recommendation for promotion to SSgt completed"
+    },
+    "OCCSMInterviewComplete": {
+      "type": "boolean",
+      "default": false,
+      "description": "OC interview/direction for promotion to WO2 (CSM) completed"
+    },
+    "CommandantRSMInterviewComplete": {
+      "type": "boolean",
+      "default": false,
+      "description": "Commandant interview/direction for promotion to WO1 (RSM) completed"
     }
   },
   "required": [

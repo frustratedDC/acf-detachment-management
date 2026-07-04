@@ -72,7 +72,7 @@ export default function PromotionReadiness() {
     const syllabusMet = allLessons.length === 0 || completedCount === allLessons.length;
     const timeMet = reqs?.timeInRankMonths == null || timeInRankMonths >= reqs.timeInRankMonths;
     const attendanceMet = attendancePct != null && attendancePct >= 80;
-    const manualOutstanding = (reqs?.manualCriteria?.length || 0) > 0;
+    const manualOutstanding = (reqs?.manualCriteria || []).some(m => !cadet[m.field]);
 
     const ready = !!nextRank && syllabusMet && timeMet && attendanceMet && disciplineClean && !manualOutstanding;
     const status = ready ? 'Ready' : syllabusMet && timeMet && attendanceMet && disciplineClean ? 'Near Ready' : 'In Progress';
