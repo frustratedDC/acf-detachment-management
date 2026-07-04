@@ -70,12 +70,8 @@ export default function TrainingPlanExport() {
   }
 
   function getDutyList(date) {
-    const dayRows = schedule.filter(s => s.Date === date);
-    const pNumbers = [...new Set(dayRows.flatMap(r => [r.InstructorPNumber, r.Instructor2PNumber]).filter(Boolean))];
-    const instructorList = pNumbers.map(getInstructorDisplay).join(', ');
     const dutyCadets = dutyAssignments.filter(a => a.Date === date);
-    const cadetList = dutyCadets.map(a => `${a.Role}: ${getInstructorDisplay(a.CadetPNumber)}`).join(', ');
-    return [instructorList, cadetList].filter(Boolean).join('  |  ');
+    return dutyCadets.map(a => `${a.Role}: ${getInstructorDisplay(a.CadetPNumber)}`).join('   ·   ');
   }
 
   function getTrainingDates() {
@@ -120,52 +116,60 @@ export default function TrainingPlanExport() {
     );
   }
 
-  // ── Draw a single lesson entry block within a column ────────────────────
+  // ── Draw a single lesson entry as a simple, legible row ─────────────────
   function drawEntry(doc, x, y, w, row, scale = 1, measureOnly = false) {
-    const lines = [];
-    if (row) {
-      lines.push({ text: row.AssignedStarLevel, bold: true, color: PALETTE.gold.map((v, i) => Math.round(v * 0.55)), size: 7.5 * scale });
-      lines.push({ text: `${row.SubjectName || row.LessonCode || 'Subject TBC'}`, bold: true, color: PALETTE.green, size: 8.5 * scale });
-      lines.push({ text: row.LessonName || 'Untitled Lesson', bold: false, color: [40, 40, 40], size: 7.5 * scale });
-      const instr = `Instructor: ${getInstructorDisplay(row.InstructorPNumber)}${row.Instructor2PNumber ? '  /  ' + getInstructorDisplay(row.Instructor2PNumber) : ''}`;
-      lines.push({ text: instr, bold: false, color: [80, 80, 80], size: 6.8 * scale });
-      lines.push({ text: `Dress: ${row.DressCode || 'TBC'}`, bold: false, color: [80, 80, 80], size: 6.8 * scale });
-      if (row.Notes) {
-        lines.push({ text: `Notes: ${row.Notes}`, bold: false, color: [110, 90, 40], size: 6.5 * scale });
-      }
-    } else {
-      lines.push({ text: 'No Lesson Scheduled', bold: false, color: [150, 150, 150], size: 7.5 * scale });
+    const padding = 2.5 * scale;
+    if (!row) {
+      const boxH = 10 * scale;
+      if (measureOnly) return boxH;
+      doc.setFontSize(7.5 * scale);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(160, 160, 160);
+      doc.text('No lesson scheduled', x + padding, y + boxH / 2 + 1.5 * scale);
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.15);
+      doc.line(x, y + boxH, x + w, y + boxH);
+      return boxH;
     }
 
-    let cy = y + 4 * scale;
-    const padding = 3 * scale;
-    let contentH = 4 * scale;
+    const titleLine = `${row.AssignedStarLevel}  ·  ${row.SubjectName || row.LessonCode || 'Subject TBC'} — ${row.LessonName || 'Untitled Lesson'}`;
+    const instr = `Instructor: ${getInstructorDisplay(row.InstructorPNumber)}${row.Instructor2PNumber ? ' / ' + getInstructorDisplay(row.Instructor2PNumber) : ''}  ·  Dress: ${row.DressCode || 'TBC'}`;
+
+    const lines = [
+      { text: titleLine, bold: true, color: [20, 20, 20], size: 8 * scale, italic: false },
+      { text: instr, bold: false, color: [90, 90, 90], size: 7 * scale, italic: false },
+    ];
+    if (row.Notes) {
+      lines.push({ text: `Notes: ${row.Notes}`, bold: false, color: [120, 120, 120], size: 6.5 * scale, italic: true });
+    }
+
+    let contentH = 3 * scale;
     lines.forEach(l => {
       doc.setFontSize(l.size);
       const wrapped = doc.splitTextToSize(l.text, w - padding * 2);
-      contentH += wrapped.length * (l.size / 2.2) + 1.3 * scale;
+      contentH += wrapped.length * (l.size / 2.1) + 1 * scale;
     });
-    const boxH = Math.max(contentH + 2 * scale, 22 * scale);
+    const boxH = Math.max(contentH + 2 * scale, 15 * scale);
 
     if (measureOnly) return boxH;
 
-    // Card border
-    doc.setDrawColor(...PALETTE.green);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(x, y, w, boxH, 1.2, 1.2, 'S');
-    doc.setFillColor(...PALETTE.cream);
-    doc.roundedRect(x, y, w, boxH, 1.2, 1.2, 'F');
-    doc.setDrawColor(...PALETTE.gold);
-    doc.roundedRect(x, y, w, boxH, 1.2, 1.2, 'S');
+    // Left accent bar only — no full border/fill, keeps it clean and legible
+    doc.setFillColor(...PALETTE.green);
+    doc.rect(x, y, 1 * scale, boxH, 'F');
 
+    let cy = y + 4 * scale;
     lines.forEach(l => {
       doc.setFontSize(l.size);
-      doc.setFont('helvetica', l.bold ? 'bold' : 'normal');
+      doc.setFont('helvetica', l.italic ? 'italic' : (l.bold ? 'bold' : 'normal'));
       doc.setTextColor(...l.color);
       const wrapped = doc.splitTextToSize(l.text, w - padding * 2);
-      doc.text(wrapped, x + padding, cy);
-      cy += wrapped.length * (l.size / 2.2) + 1.3 * scale;
+      doc.text(wrapped, x + padding + 1.5 * scale, cy);
+      cy += wrapped.length * (l.size / 2.1) + 1 * scale;
     });
+
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.15);
+    doc.line(x, y + boxH, x + w, y + boxH);
 
     return boxH;
   }
@@ -205,24 +209,31 @@ export default function TrainingPlanExport() {
         const dutyList = getDutyList(date);
         const rowCount = Math.max(p1.length, p2.length, 1);
 
-        const bannerH = 8 * scale;
+        const bannerH = 7 * scale;
         if (!measureOnly) {
           doc.setFillColor(...PALETTE.green);
-          doc.roundedRect(margin, y, usableW, bannerH, 1.5, 1.5, 'F');
-          doc.setFillColor(...PALETTE.gold);
-          doc.rect(margin, y + bannerH - 2 * scale, usableW, 2 * scale, 'F');
+          doc.rect(margin, y, usableW, bannerH, 'F');
           doc.setFontSize(9 * scale);
           doc.setFont('helvetica', 'bold');
-          doc.setTextColor(...PALETTE.gold);
+          doc.setTextColor(...PALETTE.white);
           doc.text(dateLabel, margin + 3 * scale, y + bannerH / 2 + 1.5 * scale);
-          if (dutyList) {
-            doc.setFontSize(6.5 * scale);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(...PALETTE.white);
-            doc.text(`Duty: ${dutyList}`, margin + usableW - 3 * scale, y + bannerH / 2 + 1.5 * scale, { align: 'right' });
-          }
         }
-        y += bannerH + 3 * scale;
+        y += bannerH + 1.5 * scale;
+
+        if (dutyList) {
+          const dutyH = 5 * scale;
+          if (!measureOnly) {
+            doc.setFontSize(6.8 * scale);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...PALETTE.burgundy);
+            doc.text(`DUTY:`, margin + 2 * scale, y + dutyH / 2 + 1 * scale);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(60, 60, 60);
+            doc.text(dutyList, margin + 14 * scale, y + dutyH / 2 + 1 * scale);
+          }
+          y += dutyH;
+        }
+        y += 1.5 * scale;
 
         if (!measureOnly) {
           doc.setFontSize(6.5 * scale);
@@ -243,13 +254,13 @@ export default function TrainingPlanExport() {
       }
 
       if (monthEvents.length > 0) {
-        const bannerH = 8 * scale;
+        const bannerH = 7 * scale;
         if (!measureOnly) {
           doc.setFillColor(...PALETTE.burgundy);
-          doc.roundedRect(margin, y, usableW, bannerH, 1.5, 1.5, 'F');
+          doc.rect(margin, y, usableW, bannerH, 'F');
           doc.setFontSize(9 * scale);
           doc.setFont('helvetica', 'bold');
-          doc.setTextColor(...PALETTE.gold);
+          doc.setTextColor(...PALETTE.white);
           doc.text('CALENDAR EVENTS THIS MONTH', margin + 3 * scale, y + bannerH / 2 + 1.5 * scale);
         }
         y += bannerH + 3 * scale;
