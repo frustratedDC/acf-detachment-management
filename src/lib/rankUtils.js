@@ -1,13 +1,13 @@
 // Rank progression ladder and promotion requirements
-export const RANK_ORDER = ['Cdt', 'LCpl', 'Cpl', 'Sgt', 'SSgt', 'WO2', 'WO1'];
+export const RANK_ORDER = ['Cdt', 'Cdt LCpl', 'Cdt Cpl', 'Cdt Sgt', 'Cdt SSgt', 'Cdt WO2', 'Cdt WO1'];
 
 export const RANK_REQUIREMENTS = {
-  LCpl: { requiredStarLevel: '1 Star', timeInRankMonths: 4, extraStarLevel: '2 Star', extraSubject: 'Fieldcraft', manualCriteria: [] },
-  Cpl: { requiredStarLevel: '2 Star', manualCriteria: [] },
-  Sgt: { requiredStarLevel: '3 Star', manualCriteria: [{ label: 'OC Sgt Interview', field: 'OCSgtInterviewComplete' }] },
-  SSgt: { requiredStarLevel: '4 Star', manualCriteria: [{ label: 'OC SSgt Interview', field: 'OCSSgtInterviewComplete' }] },
-  WO2: { manualCriteria: [{ label: 'OC CSM Interview', field: 'OCCSMInterviewComplete' }] },
-  WO1: { manualCriteria: [{ label: 'Commandant RSM Interview', field: 'CommandantRSMInterviewComplete' }] },
+  'Cdt LCpl': { requiredStarLevel: '1 Star', timeInRankMonths: 4, extraStarLevel: '2 Star', extraSubject: 'Fieldcraft', manualCriteria: [] },
+  'Cdt Cpl': { requiredStarLevel: '2 Star', manualCriteria: [] },
+  'Cdt Sgt': { requiredStarLevel: '3 Star', manualCriteria: [{ label: 'OC Sgt Interview', field: 'OCSgtInterviewComplete' }] },
+  'Cdt SSgt': { requiredStarLevel: '4 Star', manualCriteria: [{ label: 'OC SSgt Interview', field: 'OCSSgtInterviewComplete' }] },
+  'Cdt WO2': { manualCriteria: [{ label: 'OC CSM Interview', field: 'OCCSMInterviewComplete' }] },
+  'Cdt WO1': { manualCriteria: [{ label: 'Commandant RSM Interview', field: 'CommandantRSMInterviewComplete' }] },
 };
 
 export function monthsSince(dateStr) {
