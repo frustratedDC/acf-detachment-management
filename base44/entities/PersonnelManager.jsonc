@@ -53,6 +53,11 @@
       "format": "date",
       "description": "Date the cadet was last promoted to their CurrentStarLevel."
     },
+    "UnitStartDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date this person joined the unit/detachment"
+    },
     "PersonnelStatus": {
       "type": "string",
       "enum": [
