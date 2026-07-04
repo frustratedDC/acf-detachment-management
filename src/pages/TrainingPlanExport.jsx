@@ -76,11 +76,11 @@ export default function TrainingPlanExport() {
 
   // ── Page header ──────────────────────────────────────────────────────────
   function drawPageHeader(doc, pageW, periodDesc, subtitle = '') {
-    doc.setFillColor(...PALETTE.burgundy);
+    doc.setFillColor(...PALETTE.green);
     doc.rect(0, 0, pageW, 20, 'F');
     doc.setFillColor(...PALETTE.gold);
     doc.rect(0, 20, pageW, 2, 'F');
-    doc.setFillColor(...PALETTE.green);
+    doc.setFillColor(...PALETTE.burgundy);
     doc.rect(0, 22, pageW, 1, 'F');
 
     doc.setTextColor(...PALETTE.gold);
@@ -94,7 +94,7 @@ export default function TrainingPlanExport() {
   }
 
   function drawPageFooter(doc, pageW, pageH, pageNum, totalPages, integrityDate) {
-    doc.setFillColor(...PALETTE.burgundy);
+    doc.setFillColor(...PALETTE.green);
     doc.rect(0, pageH - 7, pageW, 7, 'F');
     doc.setFillColor(...PALETTE.gold);
     doc.rect(0, pageH - 7, pageW, 1, 'F');
@@ -111,8 +111,8 @@ export default function TrainingPlanExport() {
   function drawEntry(doc, x, y, w, row) {
     const lines = [];
     if (row) {
-      lines.push({ text: row.AssignedStarLevel, bold: true, color: PALETTE.green, size: 7.5 });
-      lines.push({ text: `${row.SubjectName || row.LessonCode || 'Subject TBC'}`, bold: true, color: PALETTE.burgundy, size: 8.5 });
+      lines.push({ text: row.AssignedStarLevel, bold: true, color: PALETTE.gold.map((v, i) => Math.round(v * 0.55)), size: 7.5 });
+      lines.push({ text: `${row.SubjectName || row.LessonCode || 'Subject TBC'}`, bold: true, color: PALETTE.green, size: 8.5 });
       lines.push({ text: row.LessonName || 'Untitled Lesson', bold: false, color: [40, 40, 40], size: 7.5 });
       const instr = `Instructor: ${getInstructorDisplay(row.InstructorPNumber)}${row.Instructor2PNumber ? '  /  ' + getInstructorDisplay(row.Instructor2PNumber) : ''}`;
       lines.push({ text: instr, bold: false, color: [80, 80, 80], size: 6.8 });
@@ -131,12 +131,12 @@ export default function TrainingPlanExport() {
     const boxH = Math.max(contentH + 2, 22);
 
     // Card border
-    doc.setDrawColor(...PALETTE.burgundy);
+    doc.setDrawColor(...PALETTE.green);
     doc.setLineWidth(0.3);
     doc.roundedRect(x, y, w, boxH, 1.2, 1.2, 'S');
     doc.setFillColor(...PALETTE.cream);
     doc.roundedRect(x, y, w, boxH, 1.2, 1.2, 'F');
-    doc.setDrawColor(...PALETTE.burgundy);
+    doc.setDrawColor(...PALETTE.gold);
     doc.roundedRect(x, y, w, boxH, 1.2, 1.2, 'S');
 
     lines.forEach(l => {
@@ -153,9 +153,9 @@ export default function TrainingPlanExport() {
 
   // ── Main generator: chronological, 2-column (P1 left / P2 right) ────────
   async function generateProgramme() {
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pageW = 210;
-    const pageH = 297;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageW = 297;
+    const pageH = 210;
     const margin = 10;
     const usableW = pageW - margin * 2;
     const gutter = 4;
@@ -190,7 +190,7 @@ export default function TrainingPlanExport() {
       ensureSpace(10 + rowCount * 24);
 
       // Date banner
-      doc.setFillColor(...PALETTE.burgundy);
+      doc.setFillColor(...PALETTE.green);
       doc.roundedRect(margin, y, usableW, 8, 1.5, 1.5, 'F');
       doc.setFillColor(...PALETTE.gold);
       doc.rect(margin, y + 6, usableW, 2, 'F');
@@ -203,7 +203,7 @@ export default function TrainingPlanExport() {
       // Column labels
       doc.setFontSize(6.5);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...PALETTE.green);
+      doc.setTextColor(...PALETTE.burgundy);
       doc.text('PERIOD 1', margin + 2, y);
       doc.text('PERIOD 2', margin + colW + gutter + 2, y);
       y += 2;
@@ -222,11 +222,11 @@ export default function TrainingPlanExport() {
     const monthEvents = events.filter(ev => ev.Date >= start && ev.Date <= end);
     if (monthEvents.length > 0) {
       ensureSpace(12);
-      doc.setFillColor(...PALETTE.green);
+      doc.setFillColor(...PALETTE.burgundy);
       doc.roundedRect(margin, y, usableW, 8, 1.5, 1.5, 'F');
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...PALETTE.white);
+      doc.setTextColor(...PALETTE.gold);
       doc.text('CALENDAR EVENTS THIS MONTH', margin + 3, y + 5.5);
       y += 11;
 
@@ -235,7 +235,7 @@ export default function TrainingPlanExport() {
         ensureSpace(8);
         doc.setFontSize(7.5);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...PALETTE.burgundy);
+        doc.setTextColor(...PALETTE.green);
         doc.text(format(parseISO(ev.Date), 'dd MMM'), margin + 2, y + 4);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(40, 40, 40);
