@@ -76,6 +76,8 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
   const [entries, setEntries] = useState({});
   const [expandedStars, setExpandedStars] = useState({ 'Admin': false, 'Basic': true, '1 Star': true, '2 Star': true, '3 Star': false, '4 Star': false });
   const [dayNotes, setDayNotes] = useState('');
+  const [isClosed, setIsClosed] = useState(false);
+  const [closureReason, setClosureReason] = useState('');
 
   const { data: instructors = [] } = useQuery({
     queryKey: ['instructors'],
@@ -115,9 +117,19 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
     queryFn: () => base44.entities.CalendarEvent.filter({ Date: formDate, IsTrainingNight: true }),
   });
 
+  const { data: closures = [] } = useQuery({
+    queryKey: ['detachment-closure', formDate],
+    queryFn: () => base44.entities.DetachmentClosure.filter({ Date: formDate }),
+  });
+
   useEffect(() => {
     setDayNotes(dayEvents[0]?.Notes || '');
   }, [dayEvents]);
+
+  useEffect(() => {
+    setIsClosed(!!closures[0]);
+    setClosureReason(closures[0]?.Reason || '');
+  }, [closures]);
 
   useEffect(() => {
     const map = {};
@@ -205,6 +217,18 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
           if (ev.GeneratedFromPlan) await base44.entities.CalendarEvent.delete(ev.id);
         }
       }
+
+      // Detachment closure
+      const existingClosures = await base44.entities.DetachmentClosure.filter({ Date: formDate });
+      if (isClosed && closureReason.trim()) {
+        if (existingClosures.length > 0) {
+          await base44.entities.DetachmentClosure.update(existingClosures[0].id, { Reason: closureReason });
+        } else {
+          await base44.entities.DetachmentClosure.create({ Date: formDate, Reason: closureReason });
+        }
+      } else {
+        for (const c of existingClosures) await base44.entities.DetachmentClosure.delete(c.id);
+      }
     },
     onSuccess: () => {
       toast.success('Schedule saved');
@@ -241,9 +265,28 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
           <textarea
             value={dayNotes}
             onChange={(e) => setDayNotes(e.target.value)}
-            placeholder="Notes for this training night (visible to instructors)"
+            placeholder="Notes for this training night (visible to everyone)"
             className="mt-1 w-full text-sm rounded-md border border-input bg-transparent px-3 py-2 shadow-sm min-h-[60px]"
           />
+        </div>
+
+        {/* Detachment closure */}
+        <div className="mb-4 p-3 rounded-lg border border-destructive/30 bg-destructive/5 space-y-2">
+          <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+            <input type="checkbox" checked={isClosed} onChange={(e) => setIsClosed(e.target.checked)} className="w-4 h-4" />
+            Close Detachment for the Night
+          </label>
+          {isClosed && (
+            <div>
+              <Label className="text-xs">Reason (required)</Label>
+              <Input
+                value={closureReason}
+                onChange={(e) => setClosureReason(e.target.value)}
+                placeholder="e.g. Adverse weather"
+                className="mt-1 h-8 text-xs"
+              />
+            </div>
+          )}
         </div>
 
         <DutyCadetAssignment date={formDate} />
@@ -279,11 +322,23 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <Label className="text-xs">Lesson</Label>
-                              <LessonSelector
-                                value={entry.LessonCode}
-                                onChange={(val) => updateEntry(key, 'LessonCode', val)}
-                                starLevel={star}
-                              />
+                              {star === 'Admin' ? (
+                                <Input
+                                  value={entry.LessonName}
+                                  onChange={(e) => {
+                                    updateEntry(key, 'LessonName', e.target.value);
+                                    updateEntry(key, 'LessonCode', e.target.value);
+                                  }}
+                                  placeholder="e.g. Kit Inspection"
+                                  className="h-8 text-xs"
+                                />
+                              ) : (
+                                <LessonSelector
+                                  value={entry.LessonCode}
+                                  onChange={(val) => updateEntry(key, 'LessonCode', val)}
+                                  starLevel={star}
+                                />
+                              )}
                               {lessonWarn && (
                                 <p className="text-xs text-yellow-700 flex items-center gap-1 mt-0.5">
                                   <AlertTriangle className="w-3 h-3 shrink-0" />{lessonWarn}
@@ -353,7 +408,7 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
 
         <div className="flex justify-end mt-4 gap-2">
           <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-          <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+          <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || (isClosed && !closureReason.trim())}>
             <Save className="w-4 h-4 mr-1.5" />
             {saveMutation.isPending ? 'Saving...' : 'Save Schedule'}
           </Button>

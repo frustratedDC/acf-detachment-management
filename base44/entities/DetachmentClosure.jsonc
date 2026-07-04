@@ -1,0 +1,23 @@
+{
+  "name": "DetachmentClosure",
+  "type": "object",
+  "properties": {
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the detachment is closed"
+    },
+    "Reason": {
+      "type": "string",
+      "description": "Reason the detachment is closed for the night"
+    },
+    "ClosedByPNumber": {
+      "type": "string",
+      "description": "PNumber of the person who closed the detachment"
+    }
+  },
+  "required": [
+    "Date",
+    "Reason"
+  ]
+}

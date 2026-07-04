@@ -49,6 +49,10 @@ export default function TrainingPlanExport() {
     queryKey: ['duty-assignments-all'],
     queryFn: () => base44.entities.DutyAssignment.filter({}),
   });
+  const { data: closures = [] } = useQuery({
+    queryKey: ['detachment-closures-all'],
+    queryFn: () => base44.entities.DetachmentClosure.filter({}),
+  });
 
   const personnelMap = {};
   personnel.forEach(p => { personnelMap[p.PNumber] = p; });
@@ -74,9 +78,19 @@ export default function TrainingPlanExport() {
     return dutyCadets.map(a => `${a.Role}: ${getInstructorDisplay(a.CadetPNumber)}`).join('   ·   ');
   }
 
+  function getClosure(date) {
+    return closures.find(c => c.Date === date);
+  }
+
+  function getDayNotes(date) {
+    return events.find(ev => ev.Date === date && ev.IsTrainingNight)?.Notes || '';
+  }
+
   function getTrainingDates() {
     const { start, end } = getDateRange();
-    return [...new Set(schedule.filter(s => s.Date >= start && s.Date <= end).map(s => s.Date))].sort();
+    const scheduleDates = schedule.filter(s => s.Date >= start && s.Date <= end).map(s => s.Date);
+    const closureDates = closures.filter(c => c.Date >= start && c.Date <= end).map(c => c.Date);
+    return [...new Set([...scheduleDates, ...closureDates])].sort();
   }
 
   function sortByStarLevel(rows) {
@@ -203,22 +217,29 @@ export default function TrainingPlanExport() {
       }
 
       for (const date of trainingDates) {
-        const p1 = sortByStarLevel(schedule.filter(s => s.Date === date && s.Period === 1));
-        const p2 = sortByStarLevel(schedule.filter(s => s.Date === date && s.Period === 2));
         const dateLabel = format(parseISO(date), 'EEEE dd MMMM yyyy').toUpperCase();
         const dutyList = getDutyList(date);
-        const rowCount = Math.max(p1.length, p2.length, 1);
+        const dayNotes = getDayNotes(date);
+        const closure = getClosure(date);
 
         const bannerH = 7 * scale;
         if (!measureOnly) {
-          doc.setFillColor(...PALETTE.green);
+          doc.setFillColor(...(closure ? PALETTE.burgundy : PALETTE.green));
           doc.rect(margin, y, usableW, bannerH, 'F');
           doc.setFontSize(9 * scale);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(...PALETTE.white);
-          doc.text(dateLabel, margin + 3 * scale, y + bannerH / 2 + 1.5 * scale);
+          doc.text(
+            closure ? `${dateLabel}  —  DETACHMENT CLOSED  —  '${closure.Reason}'` : dateLabel,
+            margin + 3 * scale, y + bannerH / 2 + 1.5 * scale
+          );
         }
         y += bannerH + 1.5 * scale;
+
+        if (closure) {
+          y += 3 * scale;
+          continue;
+        }
 
         if (dutyList) {
           const dutyH = 5 * scale;
@@ -233,7 +254,25 @@ export default function TrainingPlanExport() {
           }
           y += dutyH;
         }
+
+        if (dayNotes) {
+          const notesH = 5 * scale;
+          if (!measureOnly) {
+            doc.setFontSize(6.8 * scale);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...PALETTE.burgundy);
+            doc.text(`NOTES:`, margin + 2 * scale, y + notesH / 2 + 1 * scale);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(60, 60, 60);
+            doc.text(dayNotes, margin + 16 * scale, y + notesH / 2 + 1 * scale);
+          }
+          y += notesH;
+        }
         y += 1.5 * scale;
+
+        const p1 = sortByStarLevel(schedule.filter(s => s.Date === date && s.Period === 1));
+        const p2 = sortByStarLevel(schedule.filter(s => s.Date === date && s.Period === 2));
+        const rowCount = Math.max(p1.length, p2.length, 1);
 
         if (!measureOnly) {
           doc.setFontSize(6.5 * scale);
@@ -374,22 +413,32 @@ export default function TrainingPlanExport() {
               <div className="space-y-4">
                 {trainingDates.map(date => {
                   const daySchedule = previewSchedule.filter(s => s.Date === date).sort((a, b) => a.Period - b.Period);
+                  const closure = getClosure(date);
+                  const dayNotes = getDayNotes(date);
                   return (
                     <div key={date}>
-                      <div className="flex items-center justify-between mb-1 px-2 py-1 rounded" style={{ background: '#5C0F1E', color: '#C5A03C' }}>
-                        <p className="text-xs font-bold">{format(parseISO(date), 'EEE dd MMM yyyy').toUpperCase()}</p>
-                        {getDutyList(date) && <p className="text-xs">Duty: {getDutyList(date)}</p>}
+                      <div className="flex items-center justify-between mb-1 px-2 py-1 rounded" style={{ background: closure ? '#5C0F1E' : '#5C0F1E', color: '#C5A03C' }}>
+                        <p className="text-xs font-bold">
+                          {format(parseISO(date), 'EEE dd MMM yyyy').toUpperCase()}
+                          {closure && ` — DETACHMENT CLOSED — '${closure.Reason}'`}
+                        </p>
+                        {!closure && getDutyList(date) && <p className="text-xs">Duty: {getDutyList(date)}</p>}
                       </div>
-                      <div className="space-y-1">
-                        {daySchedule.map(row => (
-                          <div key={row.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-xs">
-                            <Badge variant="outline" className="text-xs shrink-0 h-5">P{row.Period}</Badge>
-                            <Badge variant="secondary" className="text-xs shrink-0 h-5">{row.AssignedStarLevel}</Badge>
-                            <span className="flex-1 truncate">{row.SubjectName || row.LessonCode} — {row.LessonName}{row.Notes ? ` · Notes: ${row.Notes}` : ''}</span>
-                            <span className="text-muted-foreground shrink-0">{getInstructorDisplay(row.InstructorPNumber)}</span>
-                          </div>
-                        ))}
-                      </div>
+                      {!closure && dayNotes && (
+                        <p className="text-xs italic text-muted-foreground px-2 py-1">Notes: {dayNotes}</p>
+                      )}
+                      {!closure && (
+                        <div className="space-y-1">
+                          {daySchedule.map(row => (
+                            <div key={row.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-xs">
+                              <Badge variant="outline" className="text-xs shrink-0 h-5">P{row.Period}</Badge>
+                              <Badge variant="secondary" className="text-xs shrink-0 h-5">{row.AssignedStarLevel}</Badge>
+                              <span className="flex-1 truncate">{row.SubjectName || row.LessonCode} — {row.LessonName}{row.Notes ? ` · Notes: ${row.Notes}` : ''}</span>
+                              <span className="text-muted-foreground shrink-0">{getInstructorDisplay(row.InstructorPNumber)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
