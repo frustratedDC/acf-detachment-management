@@ -65,6 +65,12 @@ export default function TrainingPlanExport() {
     return [p.Rank, p.Surname].filter(Boolean).join(' ');
   }
 
+  function getDutyList(date) {
+    const dayRows = schedule.filter(s => s.Date === date);
+    const pNumbers = [...new Set(dayRows.flatMap(r => [r.InstructorPNumber, r.Instructor2PNumber]).filter(Boolean))];
+    return pNumbers.map(getInstructorDisplay).join(', ');
+  }
+
   function getTrainingDates() {
     const { start, end } = getDateRange();
     return [...new Set(schedule.filter(s => s.Date >= start && s.Date <= end).map(s => s.Date))].sort();
@@ -117,6 +123,9 @@ export default function TrainingPlanExport() {
       const instr = `Instructor: ${getInstructorDisplay(row.InstructorPNumber)}${row.Instructor2PNumber ? '  /  ' + getInstructorDisplay(row.Instructor2PNumber) : ''}`;
       lines.push({ text: instr, bold: false, color: [80, 80, 80], size: 6.8 * scale });
       lines.push({ text: `Dress: ${row.DressCode || 'TBC'}`, bold: false, color: [80, 80, 80], size: 6.8 * scale });
+      if (row.Notes) {
+        lines.push({ text: `Notes: ${row.Notes}`, bold: false, color: [110, 90, 40], size: 6.5 * scale });
+      }
     } else {
       lines.push({ text: 'No Lesson Scheduled', bold: false, color: [150, 150, 150], size: 7.5 * scale });
     }
@@ -169,7 +178,7 @@ export default function TrainingPlanExport() {
     const periodDesc = getPeriodDescription();
     const trainingDates = getTrainingDates();
     const { start, end } = getDateRange();
-    const monthEvents = [...events.filter(ev => ev.Date >= start && ev.Date <= end)].sort((a, b) => a.Date.localeCompare(b.Date));
+    const monthEvents = [...events.filter(ev => ev.Date >= start && ev.Date <= end && ev.EventType !== 'Training Night')].sort((a, b) => a.Date.localeCompare(b.Date));
 
     // ── Single render pass shared by measurement and drawing, driven by scale ──
     function renderPass(scale, measureOnly) {
@@ -186,6 +195,7 @@ export default function TrainingPlanExport() {
         const p1 = sortByStarLevel(schedule.filter(s => s.Date === date && s.Period === 1));
         const p2 = sortByStarLevel(schedule.filter(s => s.Date === date && s.Period === 2));
         const dateLabel = format(parseISO(date), 'EEEE dd MMMM yyyy').toUpperCase();
+        const dutyList = getDutyList(date);
         const rowCount = Math.max(p1.length, p2.length, 1);
 
         const bannerH = 8 * scale;
@@ -198,6 +208,12 @@ export default function TrainingPlanExport() {
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(...PALETTE.gold);
           doc.text(dateLabel, margin + 3 * scale, y + bannerH / 2 + 1.5 * scale);
+          if (dutyList) {
+            doc.setFontSize(6.5 * scale);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...PALETTE.white);
+            doc.text(`Duty: ${dutyList}`, margin + usableW - 3 * scale, y + bannerH / 2 + 1.5 * scale, { align: 'right' });
+          }
         }
         y += bannerH + 3 * scale;
 
@@ -342,15 +358,16 @@ export default function TrainingPlanExport() {
                   const daySchedule = previewSchedule.filter(s => s.Date === date).sort((a, b) => a.Period - b.Period);
                   return (
                     <div key={date}>
-                      <p className="text-xs font-bold mb-1 px-2 py-1 rounded" style={{ background: '#5C0F1E', color: '#C5A03C' }}>
-                        {format(parseISO(date), 'EEE dd MMM yyyy').toUpperCase()}
-                      </p>
+                      <div className="flex items-center justify-between mb-1 px-2 py-1 rounded" style={{ background: '#5C0F1E', color: '#C5A03C' }}>
+                        <p className="text-xs font-bold">{format(parseISO(date), 'EEE dd MMM yyyy').toUpperCase()}</p>
+                        {getDutyList(date) && <p className="text-xs">Duty: {getDutyList(date)}</p>}
+                      </div>
                       <div className="space-y-1">
                         {daySchedule.map(row => (
                           <div key={row.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 text-xs">
                             <Badge variant="outline" className="text-xs shrink-0 h-5">P{row.Period}</Badge>
                             <Badge variant="secondary" className="text-xs shrink-0 h-5">{row.AssignedStarLevel}</Badge>
-                            <span className="flex-1 truncate">{row.SubjectName || row.LessonCode} — {row.LessonName}</span>
+                            <span className="flex-1 truncate">{row.SubjectName || row.LessonCode} — {row.LessonName}{row.Notes ? ` · Notes: ${row.Notes}` : ''}</span>
                             <span className="text-muted-foreground shrink-0">{getInstructorDisplay(row.InstructorPNumber)}</span>
                           </div>
                         ))}
