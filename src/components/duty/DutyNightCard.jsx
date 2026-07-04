@@ -5,7 +5,7 @@ import { CalendarDays, User } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import _ from 'lodash';
 
-export default function DutyNightCard({ date, entries, personnelMap }) {
+export default function DutyNightCard({ date, entries, personnelMap, dutyCadets = [] }) {
   const byPeriod = _.groupBy(entries, 'Period');
 
   function nameFor(pnum) {
@@ -23,6 +23,15 @@ export default function DutyNightCard({ date, entries, personnelMap }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {dutyCadets.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {dutyCadets.map(a => (
+              <Badge key={a.id} variant="outline" className="text-xs">
+                {a.Role}: {nameFor(a.CadetPNumber)}
+              </Badge>
+            ))}
+          </div>
+        )}
         <div className="space-y-3">
           {Object.entries(byPeriod).sort(([a], [b]) => a - b).map(([period, periodEntries]) => (
             <div key={period}>

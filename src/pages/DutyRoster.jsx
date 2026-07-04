@@ -24,6 +24,11 @@ export default function DutyRoster() {
     queryFn: () => base44.entities.PersonnelManager.filter({}),
   });
 
+  const { data: dutyAssignments = [] } = useQuery({
+    queryKey: ['duty-assignments-all'],
+    queryFn: () => base44.entities.DutyAssignment.filter({}),
+  });
+
   const personnelMap = useMemo(() => {
     const m = {}; allPersonnel.forEach(p => { m[p.PNumber] = p; }); return m;
   }, [allPersonnel]);
@@ -31,6 +36,11 @@ export default function DutyRoster() {
   const entriesForDate = useMemo(() =>
     schedule.filter(e => e.Date === dateStr),
     [schedule, dateStr]
+  );
+
+  const dutyCadetsForDate = useMemo(() =>
+    dutyAssignments.filter(a => a.Date === dateStr),
+    [dutyAssignments, dateStr]
   );
 
   return (
@@ -60,7 +70,7 @@ export default function DutyRoster() {
           </CardContent>
         </Card>
       ) : (
-        <DutyNightCard date={dateStr} entries={entriesForDate} personnelMap={personnelMap} />
+        <DutyNightCard date={dateStr} entries={entriesForDate} personnelMap={personnelMap} dutyCadets={dutyCadetsForDate} />
       )}
     </AccessGate>
   );

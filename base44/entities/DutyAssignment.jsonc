@@ -1,0 +1,34 @@
+{
+  "name": "DutyAssignment",
+  "type": "object",
+  "properties": {
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the training night"
+    },
+    "Role": {
+      "type": "string",
+      "enum": [
+        "Duty NCO",
+        "NAAFI NCO",
+        "NAAFI Cadet"
+      ],
+      "description": "Duty role performed"
+    },
+    "CadetPNumber": {
+      "type": "string",
+      "description": "PNumber of the cadet assigned to this duty role"
+    },
+    "CEAwarded": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the 15-minute CE credit has been logged for this assignment"
+    }
+  },
+  "required": [
+    "Date",
+    "Role",
+    "CadetPNumber"
+  ]
+}

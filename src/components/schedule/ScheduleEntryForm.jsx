@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import LessonSelector from '@/components/shared/LessonSelector';
 import SmartInput from '@/components/shared/SmartInput';
+import DutyCadetAssignment from '@/components/schedule/DutyCadetAssignment';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -244,6 +245,8 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
             className="mt-1 w-full text-sm rounded-md border border-input bg-transparent px-3 py-2 shadow-sm min-h-[60px]"
           />
         </div>
+
+        <DutyCadetAssignment date={formDate} />
 
         {/* Star level sections — collapsible */}
         <div className="space-y-2">

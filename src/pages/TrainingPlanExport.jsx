@@ -45,6 +45,10 @@ export default function TrainingPlanExport() {
     queryKey: ['det-settings'],
     queryFn: () => base44.entities.DetachmentSettings.filter({}),
   });
+  const { data: dutyAssignments = [] } = useQuery({
+    queryKey: ['duty-assignments-all'],
+    queryFn: () => base44.entities.DutyAssignment.filter({}),
+  });
 
   const personnelMap = {};
   personnel.forEach(p => { personnelMap[p.PNumber] = p; });
@@ -68,7 +72,10 @@ export default function TrainingPlanExport() {
   function getDutyList(date) {
     const dayRows = schedule.filter(s => s.Date === date);
     const pNumbers = [...new Set(dayRows.flatMap(r => [r.InstructorPNumber, r.Instructor2PNumber]).filter(Boolean))];
-    return pNumbers.map(getInstructorDisplay).join(', ');
+    const instructorList = pNumbers.map(getInstructorDisplay).join(', ');
+    const dutyCadets = dutyAssignments.filter(a => a.Date === date);
+    const cadetList = dutyCadets.map(a => `${a.Role}: ${getInstructorDisplay(a.CadetPNumber)}`).join(', ');
+    return [instructorList, cadetList].filter(Boolean).join('  |  ');
   }
 
   function getTrainingDates() {
