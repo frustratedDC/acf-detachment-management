@@ -10,19 +10,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import PageHeader from "@/components/shared/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HeartHandshake, Dumbbell, Lock, Send, PlusCircle, Clock, CheckCircle2, X, Star } from "lucide-react";
+import { HeartHandshake, Dumbbell, Lock, Send, PlusCircle, Clock, CheckCircle2, X, Star, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { ACCESS_LEVELS, hasAccess } from "@/lib/accessLevels";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import BulkCEEntry from "@/components/ce/BulkCEEntry";
 import KeepingActiveTracker from "@/pages/KeepingActiveTracker";
 
-// CE hour requirements per star level
+// CE hour requirements per star level — hours accumulate cumulatively across levels.
+// e.g. 2 Star requires 4 + 8 = 12 total hours; 3 Star requires 12 + 16 = 28 total hours, etc.
+// 4 Star additionally requires a specific CE activity to be marked complete by an instructor.
 export const CE_REQUIREMENTS = {
-  "1 Star":  { hours: 4,  mandatory: true },
-  "2 Star":  { hours: 8,  mandatory: true },
-  "3 Star":  { hours: 16, mandatory: false },
-  "4 Star":  { hours: 10, mandatory: false },
+  "1 Star":  { incrementalHours: 4,  cumulativeHours: 4,  mandatory: true },
+  "2 Star":  { incrementalHours: 8,  cumulativeHours: 12, mandatory: true },
+  "3 Star":  { incrementalHours: 16, cumulativeHours: 28, mandatory: false },
+  "4 Star":  { incrementalHours: 10, cumulativeHours: 38, mandatory: false, requiresActivity: true },
 };
 
 export default function CommunityEngagement() {
@@ -97,6 +100,16 @@ export default function CommunityEngagement() {
       queryClient.invalidateQueries({ queryKey: ["ce-ledger"] });
     },
     onError: () => toast.error("Failed to submit CE hours."),
+  });
+
+  const canManageActivity = hasAccess(me?.AccessLevel ?? 0, ACCESS_LEVELS.DET_2IC);
+  const activityMutation = useMutation({
+    mutationFn: (value) => base44.entities.PersonnelManager.update(me.id, { CEActivityCompleted: value }),
+    onSuccess: () => {
+      toast.success("4 Star CE activity status updated.");
+      queryClient.invalidateQueries({ queryKey: ["personnel"] });
+    },
+    onError: () => toast.error("Failed to update activity status."),
   });
 
   // ── Access Gate ──────────────────────────────────────────────────────────
@@ -191,18 +204,23 @@ export default function CommunityEngagement() {
                 {req && (
                   <>
                     <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span>{starLevel} requirement: {req.hours}h {req.mandatory ? "(Mandatory)" : "(Optional milestone)"}</span>
-                      <span>{Math.min(100, Math.round((totalApprovedHours / req.hours) * 100))}%</span>
+                      <span>{starLevel} requirement: {req.cumulativeHours}h total {req.mandatory ? "(Mandatory)" : "(Optional milestone)"}</span>
+                      <span>{Math.min(100, Math.round((totalApprovedHours / req.cumulativeHours) * 100))}%</span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-2">
                       <div
-                        className={`rounded-full h-2 transition-all ${totalApprovedHours >= req.hours ? "bg-chart-2" : "bg-primary"}`}
-                        style={{ width: `${Math.min(100, (totalApprovedHours / req.hours) * 100)}%` }}
+                        className={`rounded-full h-2 transition-all ${totalApprovedHours >= req.cumulativeHours ? "bg-chart-2" : "bg-primary"}`}
+                        style={{ width: `${Math.min(100, (totalApprovedHours / req.cumulativeHours) * 100)}%` }}
                       />
                     </div>
-                    {totalApprovedHours >= req.hours && (
+                    {totalApprovedHours >= req.cumulativeHours && (!req.requiresActivity || me?.CEActivityCompleted) && (
                       <div className="flex items-center gap-1 mt-2 text-chart-2 text-xs font-semibold">
                         <CheckCircle2 className="w-3.5 h-3.5" />Requirement met!
+                      </div>
+                    )}
+                    {req.requiresActivity && totalApprovedHours >= req.cumulativeHours && !me?.CEActivityCompleted && (
+                      <div className="flex items-center gap-1 mt-2 text-accent-foreground text-xs font-semibold">
+                        <AlertTriangle className="w-3.5 h-3.5" /> Hours complete — additional CE activity still required.
                       </div>
                     )}
                   </>
@@ -212,7 +230,8 @@ export default function CommunityEngagement() {
 
             {/* Milestones */}
             {Object.entries(CE_REQUIREMENTS).map(([level, r]) => {
-              const met = totalApprovedHours >= r.hours;
+              const hoursMet = totalApprovedHours >= r.cumulativeHours;
+              const met = hoursMet && (!r.requiresActivity || me?.CEActivityCompleted);
               return (
                 <Card key={level} className={met ? "border-chart-2/40 bg-chart-2/5" : ""}>
                   <CardContent className="pt-4 pb-3 flex flex-col gap-1">
@@ -223,11 +242,23 @@ export default function CommunityEngagement() {
                         {r.mandatory ? "Required" : "Optional"}
                       </Badge>
                     </div>
-                    <p className="text-2xl font-bold">{r.hours}h</p>
+                    <p className="text-2xl font-bold">{r.cumulativeHours}h <span className="text-xs font-normal text-muted-foreground">total</span></p>
                     {met ? (
                       <p className="text-xs text-chart-2 font-semibold">✓ Complete</p>
+                    ) : hoursMet ? (
+                      <p className="text-xs text-muted-foreground">Hours met</p>
                     ) : (
-                      <p className="text-xs text-muted-foreground">{Math.max(0, r.hours - totalApprovedHours).toFixed(1)}h remaining</p>
+                      <p className="text-xs text-muted-foreground">{Math.max(0, r.cumulativeHours - totalApprovedHours).toFixed(1)}h remaining</p>
+                    )}
+                    {r.requiresActivity && (
+                      <div className="flex items-center gap-2 mt-1 pt-1 border-t">
+                        <Checkbox
+                          checked={!!me?.CEActivityCompleted}
+                          disabled={!canManageActivity || activityMutation.isPending}
+                          onCheckedChange={(checked) => activityMutation.mutate(checked === true)}
+                        />
+                        <span className="text-xs text-muted-foreground">CE activity completed</span>
+                      </div>
                     )}
                   </CardContent>
                 </Card>

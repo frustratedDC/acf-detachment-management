@@ -150,6 +150,11 @@
       "type": "number",
       "default": 0,
       "description": "Running total of CE hours incremented when bulk CE entries are submitted. Separate from KA logic."
+    },
+    "CEActivityCompleted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the cadet has completed the additional CE activity required alongside hours for 4 Star CE assessment."
     }
   },
   "required": [
