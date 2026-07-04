@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ACCESS_LEVELS, hasAccess } from '@/lib/accessLevels';
 import { checkAndPromoteCadet } from '@/lib/progressUtils';
+import CEMilestoneTasksTab from '@/components/tasks/CEMilestoneTasksTab';
 
 export default function TaskList() {
   const queryClient = useQueryClient();
@@ -66,6 +67,11 @@ export default function TaskList() {
   const { data: ceRequests = [] } = useQuery({
     queryKey: ['ce-requests'],
     queryFn: () => base44.entities.CommunityEngagementLedger.filter({ Status: 'Pending' }),
+  });
+
+  const { data: ceMilestoneTasks = [] } = useQuery({
+    queryKey: ['ce-milestone-tasks'],
+    queryFn: () => base44.entities.CEMilestoneTask.filter({ Status: 'Pending' }),
   });
 
   const { data: courseRequests = [] } = useQuery({
@@ -268,6 +274,10 @@ export default function TaskList() {
             <HeartHandshake className="w-3.5 h-3.5" />
             CE Hours ({ceRequests.length})
           </TabsTrigger>
+          <TabsTrigger value="ce-milestones" className="gap-1">
+            <HeartHandshake className="w-3.5 h-3.5" />
+            CE Milestones ({ceMilestoneTasks.length})
+          </TabsTrigger>
           <TabsTrigger value="course-requests" className="gap-1">
             <BookOpen className="w-3.5 h-3.5" />
             Courses ({pendingCourseRequests.length})
@@ -467,6 +477,9 @@ export default function TaskList() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="ce-milestones">
+          <CEMilestoneTasksTab tasks={ceMilestoneTasks} currentPNumber={me?.PNumber} />
         </TabsContent>
         <TabsContent value="course-requests">
           <Card>

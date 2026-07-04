@@ -1,0 +1,62 @@
+{
+  "name": "CEMilestoneTask",
+  "type": "object",
+  "properties": {
+    "CadetPNumber": {
+      "type": "string",
+      "description": "PNumber of the cadet who reached the milestone"
+    },
+    "CadetName": {
+      "type": "string",
+      "description": "Display name of the cadet (snapshot)"
+    },
+    "Milestone": {
+      "type": "number",
+      "description": "The CE hour milestone reached, e.g. 4, 12, 28, 38"
+    },
+    "TotalApprovedHours": {
+      "type": "number",
+      "description": "Cadet's total approved CE hours at the time this task was generated"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Pending",
+      "description": "Approval status for marking this milestone complete"
+    },
+    "ApprovedByPNumber": {
+      "type": "string",
+      "description": "PNumber of the approving DC/2IC"
+    }
+  },
+  "required": [
+    "CadetPNumber",
+    "Milestone"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
