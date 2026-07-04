@@ -17,6 +17,18 @@ export function monthsSince(dateStr) {
   return (now.getFullYear() - then.getFullYear()) * 12 + (now.getMonth() - then.getMonth());
 }
 
+// Derives the date a cadet completed a star level from their ProgressLedger history:
+// the latest CompletionDate among the mandatory lessons for that level, once all are approved.
+export function getStarLevelCompletionDate(levelLessons, approvedLessons) {
+  if (!levelLessons || levelLessons.length === 0) return null;
+  const approvedByCode = {};
+  approvedLessons.forEach(a => { approvedByCode[a.LessonCode] = a.CompletionDate; });
+  const allApproved = levelLessons.every(l => approvedByCode[l.LessonCode]);
+  if (!allApproved) return null;
+  const dates = levelLessons.map(l => new Date(approvedByCode[l.LessonCode]).getTime());
+  return new Date(Math.max(...dates)).toISOString().split('T')[0];
+}
+
 export function computeAttendancePct(paradeRecords, pNumber, sinceDate) {
   const records = paradeRecords.filter(p => p.UserPNumber === pNumber && (!sinceDate || new Date(p.Date) >= sinceDate));
   if (records.length === 0) return null;

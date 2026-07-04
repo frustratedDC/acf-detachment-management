@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TrendingUp, FileDown, Loader2, ChevronDown } from 'lucide-react';
 import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
-import { RANK_ORDER, RANK_REQUIREMENTS, monthsSince, computeAttendancePct, countDisciplineRecords } from '@/lib/rankUtils';
+import { RANK_ORDER, RANK_REQUIREMENTS, monthsSince, computeAttendancePct, countDisciplineRecords, getStarLevelCompletionDate } from '@/lib/rankUtils';
 import CadetCriteriaDetails from '@/components/promotion/CadetCriteriaDetails';
 import { jsPDF } from 'jspdf';
 import _ from 'lodash';
@@ -64,7 +64,10 @@ export default function PromotionReadiness() {
     const completedCount = allLessons.filter(l => approvedCodes.has(l.LessonCode)).length;
     const pct = allLessons.length > 0 ? Math.round((completedCount / allLessons.length) * 100) : 100;
 
-    const timeInRankMonths = monthsSince(cadet.PromotionDate);
+    // Time-in-rank is measured from when the cadet actually completed their required star level
+    // (derived from their ProgressLedger), falling back to PromotionDate if that can't be determined.
+    const levelCompletionDate = reqs?.requiredStarLevel ? getStarLevelCompletionDate(levelLessons, approved) : null;
+    const timeInRankMonths = monthsSince(levelCompletionDate || cadet.PromotionDate);
     const attendancePct = computeAttendancePct(paradeRecords, cadet.PNumber, twelveMonthsAgo);
     const disciplineCount = countDisciplineRecords(disciplineLogs, cadet.PNumber, twelveMonthsAgo);
     const disciplineClean = disciplineCount === 0;
