@@ -150,11 +150,11 @@ export default function TrainingPlanExport() {
     const instr = `Instructor: ${getInstructorDisplay(row.InstructorPNumber)}${row.Instructor2PNumber ? ' / ' + getInstructorDisplay(row.Instructor2PNumber) : ''}  ·  Dress: ${row.DressCode || 'TBC'}`;
 
     const lines = [
-      { text: titleLine, bold: true, color: [20, 20, 20], size: 16 * scale, italic: false },
-      { text: instr, bold: false, color: [90, 90, 90], size: 14 * scale, italic: false },
+      { text: titleLine, bold: true, color: [20, 20, 20], size: 8 * scale, italic: false },
+      { text: instr, bold: false, color: [90, 90, 90], size: 7 * scale, italic: false },
     ];
     if (row.Notes) {
-      lines.push({ text: `Notes: ${row.Notes}`, bold: false, color: [120, 120, 120], size: 13 * scale, italic: true });
+      lines.push({ text: `Notes: ${row.Notes}`, bold: false, color: [120, 120, 120], size: 6.5 * scale, italic: true });
     }
 
     let contentH = 3 * scale;
@@ -163,7 +163,7 @@ export default function TrainingPlanExport() {
       const wrapped = doc.splitTextToSize(l.text, w - padding * 2);
       contentH += wrapped.length * (l.size / 2.1) + 1 * scale;
     });
-    const boxH = Math.max(contentH + 2 * scale, 30 * scale);
+    const boxH = Math.max(contentH + 2 * scale, 15 * scale);
 
     if (measureOnly) return boxH;
 
@@ -327,7 +327,7 @@ export default function TrainingPlanExport() {
 
     // Measure at full scale, then compute a scale factor to fit exactly one page
     const neededH = renderPass(1, true);
-    const scale = neededH > availableH ? Math.max(availableH / neededH, 0.35) : 1;
+    const scale = neededH > availableH ? Math.max(availableH / neededH, 0.6) : 1;
 
     drawPageHeader(doc, pageW, periodDesc);
     renderPass(scale, false);
