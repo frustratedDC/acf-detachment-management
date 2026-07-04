@@ -1,0 +1,49 @@
+{
+  "name": "StarLevelMilestone",
+  "type": "object",
+  "properties": {
+    "CadetPNumber": {
+      "type": "string",
+      "description": "PNumber of the cadet who achieved this star level"
+    },
+    "StarLevel": {
+      "type": "string",
+      "enum": [
+        "Basic",
+        "1 Star",
+        "2 Star",
+        "3 Star",
+        "4 Star"
+      ],
+      "description": "Star level achieved"
+    },
+    "DateAchieved": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the star level was completed/awarded"
+    }
+  },
+  "required": [
+    "CadetPNumber",
+    "StarLevel",
+    "DateAchieved"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

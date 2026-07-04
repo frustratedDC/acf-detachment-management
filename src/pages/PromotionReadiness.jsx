@@ -39,6 +39,10 @@ export default function PromotionReadiness() {
     queryKey: ['discipline-logs-all'],
     queryFn: () => base44.entities.DisciplineLog.filter({}),
   });
+  const { data: milestones = [] } = useQuery({
+    queryKey: ['star-level-milestones-all'],
+    queryFn: () => base44.entities.StarLevelMilestone.filter({}),
+  });
 
   const cadets = personnel.filter(p => isCadet(p.AccessLevel) && (p.PersonnelStatus || 'Active') === 'Active');
   const approvedByCadet = _.groupBy(progress.filter(p => p.Status === 'Approved'), 'CadetPNumber');
@@ -64,10 +68,13 @@ export default function PromotionReadiness() {
     const completedCount = allLessons.filter(l => approvedCodes.has(l.LessonCode)).length;
     const pct = allLessons.length > 0 ? Math.round((completedCount / allLessons.length) * 100) : 100;
 
-    // Time-in-rank is measured from when the cadet actually completed their required star level
-    // (derived from their ProgressLedger), falling back to PromotionDate if that can't be determined.
+    // Time-in-rank is measured from when the cadet actually completed their required star level.
+    // Prefer the logged StarLevelMilestone date, then fall back to the ProgressLedger-derived date, then PromotionDate.
+    const loggedMilestone = reqs?.requiredStarLevel
+      ? milestones.find(m => m.CadetPNumber === cadet.PNumber && m.StarLevel === reqs.requiredStarLevel)
+      : null;
     const levelCompletionDate = reqs?.requiredStarLevel ? getStarLevelCompletionDate(levelLessons, approved) : null;
-    const timeInRankMonths = monthsSince(levelCompletionDate || cadet.PromotionDate);
+    const timeInRankMonths = monthsSince(loggedMilestone?.DateAchieved || levelCompletionDate || cadet.PromotionDate);
     const attendancePct = computeAttendancePct(paradeRecords, cadet.PNumber, twelveMonthsAgo);
     const disciplineCount = countDisciplineRecords(disciplineLogs, cadet.PNumber, twelveMonthsAgo);
     const disciplineClean = disciplineCount === 0;
