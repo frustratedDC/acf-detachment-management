@@ -24,6 +24,6 @@ export function computeAttendancePct(paradeRecords, pNumber, sinceDate) {
   return Math.round((present / records.length) * 100);
 }
 
-export function hasCleanDisciplineRecord(disciplineLogs, pNumber, sinceDate) {
-  return !disciplineLogs.some(d => (d.PersonnelInvolved || []).includes(pNumber) && (!sinceDate || new Date(d.Date) >= sinceDate));
+export function countDisciplineRecords(disciplineLogs, pNumber, sinceDate) {
+  return disciplineLogs.filter(d => (d.PersonnelInvolved || []).includes(pNumber) && (!sinceDate || new Date(d.Date) >= sinceDate)).length;
 }

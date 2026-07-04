@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TrendingUp, FileDown, Loader2, ChevronDown } from 'lucide-react';
 import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
-import { RANK_ORDER, RANK_REQUIREMENTS, monthsSince, computeAttendancePct, hasCleanDisciplineRecord } from '@/lib/rankUtils';
+import { RANK_ORDER, RANK_REQUIREMENTS, monthsSince, computeAttendancePct, countDisciplineRecords } from '@/lib/rankUtils';
 import CadetCriteriaDetails from '@/components/promotion/CadetCriteriaDetails';
 import { jsPDF } from 'jspdf';
 import _ from 'lodash';
@@ -65,7 +65,8 @@ export default function PromotionReadiness() {
 
     const timeInRankMonths = monthsSince(cadet.PromotionDate);
     const attendancePct = computeAttendancePct(paradeRecords, cadet.PNumber, twelveMonthsAgo);
-    const disciplineClean = hasCleanDisciplineRecord(disciplineLogs, cadet.PNumber, twelveMonthsAgo);
+    const disciplineCount = countDisciplineRecords(disciplineLogs, cadet.PNumber, twelveMonthsAgo);
+    const disciplineClean = disciplineCount === 0;
 
     const syllabusMet = allLessons.length === 0 || completedCount === allLessons.length;
     const timeMet = reqs?.timeInRankMonths == null || timeInRankMonths >= reqs.timeInRankMonths;
@@ -77,7 +78,7 @@ export default function PromotionReadiness() {
 
     return {
       cadet, pct, completedCount, total: allLessons.length, nextLevel: nextRank, status,
-      approvedCodes, pendingCodes, timeInRankMonths, attendancePct, disciplineClean,
+      approvedCodes, pendingCodes, timeInRankMonths, attendancePct, disciplineClean, disciplineCount,
     };
   });
 
@@ -236,11 +237,11 @@ export default function PromotionReadiness() {
                         cadet={row.cadet}
                         syllabus={syllabus}
                         approvedCodes={row.approvedCodes}
-                        pendingCodes={row.pendingCodes}
                         nextRank={row.nextLevel}
                         timeInRankMonths={row.timeInRankMonths}
                         attendancePct={row.attendancePct}
                         disciplineClean={row.disciplineClean}
+                        disciplineCount={row.disciplineCount}
                       />
                     </div>
                   )}
