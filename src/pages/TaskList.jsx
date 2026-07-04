@@ -8,12 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil, Shirt, ShieldCheck, HeartHandshake, BookOpen, AlertCircle } from 'lucide-react';
+import { CheckSquare, Check, X, Clock, CheckCircle2, Pencil, Shirt, ShieldCheck, HeartHandshake, BookOpen, AlertCircle, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ACCESS_LEVELS, hasAccess } from '@/lib/accessLevels';
 import { checkAndPromoteCadet } from '@/lib/progressUtils';
 import CEMilestoneTasksTab from '@/components/tasks/CEMilestoneTasksTab';
+import PromotionTasksTab from '@/components/tasks/PromotionTasksTab';
 
 export default function TaskList() {
   const queryClient = useQueryClient();
@@ -72,6 +73,11 @@ export default function TaskList() {
   const { data: ceMilestoneTasks = [] } = useQuery({
     queryKey: ['ce-milestone-tasks'],
     queryFn: () => base44.entities.CEMilestoneTask.filter({ Status: 'Pending' }),
+  });
+
+  const { data: promotionTasks = [] } = useQuery({
+    queryKey: ['promotion-milestone-tasks'],
+    queryFn: () => base44.entities.PromotionMilestoneTask.filter({ Status: 'Pending' }),
   });
 
   const { data: courseRequests = [] } = useQuery({
@@ -278,6 +284,10 @@ export default function TaskList() {
             <HeartHandshake className="w-3.5 h-3.5" />
             CE Milestones ({ceMilestoneTasks.length})
           </TabsTrigger>
+          <TabsTrigger value="promotion-tasks" className="gap-1">
+            <TrendingUp className="w-3.5 h-3.5" />
+            Promotions ({promotionTasks.length})
+          </TabsTrigger>
           <TabsTrigger value="course-requests" className="gap-1">
             <BookOpen className="w-3.5 h-3.5" />
             Courses ({pendingCourseRequests.length})
@@ -480,6 +490,9 @@ export default function TaskList() {
         </TabsContent>
         <TabsContent value="ce-milestones">
           <CEMilestoneTasksTab tasks={ceMilestoneTasks} currentPNumber={me?.PNumber} />
+        </TabsContent>
+        <TabsContent value="promotion-tasks">
+          <PromotionTasksTab tasks={promotionTasks} currentPNumber={me?.PNumber} />
         </TabsContent>
         <TabsContent value="course-requests">
           <Card>

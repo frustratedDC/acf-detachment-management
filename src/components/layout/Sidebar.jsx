@@ -56,6 +56,7 @@ const NAV_GROUPS = [
     items: [
       { path: '/personnel',           label: 'Cadet Profiles',        icon: Users,         level: 4 },
       { path: '/progress',            label: 'Progress Matrix',       icon: Layers,        level: 3 },
+      { path: '/promotion-readiness', label: 'Promotion Readiness',   icon: TrendingUp,    level: 3 },
       { path: '/wht',                 label: 'Cadet WHTs',            icon: Crosshair,     level: 2 },
       { path: '/my-logbooks',         label: 'Cadet Logbooks',        icon: BookMarked,    level: 2 },
       { path: '/discipline-logs',      label: 'Discipline / SG Log', icon: Swords,        level: 5 },

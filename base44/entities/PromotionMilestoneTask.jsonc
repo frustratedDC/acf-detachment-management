@@ -1,0 +1,62 @@
+{
+  "name": "PromotionMilestoneTask",
+  "type": "object",
+  "properties": {
+    "CadetPNumber": {
+      "type": "string",
+      "description": "PNumber of the cadet who reached promotion readiness"
+    },
+    "CadetName": {
+      "type": "string",
+      "description": "Display name (Rank + Surname) of the cadet, snapshot at time of task creation"
+    },
+    "CurrentStarLevel": {
+      "type": "string",
+      "description": "Cadet's star level at the time readiness was reached"
+    },
+    "NewStarLevel": {
+      "type": "string",
+      "description": "Star level the cadet is ready to be promoted to"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Pending",
+      "description": "Approval status for confirming this promotion"
+    },
+    "ApprovedByPNumber": {
+      "type": "string",
+      "description": "PNumber of the approving DC/2IC"
+    }
+  },
+  "required": [
+    "CadetPNumber",
+    "NewStarLevel"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
