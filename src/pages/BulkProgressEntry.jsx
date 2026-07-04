@@ -17,9 +17,9 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
 import { sortLessons } from '@/lib/lessonSort';
-import { checkAndPromoteCadet, STAR_ORDER } from '@/lib/progressUtils';
+import { checkAndPromoteCadet, STAR_ORDER, ALL_STAR_LEVELS } from '@/lib/progressUtils';
 
-const STAR_LEVELS = ['Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
+const STAR_LEVELS = ALL_STAR_LEVELS;
 
 // ─── Hierarchical Award Engine ──────────────────────────────────────────────
 /**

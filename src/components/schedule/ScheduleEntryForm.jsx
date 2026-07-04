@@ -13,8 +13,9 @@ import { X, Save, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { subMonths, parseISO, subDays, format as dateFnsFormat } from 'date-fns';
+import { ALL_STAR_LEVELS } from '@/lib/progressUtils';
 
-const STAR_LEVELS = ['Admin', 'Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
+const STAR_LEVELS = ALL_STAR_LEVELS;
 const PERIODS = [1, 2];
 
 const emptyEntry = () => ({
