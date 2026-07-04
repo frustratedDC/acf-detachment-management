@@ -135,7 +135,7 @@
     },
     "NonAttenderWorkflow": {
       "type": "object",
-      "description": "Timestamps for each non-attender outreach step",
+      "description": "Timestamps for each non-attender outreach step, plus an 'outcome' field (returning | leaver_awaiting_uniform | discharge)",
       "additionalProperties": true
     },
     "IsArchived": {
@@ -146,6 +146,11 @@
     "ArchivedAt": {
       "type": "string",
       "description": "ISO timestamp when struck off"
+    },
+    "DischargeDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the discharge (uniform received) outcome was confirmed. Records are auto-deleted 6 months after this date."
     },
     "KeepingActiveAccess": {
       "type": "boolean",

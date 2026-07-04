@@ -4,8 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const OUTCOME_OPTIONS = [
+  { value: 'returning', label: 'Returning' },
+  { value: 'leaver_awaiting_uniform', label: 'Confirmed Leaver (Awaiting Uniform)' },
+  { value: 'discharge', label: 'Uniform Received (DISCHARGE)' },
+];
 
 const STEPS = [
   { key: 'outreach', label: 'Send Outreach Email' },
@@ -44,6 +52,35 @@ export default function NonAttenderWorkflow({ person, onUpdated }) {
     onUpdated?.();
   }
 
+  async function handleOutcomeChange(outcome) {
+    if (outcome === 'discharge') {
+      const confirmed = window.confirm(
+        `Discharge ${person.Rank || ''} ${person.Surname}? This will archive their record and permanently delete all associated data after 6 months. This cannot be undone.`
+      );
+      if (!confirmed) return;
+      setSaving('outcome');
+      const today = new Date().toISOString().split('T')[0];
+      await base44.entities.PersonnelManager.update(person.id, {
+        PersonnelStatus: 'Leaver',
+        IsArchived: true,
+        ArchivedAt: new Date().toISOString(),
+        DischargeDate: today,
+        NonAttenderWorkflow: { ...workflow, outcome },
+      });
+      toast.success(`${person.Surname} discharged and archived`);
+      setSaving(null);
+      onUpdated?.();
+      return;
+    }
+    setSaving('outcome');
+    await base44.entities.PersonnelManager.update(person.id, {
+      NonAttenderWorkflow: { ...workflow, outcome },
+    });
+    toast.success('Outcome updated');
+    setSaving(null);
+    onUpdated?.();
+  }
+
   return (
     <Card className="border-amber-400/30 bg-amber-50/20">
       <CardHeader className="pb-2 pt-3 px-4">
@@ -56,6 +93,17 @@ export default function NonAttenderWorkflow({ person, onUpdated }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-3 space-y-2">
+        <div className="p-2 rounded-lg bg-muted/40">
+          <Label className="text-xs">Outcome</Label>
+          <Select value={workflow.outcome || ''} onValueChange={handleOutcomeChange} disabled={saving === 'outcome'}>
+            <SelectTrigger className="h-8 mt-1"><SelectValue placeholder="Select outcome..." /></SelectTrigger>
+            <SelectContent>
+              {OUTCOME_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         {allComplete && (
           <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 mb-2">
             <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
