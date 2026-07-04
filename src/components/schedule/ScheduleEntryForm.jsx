@@ -337,6 +337,10 @@ export default function ScheduleEntryForm({ date, onClose, onSaved }) {
                               <SmartInput fieldKey="location" value={entry.Location} onChange={(val) => updateEntry(key, 'Location', val)} placeholder="e.g. Main Hall" className="h-8 text-xs" />
                             </div>
                           </div>
+                          <div>
+                            <Label className="text-xs">Notes</Label>
+                            <Input value={entry.Notes} onChange={(e) => updateEntry(key, 'Notes', e.target.value)} placeholder="Lesson-specific notes" className="h-8 text-xs" />
+                          </div>
                         </div>
                       );
                     })}
