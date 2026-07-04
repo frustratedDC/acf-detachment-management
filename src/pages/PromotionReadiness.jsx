@@ -7,15 +7,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingUp, FileDown, Loader2 } from 'lucide-react';
+import { TrendingUp, FileDown, Loader2, ChevronDown } from 'lucide-react';
 import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
 import { STAR_ORDER, isReadyForAdvancement } from '@/lib/progressUtils';
+import CadetCriteriaDetails from '@/components/promotion/CadetCriteriaDetails';
 import { jsPDF } from 'jspdf';
 import _ from 'lodash';
 
 export default function PromotionReadiness() {
   const [starFilter, setStarFilter] = useState('all');
   const [generating, setGenerating] = useState(false);
+  const [expandedCadet, setExpandedCadet] = useState(null);
 
   const { data: personnel = [] } = useQuery({
     queryKey: ['all-personnel'],
@@ -32,10 +34,13 @@ export default function PromotionReadiness() {
 
   const cadets = personnel.filter(p => isCadet(p.AccessLevel) && (p.PersonnelStatus || 'Active') === 'Active');
   const approvedByCadet = _.groupBy(progress.filter(p => p.Status === 'Approved'), 'CadetPNumber');
+  const pendingByCadet = _.groupBy(progress.filter(p => p.Status === 'Pending'), 'CadetPNumber');
 
   const cadetRows = cadets.map(cadet => {
     const approved = approvedByCadet[cadet.PNumber] || [];
+    const pending = pendingByCadet[cadet.PNumber] || [];
     const approvedCodes = new Set(approved.map(a => a.LessonCode));
+    const pendingCodes = new Set(pending.map(a => a.LessonCode));
     const levelLessons = syllabus.filter(l => l.StarLevel === cadet.CurrentStarLevel && l.IsMandatory);
     const completedCount = levelLessons.filter(l => approvedCodes.has(l.LessonCode)).length;
     const pct = levelLessons.length > 0 ? Math.round((completedCount / levelLessons.length) * 100) : 0;
@@ -43,7 +48,7 @@ export default function PromotionReadiness() {
     const nextLevel = currentIdx !== -1 && currentIdx < STAR_ORDER.length - 1 ? STAR_ORDER[currentIdx + 1] : null;
     const ready = nextLevel ? isReadyForAdvancement(cadet.CurrentStarLevel, syllabus, approvedCodes) : false;
     const status = ready ? 'Ready' : pct >= 80 ? 'Near Ready' : 'In Progress';
-    return { cadet, pct, completedCount, total: levelLessons.length, nextLevel, status };
+    return { cadet, pct, completedCount, total: levelLessons.length, nextLevel, status, approvedCodes, pendingCodes };
   });
 
   const filteredRows = cadetRows.filter(r => starFilter === 'all' || r.cadet.CurrentStarLevel === starFilter);
@@ -165,33 +170,50 @@ export default function PromotionReadiness() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {sortedRows.map(row => (
-            <Card key={row.cadet.PNumber}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                      {row.cadet.Surname?.[0]}
+          {sortedRows.map(row => {
+            const isExpanded = expandedCadet === row.cadet.PNumber;
+            return (
+              <Card key={row.cadet.PNumber}>
+                <CardContent
+                  className="p-4 cursor-pointer"
+                  onClick={() => setExpandedCadet(isExpanded ? null : row.cadet.PNumber)}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                        {row.cadet.Surname?.[0]}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{row.cadet.Rank} {row.cadet.Surname}</p>
+                        <p className="text-xs text-muted-foreground">{row.cadet.PNumber} · {row.cadet.CurrentStarLevel}{row.nextLevel ? ` → ${row.nextLevel}` : ''}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">{row.cadet.Rank} {row.cadet.Surname}</p>
-                      <p className="text-xs text-muted-foreground">{row.cadet.PNumber} · {row.cadet.CurrentStarLevel}{row.nextLevel ? ` → ${row.nextLevel}` : ''}</p>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={statusBadgeVariant(row.status)}>{row.status}</Badge>
+                      <Badge variant="outline">{row.pct}% ({row.completedCount}/{row.total})</Badge>
+                      <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={statusBadgeVariant(row.status)}>{row.status}</Badge>
-                    <Badge variant="outline">{row.pct}% ({row.completedCount}/{row.total})</Badge>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div
+                      className="bg-primary rounded-full h-2 transition-all duration-500"
+                      style={{ width: `${row.pct}%` }}
+                    />
                   </div>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div
-                    className="bg-primary rounded-full h-2 transition-all duration-500"
-                    style={{ width: `${row.pct}%` }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  {isExpanded && (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <CadetCriteriaDetails
+                        cadet={row.cadet}
+                        syllabus={syllabus}
+                        approvedCodes={row.approvedCodes}
+                        pendingCodes={row.pendingCodes}
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </AccessGate>
