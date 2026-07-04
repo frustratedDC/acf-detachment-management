@@ -56,16 +56,7 @@ export default function DutyCadetAssignment({ date }) {
         if (existing) await base44.entities.DutyAssignment.delete(existing.id);
 
         if (selectedCadet) {
-          await base44.entities.DutyAssignment.create({ Date: date, Role: role, CadetPNumber: selectedCadet, CEAwarded: true });
-          await base44.entities.CommunityEngagementLedger.create({
-            CadetPNumber: selectedCadet,
-            Hours: CE_HOURS_PER_DUTY,
-            ActivityType: 'Event Support',
-            Description: `Training night duty: ${role}`,
-            Date: date,
-            ApprovedByPNumber: personnel?.PNumber || '',
-            Status: 'Approved',
-          });
+          await base44.entities.DutyAssignment.create({ Date: date, Role: role, CadetPNumber: selectedCadet, CEAwarded: false });
         }
       }
       queryClient.invalidateQueries({ queryKey: ['duty-assignments', date] });
@@ -100,7 +91,7 @@ export default function DutyCadetAssignment({ date }) {
             </div>
           ))}
         </div>
-        <p className="text-xs text-muted-foreground">Each assigned duty cadet earns 15 minutes of Community Engagement time.</p>
+        <p className="text-xs text-muted-foreground">Each assigned duty cadet earns 15 minutes of Community Engagement time, submitted for DC approval after final parade (2100hrs).</p>
         <div className="flex justify-end">
           <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
             <Save className="w-4 h-4 mr-1.5" />
