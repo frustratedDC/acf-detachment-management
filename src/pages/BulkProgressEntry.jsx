@@ -76,6 +76,7 @@ export default function BulkProgressEntry() {
   const [search, setSearch] = useState('');
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [hideCompleteStarLevel, setHideCompleteStarLevel] = useState(false);
   const [sortBy, setSortBy] = useState('mandatory-first'); // 'mandatory-first' | 'subject-az' | 'code-asc'
 
   // ── Matrix pending ticks ────────────────────────────────────────────────────
@@ -144,23 +145,37 @@ export default function BulkProgressEntry() {
     [personnel]
   );
 
+  // All mandatory lessons for the selected star level (across all subjects) — used to determine
+  // whether a cadet has fully completed that star level, regardless of their CurrentStarLevel.
+  const mandatoryForStarLevel = useMemo(() =>
+    starLevel ? syllabus.filter(l => l.StarLevel === starLevel && l.IsMandatory) : [],
+    [syllabus, starLevel]
+  );
+
+  function hasCompletedStarLevel(pnum) {
+    if (mandatoryForStarLevel.length === 0) return false;
+    return mandatoryForStarLevel.every(l => approvedSet.has(`${pnum}::${l.LessonCode}`));
+  }
+
   const cadets = useMemo(() => {
     if (!starLevel || !subjectFilter) return [];
+    // Show all active cadets, regardless of their current star level, so any level can be entered for anyone
     let filtered = allActiveCadets.filter(c =>
-      // Only show cadets whose current star level matches the selected level
-      c.CurrentStarLevel === starLevel &&
-      (!search ||
-        c.Surname?.toLowerCase().includes(search.toLowerCase()) ||
-        c.FirstName?.toLowerCase().includes(search.toLowerCase()) ||
-        c.PNumber?.toLowerCase().includes(search.toLowerCase()))
+      !search ||
+      c.Surname?.toLowerCase().includes(search.toLowerCase()) ||
+      c.FirstName?.toLowerCase().includes(search.toLowerCase()) ||
+      c.PNumber?.toLowerCase().includes(search.toLowerCase())
     );
     if (hideCompleted) {
       filtered = filtered.filter(c =>
         displayLessons.some(l => !approvedSet.has(`${c.PNumber}::${l.LessonCode}`))
       );
     }
+    if (hideCompleteStarLevel) {
+      filtered = filtered.filter(c => !hasCompletedStarLevel(c.PNumber));
+    }
     return filtered;
-  }, [allActiveCadets, starLevel, subjectFilter, search, hideCompleted, displayLessons, approvedSet]);
+  }, [allActiveCadets, starLevel, subjectFilter, search, hideCompleted, hideCompleteStarLevel, displayLessons, approvedSet, mandatoryForStarLevel]);
 
   // ── Matrix helpers ──────────────────────────────────────────────────────────
   function isChecked(pnum, lessonCode) { return !!(pending[pnum]?.[lessonCode]); }
@@ -460,8 +475,17 @@ export default function BulkProgressEntry() {
                   {hideCompleted ? <Eye className="w-3.5 h-3.5 mr-1" /> : <EyeOff className="w-3.5 h-3.5 mr-1" />}
                   {hideCompleted ? 'Show All' : 'Hide Done'}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setHideCompleteStarLevel(v => !v)}
+                  className={hideCompleteStarLevel ? 'border-primary text-primary' : ''}
+                >
+                  {hideCompleteStarLevel ? <Eye className="w-3.5 h-3.5 mr-1" /> : <EyeOff className="w-3.5 h-3.5 mr-1" />}
+                  {hideCompleteStarLevel ? 'Show Complete Levels' : 'Hide Complete Star Level'}
+                </Button>
                 {(starLevel || subjectFilter) && (
-                  <Button size="sm" variant="ghost" onClick={() => { setStarLevel(''); setSubjectFilter(''); setSearch(''); setPending({}); setHideCompleted(false); }}>
+                  <Button size="sm" variant="ghost" onClick={() => { setStarLevel(''); setSubjectFilter(''); setSearch(''); setPending({}); setHideCompleted(false); setHideCompleteStarLevel(false); }}>
                     ✕ Clear Filters
                   </Button>
                 )}
@@ -585,7 +609,7 @@ export default function BulkProgressEntry() {
                               </span>
                               <span className="text-muted-foreground">{cadet.FirstName}</span>
                               <div className="flex items-center gap-1 mt-0.5">
-                                <Badge variant="outline" className="text-xs py-0 h-4">{cadet.CurrentStarLevel}</Badge>
+                                <Badge variant="outline" className={`text-xs py-0 h-4 ${cadet.CurrentStarLevel !== starLevel ? 'border-amber-400 text-amber-600' : ''}`}>{cadet.CurrentStarLevel}</Badge>
                                 {rowTicked > 0 && <Badge className="text-xs py-0 h-4 bg-primary/20 text-primary border-0">{rowTicked} ticked</Badge>}
                                 {rowCompleted > 0 && <Badge className="text-xs py-0 h-4 bg-chart-2/20 text-chart-2 border-0">{rowCompleted} done</Badge>}
                               </div>
