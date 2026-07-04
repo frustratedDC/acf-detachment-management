@@ -57,11 +57,12 @@ export default function PromotionReadiness() {
     const nextRank = currentIdx !== -1 && currentIdx < RANK_ORDER.length - 1 ? RANK_ORDER[currentIdx + 1] : null;
     const reqs = nextRank ? RANK_REQUIREMENTS[nextRank] : null;
 
+    // Syllabus only ever gates promotion via the required star level and, where defined, the extra Fieldcraft star level
     const levelLessons = reqs?.requiredStarLevel ? syllabus.filter(l => l.StarLevel === reqs.requiredStarLevel && l.IsMandatory) : [];
     const fieldcraftLessons = reqs?.extraStarLevel ? syllabus.filter(l => l.StarLevel === reqs.extraStarLevel && l.SubjectName?.toLowerCase().includes(reqs.extraSubject.toLowerCase())) : [];
     const allLessons = [...levelLessons, ...fieldcraftLessons];
     const completedCount = allLessons.filter(l => approvedCodes.has(l.LessonCode)).length;
-    const pct = allLessons.length > 0 ? Math.round((completedCount / allLessons.length) * 100) : 0;
+    const pct = allLessons.length > 0 ? Math.round((completedCount / allLessons.length) * 100) : 100;
 
     const timeInRankMonths = monthsSince(cadet.PromotionDate);
     const attendancePct = computeAttendancePct(paradeRecords, cadet.PNumber, twelveMonthsAgo);
@@ -74,7 +75,7 @@ export default function PromotionReadiness() {
     const manualOutstanding = (reqs?.manualCriteria?.length || 0) > 0;
 
     const ready = !!nextRank && syllabusMet && timeMet && attendanceMet && disciplineClean && !manualOutstanding;
-    const status = ready ? 'Ready' : pct >= 80 && timeMet && attendanceMet && disciplineClean ? 'Near Ready' : 'In Progress';
+    const status = ready ? 'Ready' : syllabusMet && timeMet && attendanceMet && disciplineClean ? 'Near Ready' : 'In Progress';
 
     return {
       cadet, pct, completedCount, total: allLessons.length, nextLevel: nextRank, status,
