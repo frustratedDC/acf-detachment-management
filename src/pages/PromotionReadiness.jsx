@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TrendingUp, FileDown, Loader2, ChevronDown } from 'lucide-react';
 import { ACCESS_LEVELS, isCadet } from '@/lib/accessLevels';
-import { STAR_ORDER, isReadyForAdvancement } from '@/lib/progressUtils';
+import { RANK_ORDER, RANK_REQUIREMENTS, monthsSince, computeAttendancePct, hasCleanDisciplineRecord } from '@/lib/rankUtils';
 import CadetCriteriaDetails from '@/components/promotion/CadetCriteriaDetails';
 import { jsPDF } from 'jspdf';
 import _ from 'lodash';
@@ -31,24 +31,54 @@ export default function PromotionReadiness() {
     queryKey: ['syllabus-master-all'],
     queryFn: () => base44.entities.SyllabusMaster.filter({}),
   });
+  const { data: paradeRecords = [] } = useQuery({
+    queryKey: ['parade-state-all'],
+    queryFn: () => base44.entities.DailyParadeState.filter({}),
+  });
+  const { data: disciplineLogs = [] } = useQuery({
+    queryKey: ['discipline-logs-all'],
+    queryFn: () => base44.entities.DisciplineLog.filter({}),
+  });
 
   const cadets = personnel.filter(p => isCadet(p.AccessLevel) && (p.PersonnelStatus || 'Active') === 'Active');
   const approvedByCadet = _.groupBy(progress.filter(p => p.Status === 'Approved'), 'CadetPNumber');
   const pendingByCadet = _.groupBy(progress.filter(p => p.Status === 'Pending'), 'CadetPNumber');
+  const twelveMonthsAgo = new Date();
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
   const cadetRows = cadets.map(cadet => {
     const approved = approvedByCadet[cadet.PNumber] || [];
     const pending = pendingByCadet[cadet.PNumber] || [];
     const approvedCodes = new Set(approved.map(a => a.LessonCode));
     const pendingCodes = new Set(pending.map(a => a.LessonCode));
-    const levelLessons = syllabus.filter(l => l.StarLevel === cadet.CurrentStarLevel && l.IsMandatory);
-    const completedCount = levelLessons.filter(l => approvedCodes.has(l.LessonCode)).length;
-    const pct = levelLessons.length > 0 ? Math.round((completedCount / levelLessons.length) * 100) : 0;
-    const currentIdx = STAR_ORDER.indexOf(cadet.CurrentStarLevel);
-    const nextLevel = currentIdx !== -1 && currentIdx < STAR_ORDER.length - 1 ? STAR_ORDER[currentIdx + 1] : null;
-    const ready = nextLevel ? isReadyForAdvancement(cadet.CurrentStarLevel, syllabus, approvedCodes) : false;
-    const status = ready ? 'Ready' : pct >= 80 ? 'Near Ready' : 'In Progress';
-    return { cadet, pct, completedCount, total: levelLessons.length, nextLevel, status, approvedCodes, pendingCodes };
+
+    const currentRank = cadet.Rank || 'Cdt';
+    const currentIdx = RANK_ORDER.indexOf(currentRank);
+    const nextRank = currentIdx !== -1 && currentIdx < RANK_ORDER.length - 1 ? RANK_ORDER[currentIdx + 1] : null;
+    const reqs = nextRank ? RANK_REQUIREMENTS[nextRank] : null;
+
+    const levelLessons = reqs?.requiredStarLevel ? syllabus.filter(l => l.StarLevel === reqs.requiredStarLevel && l.IsMandatory) : [];
+    const fieldcraftLessons = reqs?.extraStarLevel ? syllabus.filter(l => l.StarLevel === reqs.extraStarLevel && l.SubjectName?.toLowerCase().includes(reqs.extraSubject.toLowerCase())) : [];
+    const allLessons = [...levelLessons, ...fieldcraftLessons];
+    const completedCount = allLessons.filter(l => approvedCodes.has(l.LessonCode)).length;
+    const pct = allLessons.length > 0 ? Math.round((completedCount / allLessons.length) * 100) : 0;
+
+    const timeInRankMonths = monthsSince(cadet.PromotionDate);
+    const attendancePct = computeAttendancePct(paradeRecords, cadet.PNumber, twelveMonthsAgo);
+    const disciplineClean = hasCleanDisciplineRecord(disciplineLogs, cadet.PNumber, twelveMonthsAgo);
+
+    const syllabusMet = allLessons.length === 0 || completedCount === allLessons.length;
+    const timeMet = reqs?.timeInRankMonths == null || timeInRankMonths >= reqs.timeInRankMonths;
+    const attendanceMet = attendancePct != null && attendancePct >= 80;
+    const manualOutstanding = (reqs?.manualCriteria?.length || 0) > 0;
+
+    const ready = !!nextRank && syllabusMet && timeMet && attendanceMet && disciplineClean && !manualOutstanding;
+    const status = ready ? 'Ready' : pct >= 80 && timeMet && attendanceMet && disciplineClean ? 'Near Ready' : 'In Progress';
+
+    return {
+      cadet, pct, completedCount, total: allLessons.length, nextLevel: nextRank, status,
+      approvedCodes, pendingCodes, timeInRankMonths, attendancePct, disciplineClean,
+    };
   });
 
   const filteredRows = cadetRows.filter(r => starFilter === 'all' || r.cadet.CurrentStarLevel === starFilter);
@@ -207,6 +237,10 @@ export default function PromotionReadiness() {
                         syllabus={syllabus}
                         approvedCodes={row.approvedCodes}
                         pendingCodes={row.pendingCodes}
+                        nextRank={row.nextLevel}
+                        timeInRankMonths={row.timeInRankMonths}
+                        attendancePct={row.attendancePct}
+                        disciplineClean={row.disciplineClean}
                       />
                     </div>
                   )}
