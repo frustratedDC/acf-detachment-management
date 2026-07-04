@@ -86,6 +86,7 @@ const AppContent = () => {
         <Route path="/tasks" element={<TaskList />} />
         <Route path="/training-manager" element={<TrainingManager />} />
         <Route path="/personnel" element={<Personnel />} />
+        <Route path="/cfav-roll" element={<Personnel />} />
         <Route path="/admin" element={<AdminControls />} />
         <Route path="/training-plan-export" element={<TrainingPlanExport />} />
         <Route path="/calendar" element={<TrainingCalendar />} />

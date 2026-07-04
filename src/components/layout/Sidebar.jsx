@@ -72,7 +72,7 @@ const NAV_GROUPS = [
     label: 'CFAVs',
     icon: UsersRound,
     items: [
-      { path: '/personnel',          label: 'CFAV Nominal Roll',   icon: UserCog,       level: 4 },
+      { path: '/cfav-roll',          label: 'CFAV Nominal Roll',   icon: UserCog,       level: 4 },
       { path: '/instructor-quals',   label: 'CFAV Qualifications', icon: BadgeCheck,    level: 3 },
       { path: '/all-availability',   label: 'CFAV Availability',   icon: CalendarCheck, level: 3 },
       { path: '/instructor-engagement', label: 'Engagement Log',   icon: Swords,        level: 5 },

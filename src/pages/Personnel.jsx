@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { usePersonnel } from '@/lib/usePersonnel';
@@ -19,24 +20,31 @@ import { ACCESS_LEVELS, LEVEL_NAMES } from '@/lib/accessLevels';
 import NonAttenderWorkflow from '@/components/personnel/NonAttenderWorkflow';
 import LeaverPipeline from '@/components/personnel/LeaverPipeline';
 
-const emptyForm = {
-  PNumber: '', Rank: '', FirstName: '', Surname: '', Type: 'Cadet',
-  AccessLevel: '0', RoleName: '', CurrentStarLevel: 'Basic'
-};
+const makeEmptyForm = (type) => ({
+  PNumber: '', Rank: '', FirstName: '', Surname: '', Type: type,
+  AccessLevel: '0', RoleName: '', CurrentStarLevel: type === 'Adult Instructor' ? 'Adult' : 'Basic'
+});
 
 export default function Personnel() {
   const queryClient = useQueryClient();
   const { personnel: currentUser } = usePersonnel();
   const myLevel = currentUser?.AccessLevel ?? 0;
+  const location = useLocation();
+  const isCFAVRoll = location.pathname === '/cfav-roll';
+  const lockedType = isCFAVRoll ? 'Adult Instructor' : 'Cadet';
 
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState(lockedType);
+
+  useEffect(() => {
+    setTypeFilter(lockedType);
+  }, [lockedType]);
   const [starFilter, setStarFilter] = useState('all');
   const [levelFilter, setLevelFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('active');
   const [sortBy, setSortBy] = useState('surname');
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(() => makeEmptyForm(lockedType));
   const [editingId, setEditingId] = useState(null);
   const [profilePerson, setProfilePerson] = useState(null);
   const [leaverPerson, setLeaverPerson] = useState(null);
@@ -104,7 +112,7 @@ export default function Personnel() {
 
   function closeDialog() {
     setOpen(false);
-    setForm(emptyForm);
+    setForm(makeEmptyForm(lockedType));
     setEditingId(null);
   }
 
@@ -146,7 +154,7 @@ export default function Personnel() {
         p.PNumber?.toLowerCase().includes(search.toLowerCase()) ||
         p.RoleName?.toLowerCase().includes(search.toLowerCase()) ||
         p.Rank?.toLowerCase().includes(search.toLowerCase());
-      const matchType = typeFilter === 'all' || p.Type === typeFilter;
+      const matchType = p.Type === lockedType;
       const matchStar = starFilter === 'all' || p.CurrentStarLevel === starFilter;
       const matchLevel = levelFilter === 'all' || String(p.AccessLevel) === levelFilter;
       const matchStatus = statusFilter === 'all' || (statusFilter === 'active' ? status === 'Active' : status !== 'Active');
@@ -176,8 +184,8 @@ export default function Personnel() {
   return (
     <AccessGate level={ACCESS_LEVELS.DET_2IC}>
       <PageHeader
-        title="Personnel Manager"
-        description={`${personnel.length}/999 records`}
+        title={isCFAVRoll ? 'CFAV Nominal Roll' : 'Cadet Profiles'}
+        description={`${filtered.length} ${isCFAVRoll ? 'adults' : 'cadets'}`}
         icon={Users}
         actions={
           <div className="flex items-center gap-2">
@@ -199,8 +207,8 @@ export default function Personnel() {
             )}
             <Dialog open={open} onOpenChange={(v) => { if (!v) closeDialog(); else setOpen(true); }}>
               <DialogTrigger asChild>
-                <Button disabled={atLimit && !editingId} onClick={() => { setForm(emptyForm); setEditingId(null); }}>
-                  <Plus className="w-4 h-4 mr-2" />Add Personnel
+                <Button disabled={atLimit && !editingId} onClick={() => { setForm(makeEmptyForm(lockedType)); setEditingId(null); }}>
+                  <Plus className="w-4 h-4 mr-2" />{isCFAVRoll ? 'Add CFAV' : 'Add Cadet'}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg">
@@ -229,20 +237,6 @@ export default function Personnel() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                     <Label>Type</Label>
-                     <Select value={form.Type} onValueChange={(v) => setForm(p => ({
-                       ...p,
-                       Type: v,
-                       CurrentStarLevel: v === 'Adult Instructor' ? 'Adult' : (p.CurrentStarLevel === 'Adult' ? 'Basic' : p.CurrentStarLevel)
-                     }))}>
-                       <SelectTrigger><SelectValue /></SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="Cadet">Cadet</SelectItem>
-                         <SelectItem value="Adult Instructor">Adult Instructor</SelectItem>
-                       </SelectContent>
-                     </Select>
-                    </div>
                     <div>
                       <Label>Access Level</Label>
                       <Select value={form.AccessLevel} onValueChange={(v) => setForm(p => ({ ...p, AccessLevel: v }))}>
@@ -327,17 +321,6 @@ export default function Personnel() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="Search name, PNumber, rank, role..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
             </div>
-            <div className="flex rounded-md border border-input overflow-hidden shrink-0">
-              {[['all', 'All'], ['Cadet', 'Cadets'], ['Adult Instructor', 'Adults']].map(([val, label]) => (
-                <button
-                  key={val}
-                  onClick={() => setTypeFilter(val)}
-                  className={`px-3 py-1.5 text-sm font-medium transition-colors border-r last:border-r-0 border-input ${typeFilter === val ? 'bg-primary text-primary-foreground' : 'bg-transparent text-foreground hover:bg-muted'}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
             <Select value={starFilter} onValueChange={setStarFilter}>
               <SelectTrigger className="w-36"><SelectValue placeholder="Star Level" /></SelectTrigger>
               <SelectContent>
@@ -404,7 +387,6 @@ export default function Personnel() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant="secondary" className="text-xs">{p.Type || 'Cadet'}</Badge>
                     {p.Type !== 'Adult Instructor' && <Badge variant="outline" className="text-xs">{p.CurrentStarLevel}</Badge>}
                     <Badge className="text-xs">L{p.AccessLevel}</Badge>
                     {p.IsLinked && <Badge variant="outline" className="text-xs text-chart-2 border-chart-2/30">Linked</Badge>}
