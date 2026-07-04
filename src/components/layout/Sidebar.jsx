@@ -58,7 +58,7 @@ const NAV_GROUPS = [
       { path: '/progress',            label: 'Progress Matrix',       icon: Layers,        level: 3 },
       { path: '/wht',                 label: 'Cadet WHTs',            icon: Crosshair,     level: 2 },
       { path: '/my-logbooks',         label: 'Cadet Logbooks',        icon: BookMarked,    level: 2 },
-      { path: '/instructor-engagement',label: 'Discipline / SG Log', icon: Swords,        level: 5 },
+      { path: '/discipline-logs',      label: 'Discipline / SG Log', icon: Swords,        level: 5 },
       { path: '/uniform-exchange',    label: 'Uniform Requests',      icon: Shirt,         level: 2 },
       { path: '/course-request',      label: 'Course Requests',       icon: BookOpen,      level: 2 },
       { path: '/report-issue',        label: 'Issues Log',            icon: AlertCircle,   level: 2 },

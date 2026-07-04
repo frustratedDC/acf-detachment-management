@@ -1,0 +1,58 @@
+{
+  "name": "DisciplineLog",
+  "type": "object",
+  "properties": {
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the incident occurred"
+    },
+    "PersonnelInvolved": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "PNumbers of personnel involved in the incident"
+    },
+    "Description": {
+      "type": "string",
+      "description": "Details of the discipline or safeguarding issue"
+    },
+    "UIN": {
+      "type": "string",
+      "description": "Unique Incident Number \u2014 the only field surfaced in the Audit Log"
+    },
+    "LoggedByPNumber": {
+      "type": "string",
+      "description": "PNumber of the person who logged this entry"
+    }
+  },
+  "required": [
+    "Date",
+    "PersonnelInvolved",
+    "Description",
+    "UIN"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

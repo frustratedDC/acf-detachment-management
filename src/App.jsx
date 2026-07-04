@@ -50,6 +50,7 @@ import ReportIssue from '@/pages/ReportIssue';
 import HealthyMinds from '@/pages/HealthyMinds';
 import CommunityEngagement from '@/pages/CommunityEngagement';
 import InstructorEngagement from '@/pages/InstructorEngagement';
+import DisciplineLogs from '@/pages/DisciplineLogs';
 import MonthlyReports from '@/pages/MonthlyReports';
 import MyLogbooks from '@/pages/MyLogbooks';
 import ConflictMonitor from '@/pages/ConflictMonitor';
@@ -110,6 +111,7 @@ const AppContent = () => {
         <Route path="/healthy-minds" element={<HealthyMinds />} />
         <Route path="/community-engagement" element={<CommunityEngagement />} />
         <Route path="/instructor-engagement" element={<InstructorEngagement />} />
+        <Route path="/discipline-logs" element={<DisciplineLogs />} />
         <Route path="/monthly-reports" element={<MonthlyReports />} />
         <Route path="/my-logbooks" element={<MyLogbooks />} />
         <Route path="/conflict-monitor" element={<ConflictMonitor />} />

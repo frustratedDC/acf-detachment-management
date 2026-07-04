@@ -5,7 +5,7 @@ import AccessGate from '@/components/shared/AccessGate';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShieldCheck, BookOpen, Users, CheckSquare, AlertCircle } from 'lucide-react';
+import { ShieldCheck, BookOpen, Users, CheckSquare, AlertCircle, Swords } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 
@@ -14,6 +14,7 @@ const SOURCES = [
   { key: 'personnel', label: 'Personnel Change', icon: Users, color: 'text-purple-600 bg-purple-50 border-purple-200' },
   { key: 'approval', label: 'Approval', icon: CheckSquare, color: 'text-green-600 bg-green-50 border-green-200' },
   { key: 'issue', label: 'Issue Reported', icon: AlertCircle, color: 'text-destructive bg-destructive/5 border-destructive/20' },
+  { key: 'discipline', label: 'Discipline / SG Entry', icon: Swords, color: 'text-red-700 bg-red-50 border-red-200' },
 ];
 
 export default function AuditLog() {
@@ -32,6 +33,10 @@ export default function AuditLog() {
   const { data: issueReports = [] } = useQuery({
     queryKey: ['issue-reports'],
     queryFn: () => base44.entities.IssueReport.filter({}),
+  });
+  const { data: disciplineLogs = [] } = useQuery({
+    queryKey: ['discipline-logs'],
+    queryFn: () => base44.entities.DisciplineLog.filter({}),
   });
 
   const personnelMap = useMemo(() => {
@@ -83,8 +88,18 @@ export default function AuditLog() {
       });
     });
 
+    disciplineLogs.forEach(d => {
+      const ts = d.created_date;
+      if (!ts) return;
+      list.push({
+        source: 'discipline',
+        timestamp: ts,
+        description: `UIN: ${d.UIN}`,
+      });
+    });
+
     return list.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 100);
-  }, [syllabus, personnel, progressLedger, issueReports, personnelMap]);
+  }, [syllabus, personnel, progressLedger, issueReports, disciplineLogs, personnelMap]);
 
   return (
     <AccessGate level={ACCESS_LEVELS.SYSTEM_ADMIN}>
