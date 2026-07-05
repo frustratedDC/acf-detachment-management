@@ -10,10 +10,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Upload, Trash2, AlertTriangle, Loader2, FileUp, Users, Save, Shield, ShieldCheck, Zap, Download, AlertCircle, Plus } from 'lucide-react';
+import { Settings, Upload, Trash2, AlertTriangle, Loader2, FileUp, Users, Save, Shield, ShieldCheck, Zap, Download, AlertCircle, Plus, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 import AccessRequestsTab from '@/components/admin/AccessRequestsTab';
+import TenantsPanel from '@/components/admin/TenantsPanel';
 
 // ─── Sys Admin Section (L6 only) ───────────────────────────────────────────
 function SysAdminPanel({ queryClient }) {
@@ -708,6 +709,12 @@ export default function AdminControls() {
             </TabsTrigger>
           )}
           {isSysAdmin && (
+            <TabsTrigger value="tenants" className="gap-2">
+              <Building2 className="w-4 h-4" />
+              Tenants
+            </TabsTrigger>
+          )}
+          {isSysAdmin && (
             <TabsTrigger value="sys-admin" className="gap-2">
               <Shield className="w-4 h-4" />
               System Admin
@@ -730,6 +737,12 @@ export default function AdminControls() {
         {isDC && (
           <TabsContent value="engagement">
             <EngagementAuditPanel />
+          </TabsContent>
+        )}
+
+        {isSysAdmin && (
+          <TabsContent value="tenants">
+            <TenantsPanel />
           </TabsContent>
         )}
 

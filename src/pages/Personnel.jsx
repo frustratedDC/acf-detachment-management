@@ -56,17 +56,23 @@ export default function Personnel() {
   const canViewAs = myLevel >= ACCESS_LEVELS.DET_2IC;
   const { setViewAs } = usePersonnel();
 
-  const { data: personnel = [] } = useQuery({
+  const { data: allPersonnel = [] } = useQuery({
     queryKey: ['all-personnel'],
     queryFn: () => base44.entities.PersonnelManager.filter({}),
   });
+
+  // L6 System Admins see every tenant; everyone else is scoped to their own DetachmentID
+  const personnel = isSysAdmin
+    ? allPersonnel
+    : allPersonnel.filter(p => (p.DetachmentID || 'LEIGH') === (currentUser?.DetachmentID || 'LEIGH'));
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.PersonnelManager.create({
       ...data,
       AccessLevel: parseInt(data.AccessLevel),
       PersonnelStatus: 'Active',
-      IsLinked: false
+      IsLinked: false,
+      DetachmentID: currentUser?.DetachmentID || 'LEIGH',
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
