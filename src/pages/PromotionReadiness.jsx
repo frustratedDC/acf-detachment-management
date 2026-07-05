@@ -85,7 +85,7 @@ export default function PromotionReadiness() {
     const manualOutstanding = (reqs?.manualCriteria || []).some(m => !cadet[m.field]);
 
     const ready = !!nextRank && syllabusMet && timeMet && attendanceMet && disciplineClean && !manualOutstanding;
-    const status = ready ? 'Ready' : syllabusMet && timeMet && attendanceMet && disciplineClean ? 'Near Ready' : 'In Progress';
+    const status = !nextRank ? 'Max Rank' : ready ? 'Ready' : syllabusMet && timeMet && attendanceMet && disciplineClean ? 'Near Ready' : 'In Progress';
 
     return {
       cadet, pct, completedCount, total: allLessons.length, nextLevel: nextRank, status,
@@ -93,8 +93,9 @@ export default function PromotionReadiness() {
     };
   });
 
-  const filteredRows = cadetRows.filter(r => starFilter === 'all' || r.cadet.CurrentStarLevel === starFilter);
+  const filteredRows = cadetRows.filter(r => r.status !== 'Max Rank' && (starFilter === 'all' || r.cadet.CurrentStarLevel === starFilter));
   const sortedRows = _.orderBy(filteredRows, ['pct'], ['desc']);
+  const maxRankRows = cadetRows.filter(r => r.status === 'Max Rank' && (starFilter === 'all' || r.cadet.CurrentStarLevel === starFilter));
 
   const readyCount = cadetRows.filter(r => r.status === 'Ready').length;
   const nearCount = cadetRows.filter(r => r.status === 'Near Ready').length;
@@ -105,6 +106,8 @@ export default function PromotionReadiness() {
     if (status === 'Near Ready') return 'secondary';
     return 'outline';
   }
+
+  const [showMaxRank, setShowMaxRank] = useState(false);
 
   async function handleExport() {
     setGenerating(true);
@@ -260,6 +263,38 @@ export default function PromotionReadiness() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {maxRankRows.length > 0 && (
+        <div className="mt-6">
+          <button
+            onClick={() => setShowMaxRank(!showMaxRank)}
+            className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 hover:text-foreground transition-colors"
+          >
+            <ChevronDown className={`w-4 h-4 transition-transform ${showMaxRank ? 'rotate-180' : ''}`} />
+            Max Rank Reached ({maxRankRows.length})
+          </button>
+          {showMaxRank && (
+            <div className="space-y-2">
+              {maxRankRows.map(row => (
+                <Card key={row.cadet.PNumber} className="opacity-70">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                        {row.cadet.Surname?.[0]}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{row.cadet.Rank} {row.cadet.Surname}</p>
+                        <p className="text-xs text-muted-foreground">{row.cadet.PNumber} · {row.cadet.CurrentStarLevel}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline">Max Rank</Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </AccessGate>

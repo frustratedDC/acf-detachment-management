@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Wand2, ChevronDown, ChevronRight, Info, Lock, LockOpen, Archive, AlertTriangle } from 'lucide-react';
+import { Wand2, ChevronDown, ChevronRight, Info, Lock, LockOpen, Archive, AlertTriangle, CalendarCheck2 } from 'lucide-react';
 import { format, addMonths, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, isAdultInstructor } from '@/lib/accessLevels';
@@ -79,6 +79,23 @@ export default function TrainingPlanGenerator() {
     queryKey: ['staff-availability-all'],
     queryFn: () => base44.entities.StaffAvailability.filter({}),
     enabled: verifyAvailability,
+  });
+
+  const applyToScheduleMutation = useMutation({
+    mutationFn: async () => {
+      const records = plan.flatMap(night => night.plans.map(p => ({
+        Date: night.date,
+        Period: p.period,
+        LessonCode: p.lesson.LessonCode,
+        LessonName: p.lesson.LessonName,
+        AssignedStarLevel: p.starLevel,
+      })));
+      return base44.entities.NightlySchedule.bulkCreate(records);
+    },
+    onSuccess: (res) => {
+      toast.success(`Applied ${res?.length || 0} lessons to the Training Schedule`);
+    },
+    onError: (err) => toast.error(err.message),
   });
 
   const toggleLockMutation = useMutation({
@@ -253,12 +270,22 @@ export default function TrainingPlanGenerator() {
 
         {/* Plan output */}
         <Card className="lg:col-span-2">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 flex-row items-center justify-between gap-2 flex-wrap space-y-0">
             <CardTitle className="text-sm">
               {generated
                 ? `Overview — ${format(parseISO(startDate), 'MMM yyyy')} to ${format(parseISO(endDate), 'MMM yyyy')} (${plan.length} nights)`
                 : 'Generated Plan'}
             </CardTitle>
+            {generated && plan.length > 0 && isInstructor && (
+              <Button
+                size="sm"
+                onClick={() => applyToScheduleMutation.mutate()}
+                disabled={applyToScheduleMutation.isPending}
+              >
+                <CalendarCheck2 className="w-4 h-4 mr-2" />
+                {applyToScheduleMutation.isPending ? 'Applying…' : 'Apply to Schedule'}
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             {!generated && (
