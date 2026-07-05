@@ -1,26 +1,46 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import PageHeader from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BookOpen, Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { BookOpen, Search, ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import _ from 'lodash';
-import AddLessonDialog from '@/components/syllabus/AddLessonDialog';
+import SyllabusEditorDialog from '@/components/syllabus/SyllabusEditorDialog';
+import SyllabusBulkBar from '@/components/syllabus/SyllabusBulkBar';
+import { toast } from 'sonner';
 
 const STAR_ORDER = { 'Basic': 0, '1 Star': 1, '2 Star': 2, '3 Star': 3, '4 Star': 4, 'Adult': 5, 'Admin': 6 };
+const TYPE_BADGE = {
+  'Physical Assessment': 'bg-orange-500 text-white',
+  'Auto-Assessment': 'bg-blue-500 text-white',
+};
 
 export default function SyllabusMaster() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [starFilter, setStarFilter] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [collapsed, setCollapsed] = useState({});
+  const [selected, setSelected] = useState([]);
+  const [editingLesson, setEditingLesson] = useState(null);
 
   const { data: lessons = [], isLoading } = useQuery({
     queryKey: ['syllabus-master-all'],
     queryFn: () => base44.entities.SyllabusMaster.filter({}),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.SyllabusMaster.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['syllabus-master-all'] });
+      toast.success('Lesson deleted');
+    },
+    onError: (err) => toast.error(err.message),
   });
 
   const filtered = lessons.filter(l => {
@@ -44,11 +64,15 @@ export default function SyllabusMaster() {
     setCollapsed(p => ({ ...p, [subject]: !p[subject] }));
   }
 
+  function toggleSelect(id) {
+    setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
   return (
     <div>
       <PageHeader
         title="Master Syllabus"
-        description="Read-only view of the training syllabus"
+        description="Manage the training syllabus: lessons, assessments and qualification requirements"
         icon={BookOpen}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -82,10 +106,14 @@ export default function SyllabusMaster() {
                 <SelectItem value="star">Sort: Star Level</SelectItem>
               </SelectContent>
             </Select>
-            <AddLessonDialog />
+            <SyllabusEditorDialog />
           </div>
         }
       />
+
+      {selected.length > 0 && (
+        <SyllabusBulkBar selectedIds={selected} onClear={() => setSelected([])} />
+      )}
 
       {isLoading ? (
         <div className="space-y-4">
@@ -118,11 +146,33 @@ export default function SyllabusMaster() {
                   <CardContent>
                     <div className="space-y-1">
                       {sortLessons(grouped[subject]).map(lesson => (
-                        <div key={lesson.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div key={lesson.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group">
+                          <Checkbox
+                            checked={selected.includes(lesson.id)}
+                            onCheckedChange={() => toggleSelect(lesson.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                           <code className="text-xs font-mono bg-muted px-2 py-1 rounded">{lesson.LessonCode}</code>
                           <span className="text-sm flex-1">{lesson.LessonName}</span>
                           <Badge variant="outline" className="text-xs">{lesson.StarLevel}</Badge>
                           {lesson.IsMandatory && <Badge className="bg-accent text-accent-foreground text-xs">Required</Badge>}
+                          {lesson.LessonType && lesson.LessonType !== 'Lesson' && (
+                            <Badge className={`text-xs ${TYPE_BADGE[lesson.LessonType] || ''}`}>{lesson.LessonType}</Badge>
+                          )}
+                          {lesson.RequiredQual && <Badge variant="outline" className="text-xs">{lesson.RequiredQual}</Badge>}
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingLesson(lesson)}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => { if (confirm(`Delete "${lesson.LessonName}"?`)) deleteMutation.mutate(lesson.id); }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -132,6 +182,14 @@ export default function SyllabusMaster() {
             );
           })}
         </div>
+      )}
+
+      {editingLesson && (
+        <SyllabusEditorDialog
+          lesson={editingLesson}
+          open={!!editingLesson}
+          onOpenChange={(v) => { if (!v) setEditingLesson(null); }}
+        />
       )}
     </div>
   );

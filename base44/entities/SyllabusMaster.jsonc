@@ -30,6 +30,20 @@
     },
     "GrantsQualification": {
       "type": "string"
+    },
+    "LessonType": {
+      "type": "string",
+      "enum": [
+        "Lesson",
+        "Physical Assessment",
+        "Auto-Assessment"
+      ],
+      "default": "Lesson",
+      "description": "Lesson = standard teaching session. Physical Assessment = requires an instructor to physically run/assess it (shows in Training Plan Generator). Auto-Assessment = automatically graded on lesson completion, excluded from the Training Plan Generator."
+    },
+    "RequiredQual": {
+      "type": "string",
+      "description": "Qualification code (matching InstructorQualification.QualCode, e.g. SAAI) required to teach/assess this lesson. Leave blank if none required."
     }
   },
   "required": [

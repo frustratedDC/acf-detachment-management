@@ -141,7 +141,7 @@ export default function TrainingPlanGenerator() {
   const lessonsByLevel = useMemo(() => {
     const byLevel = {};
     selectedLevels.forEach(sl => {
-      const all = syllabus.filter(l => l.StarLevel === sl && (!mandatoryOnly || l.IsMandatory));
+      const all = syllabus.filter(l => l.StarLevel === sl && l.LessonType !== 'Auto-Assessment' && (!mandatoryOnly || l.IsMandatory));
       const mandatory = sortLessons(all.filter(l => l.IsMandatory));
       const optional = sortLessons(all.filter(l => !l.IsMandatory));
       byLevel[sl] = [...mandatory, ...optional];
