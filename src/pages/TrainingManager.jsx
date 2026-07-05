@@ -69,6 +69,11 @@ export default function TrainingManager() {
     queryFn: () => base44.entities.StaffAvailability.filter({ EventDate: planDate, IsAvailable: true }),
   });
 
+  const { data: instructorQuals = [] } = useQuery({
+    queryKey: ['instructor-quals-all'],
+    queryFn: () => base44.entities.InstructorQualification.filter({}),
+  });
+
   const personnelMap = useMemo(() => {
     const m = {};
     personnel.forEach(p => { m[p.PNumber] = p; });
@@ -83,9 +88,24 @@ export default function TrainingManager() {
   // --- Cadet progression gap analysis ---
   const cadets = useMemo(() => personnel.filter(p => isCadet(p.AccessLevel) && (p.PersonnelStatus || 'Active') === 'Active'), [personnel]);
 
+  // PNumber -> Set of qualification codes held
+  const instructorQualMap = useMemo(() => {
+    const m = {};
+    instructorQuals.forEach(q => {
+      if (!m[q.PNumber]) m[q.PNumber] = new Set();
+      m[q.PNumber].add(q.QualCode);
+    });
+    return m;
+  }, [instructorQuals]);
+
+  function getQualifiedInstructors(lesson) {
+    if (!lesson.RequiredQuals || lesson.RequiredQuals.length === 0) return instructors;
+    return instructors.filter(i => lesson.RequiredQuals.some(code => instructorQualMap[i.PNumber]?.has(code)));
+  }
+
   // For each lesson in syllabus, count how many active cadets at that star level are missing it
   const lessonGaps = useMemo(() => {
-    return syllabus.map(lesson => {
+    return syllabus.filter(l => l.LessonType !== 'Auto-Assessment').map(lesson => {
       const cadetsAtLevel = cadets.filter(c => c.CurrentStarLevel === lesson.StarLevel);
       const missing = cadetsAtLevel.filter(c => !approvedSet.has(`${c.PNumber}::${lesson.LessonCode}`));
       return {
@@ -97,6 +117,11 @@ export default function TrainingManager() {
       };
     }).filter(l => l.missingCount > 0).sort((a, b) => b.missingCount - a.missingCount);
   }, [syllabus, cadets, approvedSet]);
+
+  const availableAndQualifiedCount = (lesson) => {
+    const qualified = new Set(getQualifiedInstructors(lesson).map(i => i.PNumber));
+    return availableInstructorsForDate.filter(i => qualified.has(i.PNumber)).length;
+  };
 
   const allSubjects = useMemo(() => [...new Set(lessonGaps.map(l => l.SubjectName))].sort(), [lessonGaps]);
 
@@ -377,11 +402,20 @@ Provide 3-5 prioritized recommendations for upcoming training nights. Be concise
                       <span className="text-sm font-medium">{lesson.LessonName}</span>
                       <span className="text-xs text-muted-foreground font-mono">{lesson.LessonCode}</span>
                       {lesson.IsMandatory && <Badge variant="outline" className="text-xs py-0 h-4 text-destructive border-destructive/30">Mandatory</Badge>}
+                      {lesson.LessonType === 'Physical Assessment' && <Badge className="text-xs py-0 h-4 bg-orange-500 text-white">Physical Assessment</Badge>}
+                      {(lesson.RequiredQuals || []).map(code => (
+                        <Badge key={code} variant="outline" className="text-xs py-0 h-4">{code}</Badge>
+                      ))}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="secondary" className="text-xs">{lesson.StarLevel}</Badge>
                       <span className="text-xs text-muted-foreground">{lesson.SubjectName}</span>
                       <span className="text-xs font-semibold text-destructive">{lesson.missingCount}/{lesson.totalAtLevel} cadets missing</span>
+                      {(lesson.RequiredQuals || []).length > 0 && availableAndQualifiedCount(lesson) === 0 && (
+                        <span className="text-xs font-semibold text-destructive flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" />No qualified instructor available on {planDate}
+                        </span>
+                      )}
                       {/* Progress bar */}
                       <div className="flex-1 max-w-[80px] bg-muted rounded-full h-1.5">
                         <div className="bg-primary rounded-full h-1.5" style={{ width: `${lesson.pct}%` }} />
@@ -397,7 +431,7 @@ Provide 3-5 prioritized recommendations for upcoming training nights. Be concise
                         <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Assign instructor" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value={null}>No instructor</SelectItem>
-                          {instructors.map(i => (
+                          {getQualifiedInstructors(lesson).map(i => (
                             <SelectItem key={i.PNumber} value={i.PNumber}>
                               {i.Rank ? `${i.Rank} ` : ''}{i.Surname}
                             </SelectItem>
