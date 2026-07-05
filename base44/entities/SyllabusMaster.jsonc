@@ -41,9 +41,12 @@
       "default": "Lesson",
       "description": "Lesson = standard teaching session. Physical Assessment = requires an instructor to physically run/assess it (shows in Training Plan Generator). Auto-Assessment = automatically graded on lesson completion, excluded from the Training Plan Generator."
     },
-    "RequiredQual": {
-      "type": "string",
-      "description": "Qualification code (matching InstructorQualification.QualCode, e.g. SAAI) required to teach/assess this lesson. Leave blank if none required."
+    "RequiredQuals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Qualification codes (matching QualificationColumn.Code / InstructorQualification.QualCode, e.g. SAAI, DCCT). Any ONE of these qualifies an instructor to teach/assess this lesson. Leave empty if none required."
     }
   },
   "required": [

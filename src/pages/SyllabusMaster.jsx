@@ -159,7 +159,9 @@ export default function SyllabusMaster() {
                           {lesson.LessonType && lesson.LessonType !== 'Lesson' && (
                             <Badge className={`text-xs ${TYPE_BADGE[lesson.LessonType] || ''}`}>{lesson.LessonType}</Badge>
                           )}
-                          {lesson.RequiredQual && <Badge variant="outline" className="text-xs">{lesson.RequiredQual}</Badge>}
+                          {(lesson.RequiredQuals || []).map(code => (
+                            <Badge key={code} variant="outline" className="text-xs">{code}</Badge>
+                          ))}
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingLesson(lesson)}>
                               <Pencil className="w-3.5 h-3.5" />
