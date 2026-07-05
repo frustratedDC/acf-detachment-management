@@ -15,6 +15,7 @@ import { ACCESS_LEVELS, hasAccess } from '@/lib/accessLevels';
 import { checkAndPromoteCadet } from '@/lib/progressUtils';
 import CEMilestoneTasksTab from '@/components/tasks/CEMilestoneTasksTab';
 import PromotionTasksTab from '@/components/tasks/PromotionTasksTab';
+import KAMilestoneTasksTab from '@/components/tasks/KAMilestoneTasksTab';
 
 export default function TaskList() {
   const queryClient = useQueryClient();
@@ -78,6 +79,11 @@ export default function TaskList() {
   const { data: promotionTasks = [] } = useQuery({
     queryKey: ['promotion-milestone-tasks'],
     queryFn: () => base44.entities.PromotionMilestoneTask.filter({ Status: 'Pending' }),
+  });
+
+  const { data: kaMilestoneTasks = [] } = useQuery({
+    queryKey: ['ka-milestone-tasks'],
+    queryFn: () => base44.entities.KAMilestoneTask.filter({ Status: 'Pending' }),
   });
 
   const { data: courseRequests = [] } = useQuery({
@@ -288,6 +294,10 @@ export default function TaskList() {
             <TrendingUp className="w-3.5 h-3.5" />
             Promotions ({promotionTasks.length})
           </TabsTrigger>
+          <TabsTrigger value="ka-milestones" className="gap-1">
+            <TrendingUp className="w-3.5 h-3.5" />
+            KA Milestones ({kaMilestoneTasks.length})
+          </TabsTrigger>
           <TabsTrigger value="course-requests" className="gap-1">
             <BookOpen className="w-3.5 h-3.5" />
             Courses ({pendingCourseRequests.length})
@@ -493,6 +503,9 @@ export default function TaskList() {
         </TabsContent>
         <TabsContent value="promotion-tasks">
           <PromotionTasksTab tasks={promotionTasks} currentPNumber={me?.PNumber} />
+        </TabsContent>
+        <TabsContent value="ka-milestones">
+          <KAMilestoneTasksTab tasks={kaMilestoneTasks} currentPNumber={me?.PNumber} />
         </TabsContent>
         <TabsContent value="course-requests">
           <Card>
