@@ -9,6 +9,8 @@ import ScheduleEntryForm from '@/components/schedule/ScheduleEntryForm';
 import ScheduleView from '@/components/schedule/ScheduleView';
 import PlanLockBar from '@/components/schedule/PlanLockBar';
 import EventCreateDialog from '@/components/schedule/EventCreateDialog';
+import Phase1Walkthrough from '@/components/onboarding/Phase1Walkthrough';
+import { useOnboardingStatus } from '@/lib/useOnboarding';
 import { Button } from '@/components/ui/button';
 import { Calendar, Plus } from 'lucide-react';
 import { format } from 'date-fns';
@@ -49,6 +51,8 @@ export default function TrainingSchedule() {
   const canEdit = hasAccess(level, ACCESS_LEVELS.DET_2IC);
   const isDC = hasAccess(level, ACCESS_LEVELS.DET_COMMANDER);
   const currentMonthStr = format(new Date(), 'yyyy-MM');
+  const { status: onboardingStatus } = useOnboardingStatus(isDC);
+  const showPhase1 = isDC && onboardingStatus && onboardingStatus.CurrentPhase === 1;
 
   return (
     <AccessGate level={0}>
@@ -77,6 +81,8 @@ export default function TrainingSchedule() {
         onClose={() => setShowEventDialog(false)}
         myPNumber={personnel?.PNumber}
       />
+
+      {showPhase1 && <Phase1Walkthrough status={onboardingStatus} />}
 
       {/* DC-only Lock Controls */}
       <PlanLockBar

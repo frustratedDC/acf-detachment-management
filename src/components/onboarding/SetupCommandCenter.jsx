@@ -4,26 +4,10 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Users, UserCog, LayoutGrid, CheckCircle2, ArrowRight, Rocket } from 'lucide-react';
+import { Users, UserCog, LayoutGrid, CheckCircle2, ArrowRight, Rocket } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
 
 const PHASES = [
-  {
-    phase: 1,
-    title: 'Training Plan',
-    icon: CalendarDays,
-    directive: 'Schedule your training nights so cadets and instructors know what to expect.',
-    action: { label: 'Open Training Plan Generator', to: '/plan-generator' },
-    walkthrough: [
-      'Go to the Training Plan Generator.',
-      'Pick the star levels you want to schedule lessons for.',
-      'Choose how many months to generate, then create the plan.',
-      'Review the generated nights on the Training Calendar.',
-    ],
-    criteriaLabel: (count) => `${count} training night(s) scheduled (need 3+)`,
-    met: (count) => count >= 3,
-  },
   {
     phase: 2,
     title: 'Add Cadets',
@@ -72,17 +56,7 @@ export default function SetupCommandCenter({ status }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currentPhase = status?.CurrentPhase || 1;
-  const phaseInfo = PHASES.find(p => p.phase === currentPhase) || PHASES[0];
-  const today = format(new Date(), 'yyyy-MM-dd');
-
-  const { data: scheduleCount = 0 } = useQuery({
-    queryKey: ['onboarding-schedule-count'],
-    queryFn: async () => {
-      const rows = await base44.entities.NightlySchedule.filter({});
-      return new Set(rows.filter(r => r.Date >= today).map(r => r.Date)).size;
-    },
-    enabled: currentPhase === 1,
-  });
+  const phaseInfo = PHASES.find(p => p.phase === currentPhase);
 
   const { data: cadetCount = 0 } = useQuery({
     queryKey: ['onboarding-cadet-count'],
@@ -96,9 +70,6 @@ export default function SetupCommandCenter({ status }) {
     enabled: currentPhase === 3,
   });
 
-  const countForPhase = { 1: scheduleCount, 2: cadetCount, 3: instructorCount, 4: 1 }[currentPhase];
-  const criteriaMet = phaseInfo.met(countForPhase);
-
   const advanceMutation = useMutation({
     mutationFn: async () => {
       const updates = { [`Phase${currentPhase}Complete`]: true };
@@ -108,6 +79,10 @@ export default function SetupCommandCenter({ status }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['onboarding-status'] }),
   });
 
+  if (!phaseInfo) return null;
+
+  const countForPhase = { 2: cadetCount, 3: instructorCount, 4: 1 }[currentPhase];
+  const criteriaMet = phaseInfo.met(countForPhase);
   const Icon = phaseInfo.icon;
 
   return (
