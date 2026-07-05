@@ -1,4 +1,6 @@
 {
+  "name": "User",
+  "type": "object",
   "properties": {
     "role": {
       "type": "string",
@@ -7,11 +9,13 @@
         "admin",
         "user"
       ]
+    },
+    "DetachmentID": {
+      "type": "string",
+      "description": "Tenant identifier this user belongs to, synced from their linked PersonnelManager record. Used by RLS to scope data to their own detachment."
     }
   },
   "required": [
     "role"
-  ],
-  "name": "User",
-  "type": "object"
+  ]
 }

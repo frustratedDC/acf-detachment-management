@@ -17,13 +17,21 @@ export function PersonnelProvider({ children }) {
     try {
       setLoading(true);
       setError(null);
-      
-      // Sole admin user — grab the first (oldest) linked record
-      const records = await base44.entities.PersonnelManager.filter({ IsLinked: true });
-      
+
+      // Resolve the actual logged-in user, then find THEIR linked personnel record only —
+      // never just "the first linked record" (that leaked other tenants' identities).
+      const authUser = await base44.auth.me();
+      const records = await base44.entities.PersonnelManager.filter({ LinkedEmailUID: authUser.email });
+
       if (records && records.length > 0) {
-        const sorted = records.sort((a, b) => new Date(a.created_date || 0) - new Date(b.created_date || 0));
-        setPersonnel(sorted[0]);
+        const record = records[0];
+        setPersonnel(record);
+
+        // Self-heal: keep the auth user's DetachmentID in sync with their personnel record
+        // so entity-level RLS (scoped on {{user.DetachmentID}}) can enforce tenant isolation.
+        if (record.DetachmentID && authUser.DetachmentID !== record.DetachmentID) {
+          base44.auth.updateMe({ DetachmentID: record.DetachmentID }).catch(() => {});
+        }
       } else {
         setPersonnel(null);
       }
