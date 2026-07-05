@@ -64,6 +64,11 @@ export default function TrainingManager() {
     },
   });
 
+  const { data: planDateAvailability = [] } = useQuery({
+    queryKey: ['staff-availability', planDate],
+    queryFn: () => base44.entities.StaffAvailability.filter({ EventDate: planDate, IsAvailable: true }),
+  });
+
   const personnelMap = useMemo(() => {
     const m = {};
     personnel.forEach(p => { m[p.PNumber] = p; });
@@ -94,6 +99,12 @@ export default function TrainingManager() {
   }, [syllabus, cadets, approvedSet]);
 
   const allSubjects = useMemo(() => [...new Set(lessonGaps.map(l => l.SubjectName))].sort(), [lessonGaps]);
+
+  // --- Capacity Overview for the selected plan date ---
+  const availablePNumbers = useMemo(() => new Set(planDateAvailability.map(a => a.PNumber)), [planDateAvailability]);
+  const availableInstructorsForDate = useMemo(() => instructors.filter(i => availablePNumbers.has(i.PNumber)), [instructors, availablePNumbers]);
+  const starLevelsNeedingCoverage = useMemo(() => [...new Set(lessonGaps.map(l => l.StarLevel))], [lessonGaps]);
+  const capacityAtRisk = availableInstructorsForDate.length < starLevelsNeedingCoverage.length;
 
   const filteredGaps = useMemo(() => {
     const filtered = lessonGaps.filter(l => {
@@ -262,6 +273,43 @@ Provide 3-5 prioritized recommendations for upcoming training nights. Be concise
           </CardContent>
         </Card>
       </div>
+
+      {/* Capacity Overview */}
+      <Card className={`mb-6 ${capacityAtRisk ? 'border-destructive/40' : 'border-chart-2/30'}`}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Users className="w-4 h-4" />Capacity Overview — {format(new Date(planDate), 'dd MMM yyyy')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">{availableInstructorsForDate.length}</span>
+              <span className="text-muted-foreground">instructor(s) available</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">{starLevelsNeedingCoverage.length}</span>
+              <span className="text-muted-foreground">star level(s) with gaps</span>
+            </div>
+            {capacityAtRisk ? (
+              <div className="flex items-center gap-1.5 text-destructive text-xs font-medium">
+                <AlertTriangle className="w-3.5 h-3.5" />Risk: not enough available instructors marked for this date
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-chart-2 text-xs font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5" />Sufficient instructor availability logged
+              </div>
+            )}
+          </div>
+          {availableInstructorsForDate.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {availableInstructorsForDate.map(i => (
+                <Badge key={i.PNumber} variant="secondary" className="text-xs">{i.Rank ? `${i.Rank} ` : ''}{i.Surname}</Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Progression Gap Table */}
       <Card>
