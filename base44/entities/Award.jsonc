@@ -1,0 +1,46 @@
+{
+  "name": "Award",
+  "type": "object",
+  "properties": {
+    "PNumber": {
+      "type": "string",
+      "description": "PNumber of the cadet or adult instructor this award belongs to"
+    },
+    "AwardName": {
+      "type": "string",
+      "description": "Name of the award, e.g. Lord Lieutenant's Cadet, Best Recruit"
+    },
+    "DateAwarded": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the award was presented"
+    },
+    "Notes": {
+      "type": "string",
+      "description": "Optional notes about the award"
+    }
+  },
+  "required": [
+    "PNumber",
+    "AwardName",
+    "DateAwarded"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

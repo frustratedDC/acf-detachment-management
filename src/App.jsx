@@ -61,6 +61,7 @@ import NaafiManagement from '@/pages/NaafiManagement';
 import LogicDashboard from '@/pages/LogicDashboard';
 import PromotionReadiness from '@/pages/PromotionReadiness';
 import NewJoiners from '@/pages/NewJoiners';
+import Awards from '@/pages/Awards';
 
 const AppContent = () => {
   const { personnel, loading } = usePersonnel();
@@ -126,6 +127,7 @@ const AppContent = () => {
         <Route path="/logic-dashboard" element={<LogicDashboard />} />
         <Route path="/promotion-readiness" element={<PromotionReadiness />} />
         <Route path="/new-joiners" element={<NewJoiners />} />
+        <Route path="/awards" element={<Awards />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

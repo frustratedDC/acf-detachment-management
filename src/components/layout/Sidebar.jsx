@@ -10,7 +10,8 @@ import {
   CalendarCheck, GraduationCap, BarChart2, Wand2, Dumbbell, TrendingUp, FolderOpen,
   AlertCircle, Shirt, HeartHandshake, FileText, BookMarked,
   Star, Layers, UserCheck, Swords, Eye, ClipboardPen, UserCog,
-  UsersRound, BadgeCheck, MapPin, Cog, Plus, Crosshair as CrosshairIcon, ShoppingBag, UserPlus
+  UsersRound, BadgeCheck, MapPin, Cog, Plus, Crosshair as CrosshairIcon, ShoppingBag, UserPlus,
+  Award as AwardIcon
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -64,6 +65,7 @@ const NAV_GROUPS = [
       { path: '/uniform-exchange',    label: 'Uniform Requests',      icon: Shirt,         level: 2 },
       { path: '/course-request',      label: 'Course Requests',       icon: BookOpen,      level: 2 },
       { path: '/report-issue',        label: 'Issues Log',            icon: AlertCircle,   level: 2 },
+      { path: '/awards',              label: 'Awards',                icon: AwardIcon,     level: 0 },
     ],
   },
 
