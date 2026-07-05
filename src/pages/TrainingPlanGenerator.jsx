@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Wand2, ChevronDown, ChevronRight, Info, Lock, LockOpen, Archive } from 'lucide-react';
+import { Wand2, ChevronDown, ChevronRight, Info, Lock, LockOpen, Archive, AlertTriangle } from 'lucide-react';
 import { format, addMonths, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, isAdultInstructor } from '@/lib/accessLevels';
@@ -56,6 +56,7 @@ export default function TrainingPlanGenerator() {
   const [generated, setGenerated] = useState(false);
   const [expandedDates, setExpandedDates] = useState({});
   const [expandedArchive, setExpandedArchive] = useState(false);
+  const [verifyAvailability, setVerifyAvailability] = useState(false);
 
   const isInstructor = isAdultInstructor(me?.AccessLevel ?? 0);
 
@@ -72,6 +73,12 @@ export default function TrainingPlanGenerator() {
   const { data: trainingMonths = [] } = useQuery({
     queryKey: ['training-months'],
     queryFn: () => base44.entities.TrainingMonth.list(),
+  });
+
+  const { data: staffAvailability = [] } = useQuery({
+    queryKey: ['staff-availability-all'],
+    queryFn: () => base44.entities.StaffAvailability.filter({}),
+    enabled: verifyAvailability,
   });
 
   const toggleLockMutation = useMutation({
@@ -163,6 +170,14 @@ export default function TrainingPlanGenerator() {
     setGenerated(false);
   }
 
+  const availableCountByDate = useMemo(() => {
+    const map = {};
+    staffAvailability.forEach(a => {
+      if (a.IsAvailable) map[a.EventDate] = (map[a.EventDate] || 0) + 1;
+    });
+    return map;
+  }, [staffAvailability]);
+
   const totalLessons = Object.values(lessonsByLevel).reduce((s, l) => s + l.length, 0);
   const cycleNights = selectedLevels.length > 0 ? Math.ceil(Math.max(...selectedLevels.map(sl => (lessonsByLevel[sl]?.length || 0))) / 2) : 0;
 
@@ -211,6 +226,10 @@ export default function TrainingPlanGenerator() {
             <label className="flex items-center gap-2 cursor-pointer pt-1 border-t">
               <Checkbox checked={mandatoryOnly} onCheckedChange={v => { setMandatoryOnly(v); setGenerated(false); }} />
               <span className="text-sm">Mandatory lessons only</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox checked={verifyAvailability} onCheckedChange={setVerifyAvailability} />
+              <span className="text-sm">Verify instructor availability</span>
             </label>
             <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
               <p>{trainingNights.length} training nights in period</p>
@@ -299,7 +318,12 @@ export default function TrainingPlanGenerator() {
                                           {expanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
                                           <span className="text-sm font-semibold">{format(parseISO(night.date), 'EEE dd MMM yyyy')}</span>
                                         </div>
-                                        <div className="flex gap-1 flex-wrap">
+                                        <div className="flex gap-1 flex-wrap items-center">
+                                          {verifyAvailability && !availableCountByDate[night.date] && (
+                                            <Badge variant="outline" className="text-xs py-0 h-5 border-destructive/50 text-destructive gap-1">
+                                              <AlertTriangle className="w-3 h-3" />No availability logged
+                                            </Badge>
+                                          )}
                                           {selectedLevels.filter(sl => night.plans.some(p => p.starLevel === sl)).map(sl => (
                                             <Badge key={sl} className={`text-xs py-0 h-5 ${STAR_COLORS[sl]}`}>{sl}</Badge>
                                           ))}

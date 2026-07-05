@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import PersonnelStatusBadge from './PersonnelStatusBadge';
-import { ShieldAlert, User, Link, Star, Layers, X, Plus } from 'lucide-react';
+import { ShieldAlert, User, Link, Star, Layers, X, Plus, CalendarDays } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -35,14 +35,18 @@ export default function PersonnelProfileDialog({ person, open, onClose }) {
   const [qualInput, setQualInput] = useState('');
   const [qualsDirty, setQualsDirty] = useState(false);
   const [qualsList, setQualsList] = useState(person?.QualifiedSubjects || []);
+  const [unitStartDate, setUnitStartDate] = useState(person?.UnitStartDate || '');
+  const [unitStartDirty, setUnitStartDirty] = useState(false);
 
   // Reset state whenever the person changes
   useEffect(() => {
     setStatus(person?.PersonnelStatus || 'Active');
     setNotes(person?.StatusNotes || '');
     setQualsList(person?.QualifiedSubjects || []);
+    setUnitStartDate(person?.UnitStartDate || '');
     setDirty(false);
     setQualsDirty(false);
+    setUnitStartDirty(false);
   }, [person?.id]);
 
   // Fetch syllabus subjects for autocomplete
@@ -75,6 +79,15 @@ export default function PersonnelProfileDialog({ person, open, onClose }) {
     setQualsList(prev => prev.filter(q => q !== subj));
     setQualsDirty(true);
   }
+
+  const saveUnitStartDateMutation = useMutation({
+    mutationFn: () => base44.entities.PersonnelManager.update(person.id, { UnitStartDate: unitStartDate }),
+    onSuccess: () => {
+      toast.success('Unit start date updated');
+      queryClient.invalidateQueries({ queryKey: ['all-personnel'] });
+      setUnitStartDirty(false);
+    },
+  });
 
   const saveMutation = useMutation({
     mutationFn: () => base44.entities.PersonnelManager.update(person.id, {
@@ -128,6 +141,38 @@ export default function PersonnelProfileDialog({ person, open, onClose }) {
             </div>
           </div>
         </div>
+
+        {/* Unit Start Date — L4+ can view, L5+ can edit */}
+        {canViewSensitive && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="w-4 h-4 text-primary" />
+                <p className="text-sm font-semibold">Unit Start Date</p>
+              </div>
+              {canChangeStatus ? (
+                <div className="flex gap-2">
+                  <Input
+                    type="date"
+                    value={unitStartDate}
+                    onChange={e => { setUnitStartDate(e.target.value); setUnitStartDirty(true); }}
+                    className="text-sm h-8"
+                  />
+                  {unitStartDirty && (
+                    <Button size="sm" className="h-8 shrink-0" onClick={() => saveUnitStartDateMutation.mutate()} disabled={saveUnitStartDateMutation.isPending}>
+                      Save
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {person.UnitStartDate ? format(new Date(person.UnitStartDate), 'dd MMM yyyy') : 'Not set'}
+                </p>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Qualified Subjects — instructors only, L4+ can edit */}
         {canViewSensitive && !isCadet(person.AccessLevel) && (
