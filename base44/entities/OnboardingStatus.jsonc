@@ -1,0 +1,46 @@
+{
+  "name": "OnboardingStatus",
+  "type": "object",
+  "properties": {
+    "CurrentPhase": {
+      "type": "number",
+      "default": 1,
+      "description": "Current onboarding phase: 1=Training Plan, 2=Add Cadets, 3=Add Instructors, 4=Everything Else"
+    },
+    "Phase1Complete": {
+      "type": "boolean",
+      "default": false
+    },
+    "Phase2Complete": {
+      "type": "boolean",
+      "default": false
+    },
+    "Phase3Complete": {
+      "type": "boolean",
+      "default": false
+    },
+    "Phase4Complete": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

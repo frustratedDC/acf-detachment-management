@@ -17,6 +17,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import MyInspections from '@/components/dashboard/MyInspections';
 import KADashboardWidget from '@/components/dashboard/KADashboardWidget';
 import MyToDoWidget from '@/components/dashboard/MyToDoWidget';
+import SetupCommandCenter from '@/components/onboarding/SetupCommandCenter';
+import { useOnboardingStatus } from '@/lib/useOnboarding';
 
 const PRIORITY_COLORS = {
   Urgent: 'border-l-4 border-destructive bg-destructive/5',
@@ -58,6 +60,9 @@ export default function Dashboard() {
   const level = personnel?.AccessLevel ?? 0;
   const today = format(new Date(), 'yyyy-MM-dd');
   const in60Days = format(addDays(new Date(), 60), 'yyyy-MM-dd');
+  const isDC = hasAccess(level, ACCESS_LEVELS.DET_COMMANDER);
+  const { status: onboardingStatus } = useOnboardingStatus(isDC);
+  const setupIncomplete = isDC && onboardingStatus && !onboardingStatus.Phase4Complete;
 
   const { data: todaySchedule = [] } = useQuery({
     queryKey: ['schedule-today', today],
@@ -186,6 +191,8 @@ export default function Dashboard() {
         description={`${format(new Date(), 'EEEE, d MMMM yyyy')} — ${personnel?.RoleName || ''}`}
         icon={LayoutDashboard}
       />
+
+      {setupIncomplete && <SetupCommandCenter status={onboardingStatus} />}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
