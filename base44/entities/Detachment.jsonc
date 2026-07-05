@@ -1,0 +1,40 @@
+{
+  "name": "Detachment",
+  "type": "object",
+  "properties": {
+    "DetachmentID": {
+      "type": "string",
+      "description": "Unique tenant identifier code used to scope all personnel/records to this detachment"
+    },
+    "Name": {
+      "type": "string",
+      "description": "Display name of the detachment"
+    },
+    "CreatedByEmail": {
+      "type": "string",
+      "description": "Email of the L6 System Admin who provisioned this tenant"
+    }
+  },
+  "required": [
+    "DetachmentID",
+    "Name"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -101,6 +101,10 @@
     "LinkedEmailUID": {
       "type": "string"
     },
+    "DetachmentID": {
+      "type": "string",
+      "description": "Tenant identifier scoping this record to a specific detachment"
+    },
     "HeadCircumference": {
       "type": "string",
       "description": "Head circumference in cm"
