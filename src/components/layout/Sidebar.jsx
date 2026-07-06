@@ -29,7 +29,6 @@ const NAV_GROUPS = [
       { path: '/',             label: 'Command Hub',       icon: LayoutDashboard, level: 0 },
       { path: '/notices',      label: 'Notices',           icon: Megaphone,       level: 0 },
       { path: '/calendar',     label: 'Monthly Calendar',  icon: CalendarDays,    level: 0 },
-      { path: '/healthy-minds',label: 'Healthy Minds',     icon: HeartHandshake,  level: 0 },
       { path: '/tasks',        label: 'DC/2IC Task List',  icon: ClipboardList,   level: 1 },
     ],
   },
