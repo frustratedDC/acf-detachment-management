@@ -1,16 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAvailability } from '@/lib/useAvailability';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2, CalendarDays, ChevronDown, ChevronRight, Clock, CheckCircle2, FileEdit, Lock } from 'lucide-react';
+import { Pencil, Trash2, CalendarDays, ChevronDown, ChevronRight, Clock, CheckCircle2, FileEdit, Lock, Save, X } from 'lucide-react';
 import { format, parseISO, startOfMonth, endOfMonth, isAfter, isWithinInterval } from 'date-fns';
 import _ from 'lodash';
+import { toast } from 'sonner';
 import { ACCESS_LEVELS, isCadet, isAdultInstructor } from '@/lib/accessLevels';
 import ConflictSidebar from './ConflictSidebar';
 import MarkCompleteButton from './MarkCompleteButton';
+import LessonSelector from '@/components/shared/LessonSelector';
 
 const STAR_LEVELS = ['Admin', 'Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
 
@@ -35,6 +37,43 @@ function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, ava
   const isUserCadet = isCadet(accessLevel);
   const isUserInstructor = isAdultInstructor(accessLevel) && accessLevel < ACCESS_LEVELS.DET_2IC;
   const isDCOrAbove = accessLevel >= ACCESS_LEVELS.DET_2IC;
+  const queryClient = useQueryClient();
+  const [editingEntryId, setEditingEntryId] = useState(null);
+  const [editLessonCode, setEditLessonCode] = useState('');
+
+  const { data: allLessons = [] } = useQuery({
+    queryKey: ['all-syllabus'],
+    queryFn: () => base44.entities.SyllabusMaster.filter({}),
+    enabled: isDCOrAbove && !isLocked,
+  });
+
+  const updateEntryMutation = useMutation({
+    mutationFn: async ({ entry, lessonCode }) => {
+      const lesson = allLessons.find(l => l.LessonCode === lessonCode);
+      await base44.entities.NightlySchedule.update(entry.id, {
+        LessonCode: lessonCode,
+        LessonName: lesson?.LessonName || lessonCode,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedule-all'] });
+      toast.success('Lesson updated');
+      setEditingEntryId(null);
+    },
+  });
+
+  const deleteEntryMutation = useMutation({
+    mutationFn: (entryId) => base44.entities.NightlySchedule.delete(entryId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedule-all'] });
+      toast.success('Lesson removed');
+    },
+  });
+
+  function startEdit(entry) {
+    setEditingEntryId(entry.id);
+    setEditLessonCode(entry.LessonCode || '');
+  }
 
   function instructorLabel(pnum) {
     if (!pnum) return null;
@@ -108,6 +147,7 @@ function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, ava
                       const conflict2 = entry.Instructor2PNumber && instructorConflict(entry.Instructor2PNumber);
                       const hasConflict = conflict1 || conflict2;
 
+                      const isEditingEntry = editingEntryId === entry.id;
                       return (
                         <div
                           key={entry.id}
@@ -117,14 +157,56 @@ function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, ava
                               : 'bg-white/70 border-black/5'
                           }`}
                         >
+                          {isEditingEntry ? (
+                            <div className="space-y-1.5">
+                              <LessonSelector
+                                value={editLessonCode}
+                                onChange={setEditLessonCode}
+                                starLevel={star}
+                                className="h-7 text-xs"
+                              />
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost" size="sm" className="h-6 px-2"
+                                  onClick={() => setEditingEntryId(null)}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  size="sm" className="h-6 px-2"
+                                  disabled={updateEntryMutation.isPending || !editLessonCode}
+                                  onClick={() => updateEntryMutation.mutate({ entry, lessonCode: editLessonCode })}
+                                >
+                                  <Save className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
                           <div className="flex items-center gap-1.5 mb-1">
                             <span className="font-bold text-muted-foreground">P{entry.Period}</span>
                             <span className="font-semibold text-foreground truncate">{entry.LessonName || entry.LessonCode}</span>
                             {entry.LessonCode && !isUserCadet && (
                               <span className="text-muted-foreground font-mono shrink-0">({entry.LessonCode})</span>
                             )}
+                            {isDCOrAbove && !isLocked && (
+                              <span className="ml-auto flex items-center gap-0.5 shrink-0">
+                                <button
+                                  className="p-0.5 rounded hover:bg-black/5 text-muted-foreground"
+                                  onClick={() => startEdit(entry)}
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                                <button
+                                  className="p-0.5 rounded hover:bg-destructive/10 text-destructive"
+                                  onClick={() => deleteEntryMutation.mutate(entry.id)}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </span>
+                            )}
                           </div>
-                          {!isUserCadet && (
+                          )}
+                          {!isEditingEntry && !isUserCadet && (
                             <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-muted-foreground">
                               {inst1 && (
                                 <span className={conflict1 && isDCOrAbove ? 'text-destructive font-medium' : ''}>
