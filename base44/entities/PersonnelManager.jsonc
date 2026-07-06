@@ -218,7 +218,7 @@
           }
         },
         {
-          "data.PersonnelStatus": "Active"
+          "data.DetachmentID": "{{user.DetachmentID}}"
         }
       ]
     },
