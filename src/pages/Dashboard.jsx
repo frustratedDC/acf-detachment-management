@@ -123,6 +123,13 @@ export default function Dashboard() {
     queryFn: () => base44.entities.ImportantNotice.filter({ IsActive: true }),
   });
 
+  const STAR_ORDER = ['Admin', 'Basic', '1 Star', '2 Star', '3 Star', '4 Star'];
+  const sortedTodaySchedule = [...todaySchedule].sort((a, b) => {
+    const starDiff = STAR_ORDER.indexOf(a.AssignedStarLevel) - STAR_ORDER.indexOf(b.AssignedStarLevel);
+    if (starDiff !== 0) return starDiff;
+    return (a.Period || 0) - (b.Period || 0);
+  });
+
   const presentCount = todayParade.filter(p => p.AttendanceStatus === 'Present').length;
 
   const upcomingEvents = allEvents
@@ -219,14 +226,14 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {todaySchedule.length === 0 ? (
+              {sortedTodaySchedule.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <BookOpen className="w-7 h-7 mx-auto mb-2 opacity-40" />
                   <p className="text-sm">No lessons scheduled for tonight.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {todaySchedule.map((entry) => (
+                  {sortedTodaySchedule.map((entry) => (
                     <div key={entry.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                       <Badge variant="outline" className="shrink-0">P{entry.Period}</Badge>
                       <Badge className="bg-primary/10 text-primary border-0 shrink-0">{entry.AssignedStarLevel}</Badge>
