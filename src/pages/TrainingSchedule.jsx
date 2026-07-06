@@ -7,7 +7,6 @@ import AccessGate from '@/components/shared/AccessGate';
 import PageHeader from '@/components/shared/PageHeader';
 import ScheduleEntryForm from '@/components/schedule/ScheduleEntryForm';
 import ScheduleView from '@/components/schedule/ScheduleView';
-import PlanLockBar from '@/components/schedule/PlanLockBar';
 import EventCreateDialog from '@/components/schedule/EventCreateDialog';
 import Phase1Walkthrough from '@/components/onboarding/Phase1Walkthrough';
 import { useOnboardingStatus } from '@/lib/useOnboarding';
@@ -84,13 +83,6 @@ export default function TrainingSchedule() {
 
       {showPhase1 && <Phase1Walkthrough status={onboardingStatus} />}
 
-      {/* DC-only Lock Controls */}
-      <PlanLockBar
-        trainingMonths={trainingMonths}
-        currentMonthStr={currentMonthStr}
-        isDC={isDC}
-      />
-
       {showForm && (
         <ScheduleEntryForm
           date={editingDate || selectedDate}
@@ -108,7 +100,6 @@ export default function TrainingSchedule() {
         canEdit={canEdit}
         onEdit={(date) => { setEditingDate(date); setShowForm(true); }}
         onDelete={(date) => deleteMutation.mutate(date)}
-        trainingMonths={trainingMonths}
         myPNumber={personnel?.PNumber}
         accessLevel={level}
       />

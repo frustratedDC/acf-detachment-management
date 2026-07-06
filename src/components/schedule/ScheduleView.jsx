@@ -32,7 +32,7 @@ const SECTIONS = [
 ];
 
 // ─── Night card ───────────────────────────────────────────────────────────────
-function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, availability, isLocked, myPNumber, accessLevel, dayNotes }) {
+function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, availability, myPNumber, accessLevel, dayNotes }) {
   const byStarLevel = _.groupBy(entries, 'AssignedStarLevel');
   const isUserCadet = isCadet(accessLevel);
   const isUserInstructor = isAdultInstructor(accessLevel) && accessLevel < ACCESS_LEVELS.DET_2IC;
@@ -44,7 +44,7 @@ function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, ava
   const { data: allLessons = [] } = useQuery({
     queryKey: ['all-syllabus'],
     queryFn: () => base44.entities.SyllabusMaster.filter({}),
-    enabled: isDCOrAbove && !isLocked,
+    enabled: isDCOrAbove,
   });
 
   const updateEntryMutation = useMutation({
@@ -100,18 +100,17 @@ function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, ava
   if (visibleStars.length === 0 && !isDCOrAbove) return null;
 
   return (
-    <Card className={`border-border/50 ${isLocked ? 'opacity-90' : ''}`}>
+    <Card className="border-border/50">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="text-base flex items-center gap-2">
           <CalendarDays className="w-4 h-4 text-accent" />
           {format(parseISO(date), 'EEEE, d MMMM yyyy')}
-          {isLocked && <Badge variant="outline" className="text-xs border-primary/30 text-primary gap-1"><Lock className="w-3 h-3" />Locked</Badge>}
         </CardTitle>
         <div className="flex items-center gap-1">
-          {isDCOrAbove && !isLocked && (
+          {isDCOrAbove && (
             <MarkCompleteButton date={date} scheduleEntries={entries} accessLevel={accessLevel} />
           )}
-          {canEdit && !isLocked && (
+          {canEdit && (
             <>
               <Button variant="ghost" size="sm" onClick={() => onEdit(date)}>
                 <Pencil className="w-3.5 h-3.5" />
@@ -188,7 +187,7 @@ function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, ava
                             {entry.LessonCode && !isUserCadet && (
                               <span className="text-muted-foreground font-mono shrink-0">({entry.LessonCode})</span>
                             )}
-                            {isDCOrAbove && !isLocked && (
+                            {isDCOrAbove && (
                               <span className="ml-auto flex items-center gap-0.5 shrink-0">
                                 <button
                                   className="p-0.5 rounded hover:bg-black/5 text-muted-foreground"
@@ -238,10 +237,8 @@ function NightCard({ date, entries, canEdit, onEdit, onDelete, personnelMap, ava
 }
 
 // ─── Month block ──────────────────────────────────────────────────────────────
-function MonthBlock({ monthKey, dates, groupedByDate, canEdit, onEdit, onDelete, personnelMap, availability, lockedMonths, myPNumber, accessLevel, eventsByDate }) {
+function MonthBlock({ monthKey, dates, groupedByDate, canEdit, onEdit, onDelete, personnelMap, availability, myPNumber, accessLevel, eventsByDate }) {
   const [collapsed, setCollapsed] = useState(false);
-  const monthStr = dates[0]?.slice(0, 7);
-  const isLocked = lockedMonths.has(monthStr);
 
   return (
     <div className="border rounded-xl overflow-hidden">
@@ -253,7 +250,6 @@ function MonthBlock({ monthKey, dates, groupedByDate, canEdit, onEdit, onDelete,
           {collapsed ? <ChevronRight className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
           <span className="font-semibold text-sm">{monthKey}</span>
           <Badge variant="secondary" className="text-xs">{dates.length} night{dates.length !== 1 ? 's' : ''}</Badge>
-          {isLocked && <Badge variant="outline" className="text-xs border-primary/40 text-primary gap-1"><Lock className="w-3 h-3" />Locked</Badge>}
         </div>
       </button>
 
@@ -269,7 +265,6 @@ function MonthBlock({ monthKey, dates, groupedByDate, canEdit, onEdit, onDelete,
               onDelete={onDelete}
               personnelMap={personnelMap}
               availability={availability}
-              isLocked={isLocked}
               myPNumber={myPNumber}
               accessLevel={accessLevel}
               dayNotes={eventsByDate[date]?.Notes}
@@ -282,7 +277,7 @@ function MonthBlock({ monthKey, dates, groupedByDate, canEdit, onEdit, onDelete,
 }
 
 // ─── Main export ──────────────────────────────────────────────────────────────
-export default function ScheduleView({ schedule, isLoading, canEdit, onEdit, onDelete, trainingMonths = [], myPNumber, accessLevel = 0 }) {
+export default function ScheduleView({ schedule, isLoading, canEdit, onEdit, onDelete, myPNumber, accessLevel = 0 }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({ completed: true });
 
@@ -305,13 +300,6 @@ export default function ScheduleView({ schedule, isLoading, canEdit, onEdit, onD
   const eventsByDate = useMemo(() => {
     const m = {}; trainingNightEvents.forEach(ev => { m[ev.Date] = ev; }); return m;
   }, [trainingNightEvents]);
-
-  // Build set of locked month strings (YYYY-MM)
-  const lockedMonths = useMemo(() => {
-    const s = new Set();
-    trainingMonths.forEach(m => { if (m.IsLocked && m.MonthDate) s.add(m.MonthDate.slice(0, 7)); });
-    return s;
-  }, [trainingMonths]);
 
   const today = new Date();
   const thisMonthStart = startOfMonth(today);
@@ -412,7 +400,6 @@ export default function ScheduleView({ schedule, isLoading, canEdit, onEdit, onD
                       onDelete={onDelete}
                       personnelMap={personnelMap}
                       availability={availability}
-                      lockedMonths={lockedMonths}
                       myPNumber={myPNumber}
                       accessLevel={accessLevel}
                       eventsByDate={eventsByDate}

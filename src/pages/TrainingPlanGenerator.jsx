@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Wand2, ChevronDown, ChevronRight, Info, Lock, LockOpen, Archive, AlertTriangle, CalendarCheck2 } from 'lucide-react';
+import { Wand2, ChevronDown, ChevronRight, Info, Archive, AlertTriangle, CalendarCheck2 } from 'lucide-react';
 import { format, addMonths, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { ACCESS_LEVELS, isAdultInstructor } from '@/lib/accessLevels';
@@ -98,17 +98,6 @@ export default function TrainingPlanGenerator() {
     onError: (err) => toast.error(err.message),
   });
 
-  const toggleLockMutation = useMutation({
-    mutationFn: async (monthId, isLocked) => {
-      await base44.entities.TrainingMonth.update(monthId, { IsLocked: !isLocked });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['training-months'] });
-      toast.success('Month lock status updated');
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
   const startDate = format(startOfMonth(parseISO(startMonth + '-01')), 'yyyy-MM-dd');
   const endDate = format(endOfMonth(addMonths(parseISO(startMonth + '-01'), parseInt(duration) - 1)), 'yyyy-MM-dd');
 
@@ -129,14 +118,6 @@ export default function TrainingPlanGenerator() {
     });
     return map;
   }, [trainingMonths]);
-
-  // Helper to determine if cadet can see this month
-  function canSeeMonth(monthStr) {
-    if (isInstructor) return true; // Instructors see all
-    const monthData = monthsMap[monthStr];
-    if (!monthData) return true; // If no TrainingMonth record, default to visible
-    return monthData.IsLocked === false && monthData.IsArchived === false;
-  }
 
   const lessonsByLevel = useMemo(() => {
     const byLevel = {};
@@ -307,31 +288,15 @@ export default function TrainingPlanGenerator() {
                       .sort((a, b) => a[0].localeCompare(b[0]))
                       .map(([month, nights]) => {
                         const monthStr = format(parseISO(nights[0].date), 'yyyy-MM');
-                        const monthData = monthsMap[monthStr];
                         const isCurrentMonth = monthStr === currentMonthStr;
-                        const canView = canSeeMonth(monthStr);
 
                         return (
                           <div key={month}>
                             <div className="flex items-center gap-2 px-1 mb-1">
                               {isCurrentMonth && <Badge className="text-xs py-0 h-4 bg-accent text-accent-foreground">THIS MONTH</Badge>}
                               <p className={`text-xs font-bold ${isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'} uppercase tracking-wider`}>{month}</p>
-                              {monthData?.IsLocked && (
-                                <Lock className="w-3 h-3 text-destructive" title="Month locked for cadets" />
-                              )}
-                              {isInstructor && monthData && (
-                                <button
-                                  onClick={() => toggleLockMutation.mutate(monthData.id, monthData.IsLocked)}
-                                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                                  title={monthData.IsLocked ? 'Unlock month' : 'Lock month for cadets'}
-                                >
-                                  {monthData.IsLocked ? <Lock className="w-3 h-3" /> : <LockOpen className="w-3 h-3" />}
-                                </button>
-                              )}
                             </div>
-                            {!canView ? (
-                              <div className="text-xs text-muted-foreground p-3 rounded-lg bg-muted/30 italic">Month locked for your view</div>
-                            ) : (
+                            {(
                               <div className="space-y-1.5">
                                 {nights.map(night => {
                                   const expanded = expandedDates[night.date];
