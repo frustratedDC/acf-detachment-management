@@ -7,6 +7,7 @@ import AccessGate from '@/components/shared/AccessGate';
 import PageHeader from '@/components/shared/PageHeader';
 import PersonnelProfileDialog from '@/components/personnel/PersonnelProfileDialog';
 import PersonnelStatusBadge from '@/components/personnel/PersonnelStatusBadge';
+import PersonnelRow from '@/components/personnel/PersonnelRow';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -372,48 +373,20 @@ export default function Personnel() {
         </CardHeader>
         <CardContent>
           <div className="space-y-1">
-            {filtered.map(p => {
-              const status = p.PersonnelStatus || 'Active';
-              const isInactive = status !== 'Active';
-              return (
-                <div
-                  key={p.id}
-                  className={`flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer ${isInactive ? 'opacity-60' : ''}`}
-                  onClick={() => setProfilePerson(p)}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${isInactive ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}`}>
-                      {p.Surname?.[0]}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {[p.Rank, p.FirstName, p.Surname].filter(Boolean).join(' ')}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{p.PNumber} · {p.RoleName}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {p.Type !== 'Adult Instructor' && <Badge variant="outline" className="text-xs">{p.CurrentStarLevel}</Badge>}
-                    <Badge className="text-xs">L{p.AccessLevel}</Badge>
-                    {p.IsLinked && <Badge variant="outline" className="text-xs text-chart-2 border-chart-2/30">Linked</Badge>}
-                    {canViewSensitive && <PersonnelStatusBadge status={status} />}
-                    {canViewAs && (
-                      <Button variant="ghost" size="sm" title={`View as ${p.Surname}`} onClick={(e) => { e.stopPropagation(); setViewAs(p); toast.success(`Now viewing as ${[p.Rank, p.FirstName, p.Surname].filter(Boolean).join(' ')}`); }}>
-                        <Eye className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={(e) => openEdit(p, e)}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    {isSysAdmin && (
-                      <Button variant="ghost" size="sm" className="text-destructive" onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(p); }}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            {filtered.map(p => (
+              <PersonnelRow
+                key={p.id}
+                person={p}
+                isInactive={(p.PersonnelStatus || 'Active') !== 'Active'}
+                canViewSensitive={canViewSensitive}
+                canViewAs={canViewAs}
+                isSysAdmin={isSysAdmin}
+                onSelect={() => setProfilePerson(p)}
+                onViewAs={() => { setViewAs(p); toast.success(`Now viewing as ${[p.Rank, p.FirstName, p.Surname].filter(Boolean).join(' ')}`); }}
+                onEdit={(e) => openEdit(p, e)}
+                onDelete={() => deleteMutation.mutate(p)}
+              />
+            ))}
             {filtered.length === 0 && (
               <p className="text-center py-8 text-muted-foreground text-sm">No personnel match the current filters.</p>
             )}
