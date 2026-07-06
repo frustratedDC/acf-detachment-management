@@ -203,9 +203,25 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "IsDetachmentAdmin": true
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.DetachmentID}}"
+            }
+          ]
+        }
+      ]
     },
     "read": {
       "$or": [
@@ -231,13 +247,41 @@
           "user_condition": {
             "role": "admin"
           }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "IsDetachmentAdmin": true
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.DetachmentID}}"
+            }
+          ]
         }
       ]
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "IsDetachmentAdmin": true
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.DetachmentID}}"
+            }
+          ]
+        }
+      ]
     }
   }
 }
