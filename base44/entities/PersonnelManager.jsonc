@@ -213,11 +213,11 @@
           "$and": [
             {
               "user_condition": {
-                "IsDetachmentAdmin": true
+                "data.IsDetachmentAdmin": true
               }
             },
             {
-              "data.DetachmentID": "{{user.DetachmentID}}"
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
             }
           ]
         }
@@ -234,7 +234,7 @@
           }
         },
         {
-          "data.DetachmentID": "{{user.DetachmentID}}"
+          "data.DetachmentID": "{{user.data.DetachmentID}}"
         }
       ]
     },
@@ -252,11 +252,11 @@
           "$and": [
             {
               "user_condition": {
-                "IsDetachmentAdmin": true
+                "data.IsDetachmentAdmin": true
               }
             },
             {
-              "data.DetachmentID": "{{user.DetachmentID}}"
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
             }
           ]
         }
@@ -273,11 +273,11 @@
           "$and": [
             {
               "user_condition": {
-                "IsDetachmentAdmin": true
+                "data.IsDetachmentAdmin": true
               }
             },
             {
-              "data.DetachmentID": "{{user.DetachmentID}}"
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
             }
           ]
         }
