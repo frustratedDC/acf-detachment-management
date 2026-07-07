@@ -28,5 +28,6 @@ export function isAdultInstructor(accessLevel) {
 }
 
 export function hasAccess(userLevel, requiredLevel) {
+  if (userLevel === ACCESS_LEVELS.SYSTEM_ADMIN) return true;
   return userLevel >= requiredLevel;
 }
