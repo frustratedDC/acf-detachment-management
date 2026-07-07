@@ -336,6 +336,19 @@ export default function LessonAttendance() {
                         isApproved ? 'bg-chart-2/5' : 'hover:bg-muted/50'
                       }`}
                     >
+                      {isL4 && !isApproved && targets.length > 0 && (
+                        <Select value="" onValueChange={(v) => reassignCadet(cadet.PNumber, v)}>
+                          <SelectTrigger className="h-7 w-8 p-0 justify-center border-none bg-transparent shadow-none [&>svg]:hidden" title="Move to a different star level group for tonight">
+                            <Repeat className="w-3.5 h-3.5 text-muted-foreground" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {isReassigned && <SelectItem value="original">Back to {cadet.CurrentStarLevel}</SelectItem>}
+                            {targets.map(sl => (
+                              <SelectItem key={sl} value={sl}>Move to {sl}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                       {isApproved ? (
                         <span className="text-chart-2 text-lg w-5 text-center" title="Already approved">✓</span>
                       ) : isPending ? (
@@ -358,19 +371,6 @@ export default function LessonAttendance() {
                         <Badge variant="outline" className={`text-xs ${isReassigned ? 'border-accent text-accent-foreground bg-accent/10' : ''}`}>
                           {effectiveLevel}{isReassigned ? ' (moved)' : ''}
                         </Badge>
-                      )}
-                      {isL4 && !isApproved && targets.length > 0 && (
-                        <Select value="" onValueChange={(v) => reassignCadet(cadet.PNumber, v)}>
-                          <SelectTrigger className="h-7 w-8 p-0 justify-center border-none bg-transparent shadow-none [&>svg]:hidden" title="Move to a different star level group for tonight">
-                            <Repeat className="w-3.5 h-3.5 text-muted-foreground" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {isReassigned && <SelectItem value="original">Back to {cadet.CurrentStarLevel}</SelectItem>}
-                            {targets.map(sl => (
-                              <SelectItem key={sl} value={sl}>Move to {sl}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
                       )}
                     </div>
                   );
