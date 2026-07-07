@@ -338,7 +338,7 @@ export default function LessonAttendance() {
                     >
                       {isL4 && !isApproved && targets.length > 0 && (
                         <Select value="" onValueChange={(v) => reassignCadet(cadet.PNumber, v)}>
-                          <SelectTrigger className="h-7 w-8 p-0 justify-center border-none bg-transparent shadow-none [&>svg]:hidden" title="Move to a different star level group for tonight">
+                          <SelectTrigger className="h-7 w-7 p-0 justify-center border-none bg-transparent shadow-none [&>svg:last-child]:hidden" title="Move to a different star level group for tonight">
                             <Repeat className="w-3.5 h-3.5 text-muted-foreground" />
                           </SelectTrigger>
                           <SelectContent>
