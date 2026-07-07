@@ -48,10 +48,11 @@ export default function LessonAttendance() {
     queryFn: () => base44.entities.DailyParadeState.filter({ Date: date }),
   });
 
-  const { data: allPersonnel = [] } = useQuery({
+  const { data: allPersonnelRaw = [] } = useQuery({
     queryKey: ['all-personnel'],
     queryFn: () => base44.entities.PersonnelManager.filter({}),
   });
+  const allPersonnel = allPersonnelRaw.filter(p => p.DetachmentID !== 'GLOBAL');
 
   const { data: syllabus = [] } = useQuery({
     queryKey: ['syllabus-master'],

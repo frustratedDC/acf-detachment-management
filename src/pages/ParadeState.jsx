@@ -29,10 +29,11 @@ export default function ParadeState() {
   const [engagementTarget, setEngagementTarget] = useState(null); // instructor record for modal
   const isDC = (me?.AccessLevel ?? 0) >= ACCESS_LEVELS.DET_COMMANDER;
 
-  const { data: allPersonnel = [] } = useQuery({
+  const { data: allPersonnelRaw = [] } = useQuery({
     queryKey: ['all-personnel'],
     queryFn: () => base44.entities.PersonnelManager.filter({}),
   });
+  const allPersonnel = allPersonnelRaw.filter(p => p.DetachmentID !== 'GLOBAL');
 
   const { data: existingParade = [] } = useQuery({
     queryKey: ['parade', date],
