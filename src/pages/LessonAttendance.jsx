@@ -11,7 +11,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileCheck, Send, Search, Users, Pencil, AlertTriangle, UserX, EyeOff, Eye, ClipboardList } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FileCheck, Send, Search, Users, Pencil, AlertTriangle, UserX, EyeOff, Eye, ClipboardList, Repeat } from 'lucide-react';
 import { ACCESS_LEVELS } from '@/lib/accessLevels';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -22,7 +23,8 @@ export default function LessonAttendance() {
   const queryClient = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const [date, setDate] = useState(today);
-  const [selectedCadets, setSelectedCadets] = useState([]);
+  const [selectedByLesson, setSelectedByLesson] = useState({});
+  const [nightReassignments, setNightReassignments] = useState({});
   const [search, setSearch] = useState('');
   const [changeRequestOpen, setChangeRequestOpen] = useState(false);
   const [changeRequestLesson, setChangeRequestLesson] = useState(null);
@@ -62,23 +64,49 @@ export default function LessonAttendance() {
 
   const presentPNumbers = new Set(paradeState.filter(p => p.AttendanceStatus === 'Present').map(p => p.UserPNumber));
 
-  const { data: existingProgress = [] } = useQuery({
-    queryKey: ['progress-for-lesson', activeLesson?.LessonCode],
-    queryFn: () => base44.entities.ProgressLedger.filter({ LessonCode: activeLesson?.LessonCode }),
-    enabled: !!activeLesson?.LessonCode,
+  // All progress entries recorded for tonight, across every lesson — used to know who's already
+  // committed to a lesson so they don't appear in another star level's nominal roll.
+  const { data: nightProgress = [] } = useQuery({
+    queryKey: ['progress-for-night', date],
+    queryFn: () => base44.entities.ProgressLedger.filter({ CompletionDate: date }),
+    enabled: !!date,
   });
-  const alreadyCompletedPNumbers = new Set(existingProgress.filter(p => p.Status === 'Approved').map(p => p.CadetPNumber));
-  const pendingPNumbers = new Set(existingProgress.filter(p => p.Status === 'Pending').map(p => p.CadetPNumber));
+
+  const alreadyCompletedPNumbers = new Set(
+    nightProgress.filter(p => p.LessonCode === activeLesson?.LessonCode && p.Status === 'Approved').map(p => p.CadetPNumber)
+  );
+  const pendingPNumbers = new Set(
+    nightProgress.filter(p => p.LessonCode === activeLesson?.LessonCode && p.Status === 'Pending').map(p => p.CadetPNumber)
+  );
+
+  const selectedCadets = selectedByLesson[activeLesson?.id] || [];
+
+  function getEffectiveStarLevel(p) {
+    return nightReassignments[p.PNumber] || p.CurrentStarLevel;
+  }
 
   const [hideCompleted, setHideCompleted] = useState(false);
 
-  // All cadets at the right star level who are present (including already completed, for display)
-  const nominalRollCadets = allPersonnel.filter(p =>
+  // Cadets already committed (approved/pending/selected) to a different lesson running the same
+  // period tonight — they shouldn't be offered up in this lesson's nominal roll too.
+  const otherLessonsSamePeriod = myLessons.filter(l => l.id !== activeLesson?.id && l.Period === activeLesson?.Period);
+  const otherLessonCodes = new Set(otherLessonsSamePeriod.map(l => l.LessonCode));
+  const assignedElsewherePNumbers = new Set([
+    ...nightProgress.filter(p => otherLessonCodes.has(p.LessonCode)).map(p => p.CadetPNumber),
+    ...otherLessonsSamePeriod.flatMap(l => selectedByLesson[l.id] || []),
+  ]);
+
+  // The 'Admin' star level lesson is a whole-detachment activity — its nominal roll pulls in every
+  // present cadet regardless of star level, rather than just cadets with CurrentStarLevel === 'Admin'.
+  const isAdminLesson = activeLesson?.AssignedStarLevel === 'Admin';
+  const baseRollCadets = allPersonnel.filter(p =>
     p.Type === 'Cadet' &&
     (p.PersonnelStatus || 'Active') === 'Active' &&
-    p.CurrentStarLevel === activeLesson?.AssignedStarLevel &&
-    presentPNumbers.has(p.PNumber)
+    presentPNumbers.has(p.PNumber) &&
+    (isAdminLesson || getEffectiveStarLevel(p) === activeLesson?.AssignedStarLevel)
   );
+
+  const nominalRollCadets = baseRollCadets.filter(p => !assignedElsewherePNumbers.has(p.PNumber));
 
   const eligibleCadets = nominalRollCadets.filter(p => !alreadyCompletedPNumbers.has(p.PNumber));
 
@@ -92,7 +120,7 @@ export default function LessonAttendance() {
     p.Type === 'Cadet' &&
     (p.PersonnelStatus || 'Active') === 'Active' &&
     presentPNumbers.has(p.PNumber) &&
-    !scheduledStarLevels.has(p.CurrentStarLevel)
+    !scheduledStarLevels.has(getEffectiveStarLevel(p))
   ) : [];
 
   // Instructors present tonight
@@ -114,6 +142,9 @@ export default function LessonAttendance() {
     c.PNumber?.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Reassignment targets — the other star levels scheduled tonight, for L4+ to move a cadet into.
+  const reassignTargets = [...scheduledStarLevels].filter(sl => sl !== 'Admin');
+
   const submitMutation = useMutation({
     mutationFn: async () => {
       const isAutoApproved = (me?.AccessLevel ?? 0) >= ACCESS_LEVELS.DET_2IC;
@@ -128,8 +159,9 @@ export default function LessonAttendance() {
     },
     onSuccess: () => {
       toast.success('Attendance submitted');
-      setSelectedCadets([]);
+      setSelectedByLesson(prev => ({ ...prev, [activeLesson.id]: [] }));
       queryClient.invalidateQueries({ queryKey: ['progress'] });
+      queryClient.invalidateQueries({ queryKey: ['progress-for-night'] });
     },
   });
 
@@ -151,6 +183,7 @@ export default function LessonAttendance() {
       setSelectedUnassigned([]);
       setQuickAssignOpen(false);
       queryClient.invalidateQueries({ queryKey: ['progress'] });
+      queryClient.invalidateQueries({ queryKey: ['progress-for-night'] });
     },
   });
 
@@ -165,15 +198,29 @@ export default function LessonAttendance() {
   });
 
   function toggleCadet(pnum) {
-    setSelectedCadets(prev =>
-      prev.includes(pnum) ? prev.filter(p => p !== pnum) : [...prev, pnum]
-    );
+    setSelectedByLesson(prev => {
+      const current = prev[activeLesson.id] || [];
+      const next = current.includes(pnum) ? current.filter(p => p !== pnum) : [...current, pnum];
+      return { ...prev, [activeLesson.id]: next };
+    });
   }
 
   function toggleUnassigned(pnum) {
     setSelectedUnassigned(prev =>
       prev.includes(pnum) ? prev.filter(p => p !== pnum) : [...prev, pnum]
     );
+  }
+
+  function reassignCadet(pnum, newLevel) {
+    setNightReassignments(prev => {
+      const next = { ...prev };
+      if (newLevel === 'original') {
+        delete next[pnum];
+      } else {
+        next[pnum] = newLevel;
+      }
+      return next;
+    });
   }
 
   return (
@@ -209,7 +256,7 @@ export default function LessonAttendance() {
                 <Button
                   variant={idx === activeLessonIdx ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => { setActiveLessonIdx(idx); setSelectedCadets([]); }}
+                  onClick={() => setActiveLessonIdx(idx)}
                 >
                   P{lesson.Period} · {lesson.AssignedStarLevel} · {lesson.LessonCode}
                 </Button>
@@ -235,6 +282,11 @@ export default function LessonAttendance() {
                 <div><span className="text-muted-foreground">Dress:</span> <strong>{activeLesson.DressCode || 'N/A'}</strong></div>
                 <div><span className="text-muted-foreground">Location:</span> <strong>{activeLesson.Location || 'N/A'}</strong></div>
               </div>
+              {isAdminLesson && (
+                <p className="text-xs text-muted-foreground mt-2 italic">
+                  Admin lesson — nominal roll includes every present cadet across all star levels.
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -274,13 +326,14 @@ export default function LessonAttendance() {
                 {filteredCadets.map(cadet => {
                   const isApproved = alreadyCompletedPNumbers.has(cadet.PNumber);
                   const isPending = !isApproved && pendingPNumbers.has(cadet.PNumber);
+                  const effectiveLevel = getEffectiveStarLevel(cadet);
+                  const isReassigned = effectiveLevel !== cadet.CurrentStarLevel;
+                  const targets = reassignTargets.filter(sl => sl !== effectiveLevel);
                   return (
-                    <label
+                    <div
                       key={cadet.PNumber}
                       className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                        isApproved
-                          ? 'bg-chart-2/5 cursor-default'
-                          : 'hover:bg-muted/50 cursor-pointer'
+                        isApproved ? 'bg-chart-2/5' : 'hover:bg-muted/50'
                       }`}
                     >
                       {isApproved ? (
@@ -293,7 +346,7 @@ export default function LessonAttendance() {
                           onCheckedChange={() => toggleCadet(cadet.PNumber)}
                         />
                       )}
-                      <div className="flex-1">
+                      <div className="flex-1 cursor-pointer" onClick={() => !isApproved && !isPending && toggleCadet(cadet.PNumber)}>
                         <p className={`text-sm font-medium ${isApproved ? 'text-muted-foreground line-through' : ''}`}>
                           {cadet.Surname}{cadet.FirstName ? `, ${cadet.FirstName}` : ''}
                         </p>
@@ -301,8 +354,25 @@ export default function LessonAttendance() {
                       </div>
                       {isApproved && <Badge className="text-xs bg-chart-2/20 text-chart-2 border-0">Completed</Badge>}
                       {isPending && <Badge className="text-xs bg-yellow-100 text-yellow-700 border-0">Pending</Badge>}
-                      {!isApproved && !isPending && <Badge variant="outline" className="text-xs">{cadet.CurrentStarLevel}</Badge>}
-                    </label>
+                      {!isApproved && !isPending && (
+                        <Badge variant="outline" className={`text-xs ${isReassigned ? 'border-accent text-accent-foreground bg-accent/10' : ''}`}>
+                          {effectiveLevel}{isReassigned ? ' (moved)' : ''}
+                        </Badge>
+                      )}
+                      {isL4 && !isApproved && targets.length > 0 && (
+                        <Select value="" onValueChange={(v) => reassignCadet(cadet.PNumber, v)}>
+                          <SelectTrigger className="h-7 w-8 p-0 justify-center border-none bg-transparent shadow-none [&>svg]:hidden" title="Move to a different star level group for tonight">
+                            <Repeat className="w-3.5 h-3.5 text-muted-foreground" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {isReassigned && <SelectItem value="original">Back to {cadet.CurrentStarLevel}</SelectItem>}
+                            {targets.map(sl => (
+                              <SelectItem key={sl} value={sl}>Move to {sl}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
                   );
                 })}
                 {filteredCadets.length === 0 && (
