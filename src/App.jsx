@@ -62,6 +62,7 @@ import LogicDashboard from '@/pages/LogicDashboard';
 import PromotionReadiness from '@/pages/PromotionReadiness';
 import NewJoiners from '@/pages/NewJoiners';
 import Awards from '@/pages/Awards';
+import ProjectBoard from '@/pages/ProjectBoard';
 
 const AppContent = () => {
   const { personnel, loading } = usePersonnel();
@@ -128,6 +129,7 @@ const AppContent = () => {
         <Route path="/promotion-readiness" element={<PromotionReadiness />} />
         <Route path="/new-joiners" element={<NewJoiners />} />
         <Route path="/awards" element={<Awards />} />
+        <Route path="/project-board" element={<ProjectBoard />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

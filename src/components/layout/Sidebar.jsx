@@ -121,6 +121,7 @@ const NAV_GROUPS = [
       { path: '/admin', label: 'Global Settings', icon: Settings, level: 6 },
       { path: '/logic-dashboard', label: 'Logic Dashboard', icon: Cog, level: 6 },
       { path: '/audit-log', label: 'System Audit Log', icon: ShieldCheck, level: 6 },
+      { path: '/project-board', label: 'Project Board', icon: Layers, level: 6 },
     ],
   },
 ];
