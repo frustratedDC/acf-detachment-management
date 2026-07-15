@@ -31,7 +31,7 @@
       "$or": [
         {
           "user_condition": {
-            "role": "admin"
+            "role": "user"
           }
         },
         {
@@ -71,7 +71,7 @@
       "$or": [
         {
           "user_condition": {
-            "role": "admin"
+            "role": "user"
           }
         },
         {
@@ -110,17 +110,7 @@
       "$or": [
         {
           "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "data.AccessLevel": 1
-          }
-        },
-        {
-          "user_condition": {
-            "data.AccessLevel": 2
+            "role": "user"
           }
         },
         {
