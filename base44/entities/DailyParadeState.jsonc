@@ -25,5 +25,25 @@
     "Date",
     "UserPNumber",
     "AttendanceStatus"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "user"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "user"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "user"
+      }
+    },
+    "delete": {
+      "data.Role Name": "{{user.id}}"
+    }
+  }
 }
