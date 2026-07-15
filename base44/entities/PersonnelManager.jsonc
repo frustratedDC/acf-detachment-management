@@ -212,9 +212,28 @@
         {
           "$and": [
             {
-              "user_condition": {
-                "data.IsDetachmentAdmin": true
-              }
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.AccessLevel": 3
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.AccessLevel": 4
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.AccessLevel": 5
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.AccessLevel": 6
+                  }
+                }
+              ]
             },
             {
               "data.DetachmentID": "{{user.data.DetachmentID}}"
@@ -251,9 +270,28 @@
         {
           "$and": [
             {
-              "user_condition": {
-                "data.IsDetachmentAdmin": true
-              }
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.AccessLevel": 3
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.AccessLevel": 4
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.AccessLevel": 5
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.AccessLevel": 6
+                  }
+                }
+              ]
             },
             {
               "data.DetachmentID": "{{user.data.DetachmentID}}"
@@ -272,9 +310,28 @@
         {
           "$and": [
             {
-              "user_condition": {
-                "data.IsDetachmentAdmin": true
-              }
+              "$or": [
+                {
+                  "user_condition": {
+                    "data.AccessLevel": 3
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.AccessLevel": 4
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.AccessLevel": 5
+                  }
+                },
+                {
+                  "user_condition": {
+                    "data.AccessLevel": 6
+                  }
+                }
+              ]
             },
             {
               "data.DetachmentID": "{{user.data.DetachmentID}}"
