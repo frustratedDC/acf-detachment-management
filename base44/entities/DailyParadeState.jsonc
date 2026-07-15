@@ -58,6 +58,11 @@
           "user_condition": {
             "data.AccessLevel": 6
           }
+        },
+        {
+          "user_condition": {
+            "data.DetachmentID": "GLOBAL"
+          }
         }
       ]
     },
@@ -93,6 +98,11 @@
           "user_condition": {
             "data.AccessLevel": 6
           }
+        },
+        {
+          "user_condition": {
+            "data.DetachmentID": "GLOBAL"
+          }
         }
       ]
     },
@@ -116,6 +126,11 @@
         {
           "user_condition": {
             "data.AccessLevel": 6
+          }
+        },
+        {
+          "user_condition": {
+            "data.DetachmentID": "GLOBAL"
           }
         }
       ]
