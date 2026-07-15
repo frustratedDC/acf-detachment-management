@@ -31,11 +31,6 @@
       "$or": [
         {
           "user_condition": {
-            "role": "user"
-          }
-        },
-        {
-          "user_condition": {
             "data.AccessLevel": 1
           }
         },
@@ -71,11 +66,6 @@
       "$or": [
         {
           "user_condition": {
-            "role": "user"
-          }
-        },
-        {
-          "user_condition": {
             "data.AccessLevel": 1
           }
         },
@@ -108,11 +98,6 @@
     },
     "delete": {
       "$or": [
-        {
-          "user_condition": {
-            "role": "user"
-          }
-        },
         {
           "user_condition": {
             "data.AccessLevel": 3
