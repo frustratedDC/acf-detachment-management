@@ -24,6 +24,7 @@ export default function SyllabusMaster() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [starFilter, setStarFilter] = useState('all');
+  const [subjectFilter, setSubjectFilter] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [collapsed, setCollapsed] = useState({});
   const [selected, setSelected] = useState([]);
@@ -48,11 +49,13 @@ export default function SyllabusMaster() {
       l.LessonName?.toLowerCase().includes(search.toLowerCase()) ||
       l.SubjectName?.toLowerCase().includes(search.toLowerCase());
     const matchStar = starFilter === 'all' || l.StarLevel === starFilter;
-    return matchSearch && matchStar;
+    const matchSubject = subjectFilter === 'all' || l.SubjectName === subjectFilter;
+    return matchSearch && matchStar && matchSubject;
   });
 
   const grouped = _.groupBy(filtered, 'SubjectName');
   const subjects = Object.keys(grouped).sort();
+  const allSubjects = _.uniq(lessons.map(l => l.SubjectName).filter(Boolean)).sort();
 
   function sortLessons(list) {
     if (sortBy === 'star') return _.sortBy(list, l => STAR_ORDER[l.StarLevel] ?? 99);
@@ -70,7 +73,7 @@ export default function SyllabusMaster() {
 
   function downloadCSV() {
     const rows = [['Star Level', 'Subject', 'Lesson Name', 'isAssessment', 'Optional/Mandatory']];
-    const sorted = _.sortBy(lessons, l => STAR_ORDER[l.StarLevel] ?? 99, 'LessonName');
+    const sorted = _.sortBy(filtered, l => STAR_ORDER[l.StarLevel] ?? 99, 'LessonName');
     sorted.forEach(l => {
       const isAssessment = (l.LessonType === 'Physical Assessment' || l.LessonType === 'Auto-Assessment') ? 'Yes' : 'No';
       const optMan = l.IsMandatory ? 'Mandatory' : 'Optional';
@@ -112,6 +115,13 @@ export default function SyllabusMaster() {
                 <SelectItem value="4 Star">4 Star</SelectItem>
                 <SelectItem value="Adult">Adult</SelectItem>
                 <SelectItem value="Admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+              <SelectTrigger className="w-40"><SelectValue placeholder="Subject" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Subjects</SelectItem>
+                {allSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
