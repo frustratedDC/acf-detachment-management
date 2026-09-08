@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BookOpen, Search, ChevronDown, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { BookOpen, Search, ChevronDown, ChevronRight, Pencil, Trash2, Download } from 'lucide-react';
 import _ from 'lodash';
 import SyllabusEditorDialog from '@/components/syllabus/SyllabusEditorDialog';
 import SyllabusBulkBar from '@/components/syllabus/SyllabusBulkBar';
@@ -68,6 +68,22 @@ export default function SyllabusMaster() {
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   }
 
+  function downloadCSV() {
+    const rows = [['Star Level', 'Subject', 'Lesson Name', 'isAssessment', 'Optional/Mandatory']];
+    const sorted = _.sortBy(lessons, l => STAR_ORDER[l.StarLevel] ?? 99, 'LessonName');
+    sorted.forEach(l => {
+      const isAssessment = (l.LessonType === 'Physical Assessment' || l.LessonType === 'Auto-Assessment') ? 'Yes' : 'No';
+      const optMan = l.IsMandatory ? 'Mandatory' : 'Optional';
+      rows.push([l.StarLevel || '', l.SubjectName || '', l.LessonName || '', isAssessment, optMan]);
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'MasterSyllabus.csv';
+    a.click();
+  }
+
   return (
     <div>
       <PageHeader
@@ -106,6 +122,9 @@ export default function SyllabusMaster() {
                 <SelectItem value="star">Sort: Star Level</SelectItem>
               </SelectContent>
             </Select>
+            <Button variant="outline" size="sm" onClick={downloadCSV}>
+              <Download className="w-4 h-4 mr-1.5" />CSV
+            </Button>
             <SyllabusEditorDialog />
           </div>
         }
