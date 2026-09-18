@@ -50,7 +50,7 @@ export default function EventItinerarySection({ event }) {
       <Card>
         <CardContent className="pt-4 space-y-3">
           <h3 className="text-sm font-semibold flex items-center gap-2"><Clock className="w-4 h-4" />Add Timeframe</h3>
-          <p className="text-xs text-muted-foreground">Event runs {format(new Date(event.StartDateTime), 'dd MMM HH:mm')} → {format(new Date(event.EndDateTime), 'dd MMM HH:mm')}. Slots must fall within these boundaries.</p>
+          <p className="text-xs text-muted-foreground">{event.StartDateTime && event.EndDateTime ? <>Event runs {format(new Date(event.StartDateTime), 'dd MMM HH:mm')} → {format(new Date(event.EndDateTime), 'dd MMM HH:mm')}. Slots must fall within these boundaries.</> : 'Set event start/end times in Details first.'}</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end">
             <div className="col-span-2 sm:col-span-1"><Label className="text-xs">Start Time</Label><Input type="datetime-local" value={newSlot.StartTime} onChange={(e) => setNewSlot({ ...newSlot, StartTime: e.target.value })} /></div>
             <div><Label className="text-xs">Duration (min)</Label><Input type="number" value={newSlot.DurationMinutes} onChange={(e) => setNewSlot({ ...newSlot, DurationMinutes: Number(e.target.value) })} /></div>

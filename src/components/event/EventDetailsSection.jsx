@@ -74,7 +74,7 @@ export default function EventDetailsSection({ event }) {
             <Label>Activity Tags</Label>
             <div className="flex flex-wrap gap-2 mt-1">
               {ACTIVITY_TAGS.map((tag) => (
-                <button key={tag} type="button" onClick={() => toggleTag(tag)} className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${form.ActivityTags.includes(tag) ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-muted'}`}>{tag}</button>
+                <button key={tag} type="button" onClick={() => toggleTag(tag)} className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${(form.ActivityTags || []).includes(tag) ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-muted'}`}>{tag}</button>
               ))}
             </div>
           </div>
