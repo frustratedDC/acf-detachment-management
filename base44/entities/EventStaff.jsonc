@@ -1,0 +1,154 @@
+{
+  "name": "EventStaff",
+  "type": "object",
+  "properties": {
+    "EventID": {
+      "type": "string",
+      "description": "Linked EventTrainingPlan ID"
+    },
+    "StaffType": {
+      "type": "string",
+      "enum": [
+        "Adult Instructor",
+        "Cadet Instructor"
+      ]
+    },
+    "PNumber": {
+      "type": "string",
+      "description": "Linked PersonnelManager PNumber"
+    },
+    "Rank": {
+      "type": "string"
+    },
+    "Name": {
+      "type": "string"
+    },
+    "QualifiedStatus": {
+      "type": "string",
+      "enum": [
+        "SPTA",
+        "BIT1",
+        "BIT2",
+        "BIT3",
+        "BIT4",
+        "BIT5",
+        "Qualified"
+      ],
+      "description": "Qualified status, lowest number = highest priority"
+    },
+    "SubjectQualifications": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Subject qualification codes by domain (SAAI, RCO SR, NNAS G, etc.)"
+    },
+    "CIQualifications": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "JCIC",
+          "SCIC"
+        ]
+      }
+    },
+    "PlatoonID": {
+      "type": "string",
+      "description": "Assigned platoon EventPlatoon ID"
+    },
+    "CommandRole": {
+      "type": "string",
+      "description": "e.g. Platoon Commander if applicable"
+    },
+    "DetachmentID": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "EventID",
+    "StaffType",
+    "DetachmentID"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

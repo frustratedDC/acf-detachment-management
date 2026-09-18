@@ -1,0 +1,281 @@
+{
+  "name": "EventTrainingPlan",
+  "type": "object",
+  "properties": {
+    "Title": {
+      "type": "string",
+      "description": "Event title"
+    },
+    "StartDateTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event start date and time"
+    },
+    "EndDateTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event end date and time"
+    },
+    "Location": {
+      "type": "string"
+    },
+    "EventCost": {
+      "type": "number",
+      "description": "Cost per cadet in GBP"
+    },
+    "EventType": {
+      "type": "string",
+      "enum": [
+        "County",
+        "Company",
+        "Detachment",
+        "Other"
+      ]
+    },
+    "ActivityTags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Fieldcraft",
+          "Sports/Fitness",
+          "Navigation/Expedition",
+          "Skill At Arms/Shooting",
+          "Drill and Turnout",
+          "Public Event/Community Engagement",
+          "General Training",
+          "First Aid",
+          "Radios",
+          "DofE",
+          "Adventurous Training",
+          "Admin"
+        ]
+      },
+      "description": "Types of activities covered by this event"
+    },
+    "TransportMode": {
+      "type": "string",
+      "enum": [
+        "Coach",
+        "Own Transport"
+      ]
+    },
+    "OutboundDepartureLocation": {
+      "type": "string"
+    },
+    "OutboundDateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "OutboundLatestArrival": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Latest arrival time for loading"
+    },
+    "TransportDressState": {
+      "type": "string",
+      "enum": [
+        "MTP",
+        "CIV",
+        "Other"
+      ]
+    },
+    "TransportDressOther": {
+      "type": "string",
+      "description": "Free text if dress state is Other"
+    },
+    "CoachOfficer": {
+      "type": "string",
+      "description": "Coach officer name if Coach selected"
+    },
+    "InboundArrivalLocation": {
+      "type": "string"
+    },
+    "InboundDateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "FeedingProvided": {
+      "type": "boolean",
+      "default": false
+    },
+    "RequiresBreakfastPrior": {
+      "type": "boolean",
+      "default": false,
+      "description": "Breakfast prior to arrival"
+    },
+    "RequiresBreakfast": {
+      "type": "boolean",
+      "default": false
+    },
+    "RequiresPackedLunch": {
+      "type": "boolean",
+      "default": false
+    },
+    "RequiresEveningMeal": {
+      "type": "boolean",
+      "default": false
+    },
+    "AccommodationProvided": {
+      "type": "boolean",
+      "default": false
+    },
+    "AccommodationType": {
+      "type": "string",
+      "enum": [
+        "Building",
+        "Tented",
+        "Both"
+      ]
+    },
+    "OwnSleepingEquipment": {
+      "type": "boolean",
+      "default": false
+    },
+    "LaundryAvailable": {
+      "type": "string",
+      "enum": [
+        "Yes",
+        "No",
+        "NA"
+      ]
+    },
+    "LaundryCost": {
+      "type": "number",
+      "description": "Approximate laundry cost if available"
+    },
+    "TrainingStarLevels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Selected star levels for training scope"
+    },
+    "TrainingSubjects": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Selected subjects for training scope"
+    },
+    "CompanyStaffOC": {
+      "type": "string"
+    },
+    "CompanyStaffTO": {
+      "type": "string"
+    },
+    "CompanyStaffCSM": {
+      "type": "string"
+    },
+    "CompanyStaffOfficer": {
+      "type": "string"
+    },
+    "CompanyStaffCQMS": {
+      "type": "string"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Planned",
+        "Committed",
+        "Cancelled"
+      ],
+      "default": "Draft"
+    },
+    "DetachmentID": {
+      "type": "string",
+      "description": "Tenant scoping"
+    },
+    "CreatedByPNumber": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "Title",
+    "StartDateTime",
+    "EndDateTime",
+    "DetachmentID"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

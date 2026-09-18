@@ -1,0 +1,173 @@
+{
+  "name": "EventNominalRoll",
+  "type": "object",
+  "properties": {
+    "EventID": {
+      "type": "string",
+      "description": "Linked EventTrainingPlan ID"
+    },
+    "PNumber": {
+      "type": "string",
+      "description": "Cadet PNumber"
+    },
+    "Rank": {
+      "type": "string"
+    },
+    "Surname": {
+      "type": "string"
+    },
+    "FirstName": {
+      "type": "string"
+    },
+    "Detachment": {
+      "type": "string",
+      "description": "Detachment name from CSV"
+    },
+    "Gender": {
+      "type": "string",
+      "enum": [
+        "M",
+        "F"
+      ]
+    },
+    "CurrentStarLevel": {
+      "type": "string",
+      "enum": [
+        "New Joiner",
+        "Basic",
+        "1 Star",
+        "2 Star",
+        "3 Star",
+        "4 Star",
+        "Adult",
+        "Admin"
+      ]
+    },
+    "WHTAirRifle": {
+      "type": "string",
+      "description": "WHT status for Air Rifle"
+    },
+    "WHTGPRifle": {
+      "type": "string",
+      "description": "WHT status for GP Rifle"
+    },
+    "SubjectCompletions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lesson codes completed (from CSV upload 1)"
+    },
+    "PartialCompletions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Partial subject completions (from CSV upload 2)"
+    },
+    "PlatoonID": {
+      "type": "string",
+      "description": "Assigned platoon EventPlatoon ID"
+    },
+    "TargetedTraining": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Manual targeted training inputs (e.g. '3 Star:Navigation')"
+    },
+    "LinkedPersonnelID": {
+      "type": "string",
+      "description": "Linked PersonnelManager record ID if found"
+    },
+    "DetachmentID": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "EventID",
+    "PNumber",
+    "DetachmentID"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

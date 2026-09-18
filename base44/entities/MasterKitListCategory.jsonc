@@ -1,0 +1,121 @@
+{
+  "name": "MasterKitListCategory",
+  "type": "object",
+  "properties": {
+    "CategoryNumber": {
+      "type": "number",
+      "description": "Category 1-7"
+    },
+    "CategoryName": {
+      "type": "string"
+    },
+    "Disclaimer": {
+      "type": "string",
+      "description": "Standard disclaimer notes (no aerosols, jewelry rules, etc.)"
+    },
+    "DefaultItems": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Default items in this category"
+    },
+    "MultiQuantityItems": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Items that allow multiple quantities (highlighted)"
+    },
+    "DetachmentID": {
+      "type": "string",
+      "description": "GLOBAL for shared registry, or detachment-scoped"
+    }
+  },
+  "required": [
+    "CategoryNumber",
+    "CategoryName",
+    "DetachmentID"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -96,6 +96,7 @@ const NAV_GROUPS = [
       { path: '/plan-generator',       label: 'AI Plan Generator',    icon: Wand2,          level: 4 },
       { path: '/training-plan-export', label: 'Export PDF',           icon: FileDown,       level: 3 },
       { path: '/conflict-monitor',     label: 'Conflict Monitor',     icon: CrosshairIcon,  level: 4 },
+      { path: '/event-planning',       label: 'Event Planning',       icon: CalendarDays,   level: 5 },
     ],
   },
 

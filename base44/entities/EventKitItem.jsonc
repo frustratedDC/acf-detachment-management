@@ -1,0 +1,126 @@
+{
+  "name": "EventKitItem",
+  "type": "object",
+  "properties": {
+    "EventID": {
+      "type": "string",
+      "description": "Linked EventTrainingPlan ID"
+    },
+    "CategoryNumber": {
+      "type": "number",
+      "description": "Kit category 1-7"
+    },
+    "CategoryName": {
+      "type": "string"
+    },
+    "Included": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this category is included in the event"
+    },
+    "SelectedItems": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Selected items within this category"
+    },
+    "Disclaimer": {
+      "type": "string",
+      "description": "Standard disclaimer notes for this category"
+    },
+    "UniformMultiplier": {
+      "type": "number",
+      "description": "Auto-calculated uniform multiplier based on transport dress state (CIV=2, MTP=1)"
+    },
+    "DetachmentID": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "EventID",
+    "CategoryNumber",
+    "DetachmentID"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

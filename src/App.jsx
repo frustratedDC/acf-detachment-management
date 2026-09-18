@@ -63,6 +63,8 @@ import PromotionReadiness from '@/pages/PromotionReadiness';
 import NewJoiners from '@/pages/NewJoiners';
 import Awards from '@/pages/Awards';
 import ProjectBoard from '@/pages/ProjectBoard';
+import EventTrainingPlanning from '@/pages/EventTrainingPlanning';
+import EventTrainingPlanDetail from '@/pages/EventTrainingPlanDetail';
 
 const AppContent = () => {
   const { personnel, loading } = usePersonnel();
@@ -130,6 +132,8 @@ const AppContent = () => {
         <Route path="/new-joiners" element={<NewJoiners />} />
         <Route path="/awards" element={<Awards />} />
         <Route path="/project-board" element={<ProjectBoard />} />
+        <Route path="/event-planning" element={<EventTrainingPlanning />} />
+        <Route path="/event-planning/:eventId" element={<EventTrainingPlanDetail />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
