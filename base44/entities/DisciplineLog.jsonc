@@ -20,7 +20,7 @@
     },
     "UIN": {
       "type": "string",
-      "description": "Unique Incident Number \u2014 the only field surfaced in the Audit Log"
+      "description": "Unique Incident Number — the only field surfaced in the Audit Log"
     },
     "LoggedByPNumber": {
       "type": "string",
@@ -32,27 +32,5 @@
     "PersonnelInvolved",
     "Description",
     "UIN"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

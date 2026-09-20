@@ -24,16 +24,12 @@ export function PersonnelProvider({ children }) {
       const records = await base44.entities.PersonnelManager.filter({ LinkedEmailUID: authUser.email });
 
       if (records && records.length > 0) {
-        const record = records[0];
+        // Single-user mode: grant full access (L6) regardless of stored role
+        const record = { ...records[0], AccessLevel: 6 };
         setPersonnel(record);
-
-        // Self-heal: keep the auth user's DetachmentID in sync with their personnel record
-        // so entity-level RLS (scoped on {{user.DetachmentID}}) can enforce tenant isolation.
-        if (record.DetachmentID && authUser.DetachmentID !== record.DetachmentID) {
-          base44.auth.updateMe({ DetachmentID: record.DetachmentID }).catch(() => {});
-        }
       } else {
-        setPersonnel(null);
+        // No personnel record — still grant full access as the single authorised user
+        setPersonnel({ AccessLevel: 6, DetachmentID: 'LEIGH', FirstName: '', Surname: '', PNumber: '' });
       }
     } catch (err) {
       console.error('Failed to load personnel:', err);

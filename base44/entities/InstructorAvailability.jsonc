@@ -33,44 +33,5 @@
     "InstructorPNumber",
     "Date",
     "Status"
-  ],
-  "rls": {
-    "create": {},
-    "read": {
-      "$or": [
-        {
-          "data.InstructorPNumber": "{{user.PNumber}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.InstructorPNumber": "{{user.PNumber}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "data.InstructorPNumber": "{{user.PNumber}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    }
-  }
+  ]
 }

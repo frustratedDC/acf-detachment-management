@@ -71,30 +71,5 @@
     "Category",
     "Urgency",
     "Description"
-  ],
-  "rls": {
-    "create": {},
-    "read": {
-      "$or": [
-        {
-          "data.PNumber": "{{user.PNumber}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

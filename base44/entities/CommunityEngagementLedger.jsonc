@@ -55,30 +55,5 @@
     "Hours",
     "Description",
     "Date"
-  ],
-  "rls": {
-    "create": {},
-    "read": {
-      "$or": [
-        {
-          "data.CadetPNumber": "{{user.PNumber}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }
