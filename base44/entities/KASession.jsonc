@@ -41,6 +41,14 @@
       "type": "object",
       "description": "Key-value map of PNumber to activity score subsets",
       "additionalProperties": true
+    },
+    "EventID": {
+      "type": "string",
+      "description": "Linked EventTrainingPlan ID when this session runs during an event"
+    },
+    "StanceID": {
+      "type": "string",
+      "description": "Linked EventTrainingStance ID when this session runs against a stance cadet subset"
     }
   },
   "required": [

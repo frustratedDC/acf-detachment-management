@@ -5,13 +5,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Trash2, Search, Users, Loader2 } from 'lucide-react';
+import { Upload, Trash2, Search, Users, Loader2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
+import EventManualCadetModal from '@/components/event/EventManualCadetModal';
 
 export default function EventNominalRollSection({ event }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   const fileRef1 = useRef(null);
   const fileRef2 = useRef(null);
 
@@ -126,6 +128,7 @@ export default function EventNominalRollSection({ event }) {
       <Card>
         <CardContent className="pt-4 space-y-3">
           <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => setShowManual(true)}><UserPlus className="w-4 h-4 mr-1.5" />Add Cadet</Button>
             <Button size="sm" variant="outline" onClick={() => fileRef1.current?.click()} disabled={uploading}>
               {uploading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Upload className="w-4 h-4 mr-1.5" />}
               Upload Nominal Roll (CSV 1)
@@ -167,8 +170,10 @@ export default function EventNominalRollSection({ event }) {
             </CardContent>
           </Card>
         ))}
-        {filtered.length === 0 && <p className="text-center py-8 text-sm text-muted-foreground">{roll.length === 0 ? 'No cadets on nominal roll. Upload a CSV to begin.' : 'No cadets match your search.'}</p>}
+        {filtered.length === 0 && <p className="text-center py-8 text-sm text-muted-foreground">{roll.length === 0 ? 'No cadets on nominal roll. Upload a CSV or add manually to begin.' : 'No cadets match your search.'}</p>}
       </div>
+
+      <EventManualCadetModal event={event} open={showManual} onOpenChange={setShowManual} />
     </div>
   );
 }

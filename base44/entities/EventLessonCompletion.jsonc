@@ -1,0 +1,124 @@
+{
+  "name": "EventLessonCompletion",
+  "type": "object",
+  "properties": {
+    "EventID": {
+      "type": "string",
+      "description": "Linked EventTrainingPlan ID"
+    },
+    "StanceID": {
+      "type": "string",
+      "description": "Linked EventTrainingStance ID"
+    },
+    "CadetID": {
+      "type": "string",
+      "description": "EventNominalRoll record ID of the cadet"
+    },
+    "LessonCode": {
+      "type": "string",
+      "description": "SyllabusMaster LessonCode being tracked"
+    },
+    "Status": {
+      "type": "string",
+      "enum": [
+        "Pass",
+        "Stance",
+        "REVAL",
+        ""
+      ],
+      "default": "",
+      "description": "Pass = completed, Stance = completed in this stance, REVAL = revalidation needed, blank = not yet assessed"
+    },
+    "DetachmentID": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "EventID",
+    "StanceID",
+    "CadetID",
+    "LessonCode",
+    "DetachmentID"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

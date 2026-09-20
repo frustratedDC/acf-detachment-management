@@ -173,6 +173,11 @@
     "CompanyStaffCQMS": {
       "type": "string"
     },
+    "CompetitionScoring": {
+      "type": "object",
+      "description": "Adjustable competition scoring config: { pointsPerRank: [3,2,1], bonusPoints: 1 }",
+      "additionalProperties": true
+    },
     "Status": {
       "type": "string",
       "enum": [

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,13 +8,15 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { UserPlus, Trash2 } from 'lucide-react';
+import { UserPlus, Trash2, Upload, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { QUALIFIED_STATUS_OPTIONS, SUBJECT_QUAL_DOMAINS, CI_QUALIFICATIONS, CI_SUBJECT_QUALS } from '@/lib/eventConstants';
 
 export default function EventStaffSection({ event }) {
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
   const [addType, setAddType] = useState('Adult Instructor');
   const [pickPNumber, setPickPNumber] = useState('');
   const [manual, setManual] = useState({ Rank: '', Name: '', PNumber: '' });
@@ -62,6 +64,34 @@ export default function EventStaffSection({ event }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['event-staff', event.id] }),
   });
 
+  async function handleStaffUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+      const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
+        file_url,
+        json_schema: { type: 'object', properties: { records: { type: 'array', items: { type: 'object', properties: {
+          StaffType: { type: 'string' }, Rank: { type: 'string' }, Name: { type: 'string' }, PNumber: { type: 'string' },
+          QualifiedStatus: { type: 'string' }, SubjectQualifications: { type: 'array', items: { type: 'string' } },
+          CIQualifications: { type: 'array', items: { type: 'string' } },
+        } } } } },
+      });
+      const records = result.output?.records || result.output || [];
+      const toCreate = records.map((r) => ({
+        EventID: event.id, DetachmentID: event.DetachmentID,
+        StaffType: r.StaffType || 'Adult Instructor', Rank: r.Rank || '', Name: r.Name || '', PNumber: r.PNumber || '',
+        QualifiedStatus: r.QualifiedStatus || 'Qualified', SubjectQualifications: r.SubjectQualifications || [], CIQualifications: r.CIQualifications || [],
+      })).filter((r) => r.Name);
+      if (toCreate.length) await base44.entities.EventStaff.bulkCreate(toCreate);
+      queryClient.invalidateQueries({ queryKey: ['event-staff', event.id] });
+      toast.success(`${toCreate.length} staff imported`);
+    } catch (err) { toast.error(err.message); }
+    setUploading(false);
+    e.target.value = '';
+  }
+
   function resetForm() {
     setShowAdd(false); setPickPNumber(''); setManual({ Rank: '', Name: '', PNumber: '' });
     setQuals([]); setCiQuals([]); setQualifiedStatus('Qualified');
@@ -92,10 +122,16 @@ export default function EventStaffSection({ event }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Instructional Staff ({staff.length})</h3>
-        <Button size="sm" onClick={() => { setShowAdd(true); setAddType('Adult Instructor'); }}>
-          <UserPlus className="w-4 h-4 mr-1.5" />Add Staff
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
+            {uploading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Upload className="w-4 h-4 mr-1.5" />}CSV
+          </Button>
+          <Button size="sm" onClick={() => { setShowAdd(true); setAddType('Adult Instructor'); }}>
+            <UserPlus className="w-4 h-4 mr-1.5" />Add Staff
+          </Button>
+        </div>
       </div>
+      <input ref={fileRef} type="file" accept=".csv,.xlsx,.json" className="hidden" onChange={handleStaffUpload} />
       <div className="grid gap-2">
         {staff.map((s) => (
           <Card key={s.id}>

@@ -17,6 +17,12 @@ import EventPlatoonSection from '@/components/event/EventPlatoonSection';
 import EventEquipmentSection from '@/components/event/EventEquipmentSection';
 import EventItinerarySection from '@/components/event/EventItinerarySection';
 import EventCommitSection from '@/components/event/EventCommitSection';
+import EventStanceSection from '@/components/event/EventStanceSection';
+import EventLessonTrackingSection from '@/components/event/EventLessonTrackingSection';
+import EventAwardsSection from '@/components/event/EventAwardsSection';
+import EventKASessionSection from '@/components/event/EventKASessionSection';
+import EventStoresSection from '@/components/event/EventStoresSection';
+import EventPaperworkSection from '@/components/event/EventPaperworkSection';
 
 const STATUS_COLOR = {
   Draft: 'bg-muted text-muted-foreground',
@@ -31,9 +37,15 @@ const SECTIONS = [
   { key: 'staff', label: 'Staff' },
   { key: 'roll', label: 'Nominal Roll' },
   { key: 'training', label: 'Training' },
+  { key: 'stances', label: 'Stances' },
+  { key: 'tracking', label: 'Tracking' },
+  { key: 'awards', label: 'Awards' },
+  { key: 'ka', label: 'KA Sessions' },
+  { key: 'stores', label: 'Stores' },
   { key: 'platoons', label: 'Platoons' },
   { key: 'equipment', label: 'Equipment' },
   { key: 'itinerary', label: 'Itinerary' },
+  { key: 'paperwork', label: 'Paperwork' },
   { key: 'commit', label: 'Commit' },
 ];
 
@@ -78,9 +90,15 @@ export default function EventTrainingPlanDetail() {
         <TabsContent value="staff"><EventStaffSection event={event} /></TabsContent>
         <TabsContent value="roll"><EventNominalRollSection event={event} /></TabsContent>
         <TabsContent value="training"><EventTrainingSection event={event} /></TabsContent>
+        <TabsContent value="stances"><EventStanceSection event={event} /></TabsContent>
+        <TabsContent value="tracking"><EventLessonTrackingSection event={event} /></TabsContent>
+        <TabsContent value="awards"><EventAwardsSection event={event} /></TabsContent>
+        <TabsContent value="ka"><EventKASessionSection event={event} /></TabsContent>
+        <TabsContent value="stores"><EventStoresSection event={event} /></TabsContent>
         <TabsContent value="platoons"><EventPlatoonSection event={event} /></TabsContent>
         <TabsContent value="equipment"><EventEquipmentSection event={event} /></TabsContent>
         <TabsContent value="itinerary"><EventItinerarySection event={event} /></TabsContent>
+        <TabsContent value="paperwork"><EventPaperworkSection event={event} /></TabsContent>
         <TabsContent value="commit"><EventCommitSection event={event} /></TabsContent>
       </Tabs>
     </AccessGate>

@@ -1,0 +1,143 @@
+{
+  "name": "EventTrainingStance",
+  "type": "object",
+  "properties": {
+    "EventID": {
+      "type": "string",
+      "description": "Linked EventTrainingPlan ID"
+    },
+    "StanceLabel": {
+      "type": "string",
+      "description": "Rotation label e.g. A1, B2, C1, D2"
+    },
+    "StartTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Stance start date and time"
+    },
+    "EndTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Stance end date and time"
+    },
+    "SubjectName": {
+      "type": "string",
+      "description": "Subject taught in this stance, from SyllabusMaster"
+    },
+    "LessonCodes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "SyllabusMaster LessonCodes taught in this stance"
+    },
+    "StaffIDs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "EventStaff record IDs assigned to instruct this stance"
+    },
+    "CadetIDs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "EventNominalRoll record IDs assigned to this stance rotation"
+    },
+    "SortOrder": {
+      "type": "number",
+      "default": 0,
+      "description": "Display/order order for the stance in the plan timeline"
+    },
+    "DetachmentID": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "EventID",
+    "StanceLabel",
+    "DetachmentID"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

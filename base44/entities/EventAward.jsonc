@@ -1,0 +1,127 @@
+{
+  "name": "EventAward",
+  "type": "object",
+  "properties": {
+    "EventID": {
+      "type": "string",
+      "description": "Linked EventTrainingPlan ID"
+    },
+    "AwardName": {
+      "type": "string",
+      "description": "Name of the award e.g. Best Section, Top Recruit"
+    },
+    "AwardType": {
+      "type": "string",
+      "enum": [
+        "preset",
+        "custom"
+      ],
+      "default": "custom"
+    },
+    "Prize": {
+      "type": "string",
+      "description": "Prize given to the winner"
+    },
+    "Description": {
+      "type": "string",
+      "description": "Criteria or description of the award"
+    },
+    "SortOrder": {
+      "type": "number",
+      "default": 0
+    },
+    "WinnerCadetID": {
+      "type": "string",
+      "description": "EventNominalRoll ID of the awarded winner, set when the DC nominates them"
+    },
+    "DetachmentID": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "EventID",
+    "AwardName",
+    "DetachmentID"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "data.AccessLevel": 6
+          }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "data.AccessLevel": 5
+              }
+            },
+            {
+              "data.DetachmentID": "{{user.data.DetachmentID}}"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
