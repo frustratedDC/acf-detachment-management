@@ -22,6 +22,7 @@ const STATUS_COLOR = {
   Draft: 'bg-muted text-muted-foreground',
   Planned: 'bg-blue-500/20 text-blue-600',
   Committed: 'bg-chart-2/20 text-chart-2',
+  Complete: 'bg-chart-2/30 text-chart-2 font-semibold',
   Cancelled: 'bg-destructive/20 text-destructive',
 };
 

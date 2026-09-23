@@ -167,7 +167,7 @@ export default function EventAwardsSection({ event }) {
               <Label className="text-xs">Stance</Label>
               <Select value={scoreForm.StanceID} onValueChange={(v) => setScoreForm({ ...scoreForm, StanceID: v, CadetID: '' })}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select stance…" /></SelectTrigger>
-                <SelectContent>{stances.map((s) => <SelectItem key={s.id} value={s.id}>{s.StanceLabel} — {s.SubjectName || ''}</SelectItem>)}</SelectContent>
+                <SelectContent>{stances.map((s) => <SelectItem key={s.id} value={s.id}>{s.StanceLabel} — {(s.SubjectNames && s.SubjectNames.length ? s.SubjectNames : s.SubjectName ? [s.SubjectName] : []).join(', ') || ''}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>

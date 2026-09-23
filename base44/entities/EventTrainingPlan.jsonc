@@ -184,9 +184,15 @@
         "Draft",
         "Planned",
         "Committed",
+        "Complete",
         "Cancelled"
       ],
       "default": "Draft"
+    },
+    "CompletedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the event was marked complete and the snapshot was frozen"
     },
     "DetachmentID": {
       "type": "string",

@@ -5,9 +5,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Trash2, Search, Users, Loader2, UserPlus } from 'lucide-react';
+import { Upload, Trash2, Search, Users, Loader2, UserPlus, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import EventManualCadetModal from '@/components/event/EventManualCadetModal';
+import { buildNominalRollTemplateCsv, buildPartialCompletionsTemplateCsv, downloadTextFile, parseNominalRollText, parsePartialCompletionsText, getExtension } from '@/lib/eventCsvTemplate';
 
 export default function EventNominalRollSection({ event }) {
   const queryClient = useQueryClient();
@@ -43,46 +44,71 @@ export default function EventNominalRollSection({ event }) {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['event-nominal-roll', event.id] }); toast.success('Nominal roll cleared'); },
   });
 
+  async function readText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsText(file);
+    });
+  }
+
   async function handleUpload1(e) {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
-      const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url,
-        json_schema: {
-          type: 'object',
-          properties: {
-            records: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  PNumber: { type: 'string' }, Rank: { type: 'string' }, Surname: { type: 'string' },
-                  FirstName: { type: 'string' }, Detachment: { type: 'string' }, Gender: { type: 'string' },
-                  CurrentStarLevel: { type: 'string' }, WHTAirRifle: { type: 'string' }, WHTGPRifle: { type: 'string' },
-                  SubjectCompletions: { type: 'array', items: { type: 'string' } },
+      const ext = getExtension(file.name);
+      let records;
+      if (ext === 'csv' || ext === 'json') {
+        const text = await readText(file);
+        records = parseNominalRollText(text, ext);
+      } else {
+        // xlsx or unknown — fall back to AI extraction
+        const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+        const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
+          file_url,
+          json_schema: {
+            type: 'object',
+            properties: {
+              records: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    PNumber: { type: 'string' }, Rank: { type: 'string' }, Surname: { type: 'string' },
+                    FirstName: { type: 'string' }, Detachment: { type: 'string' }, Gender: { type: 'string' },
+                    CurrentStarLevel: { type: 'string' }, WHTAirRifle: { type: 'string' }, WHTGPRifle: { type: 'string' },
+                    SubjectCompletions: { type: 'array', items: { type: 'string' } },
+                  },
                 },
               },
             },
           },
-        },
-      });
-      const raw = result.output?.records || result.output || [];
-      const records = raw.map((r) => {
+        });
+        const raw = result.output?.records || result.output || [];
+        records = raw.map((r) => ({
+          PNumber: r.PNumber || '', Rank: r.Rank || '', Surname: r.Surname || '', FirstName: r.FirstName || '',
+          Detachment: r.Detachment || '', Gender: r.Gender || '', CurrentStarLevel: r.CurrentStarLevel || 'Basic',
+          WHTAirRifle: r.WHTAirRifle || '', WHTGPRifle: r.WHTGPRifle || '', SubjectCompletions: r.SubjectCompletions || [],
+        }));
+      }
+
+      if (!records.length) { toast.error('No cadet rows found in the file'); setUploading(false); e.target.value = ''; return; }
+
+      const payload = records.map((r) => {
         const existing = personnel.find((p) => p.PNumber === r.PNumber);
         return {
-          EventID: event.id, PNumber: r.PNumber || '', Rank: r.Rank || '', Surname: r.Surname || '', FirstName: r.FirstName || '',
-          Detachment: r.Detachment || '', Gender: r.Gender || '', CurrentStarLevel: r.CurrentStarLevel || 'Basic',
-          WHTAirRifle: r.WHTAirRifle || '', WHTGPRifle: r.WHTGPRifle || '',
-          SubjectCompletions: r.SubjectCompletions || [], LinkedPersonnelID: existing?.id || '',
+          EventID: event.id, PNumber: r.PNumber, Rank: r.Rank, Surname: r.Surname, FirstName: r.FirstName,
+          Detachment: r.Detachment, Gender: r.Gender, CurrentStarLevel: r.CurrentStarLevel,
+          WHTAirRifle: r.WHTAirRifle, WHTGPRifle: r.WHTGPRifle,
+          SubjectCompletions: r.SubjectCompletions, LinkedPersonnelID: existing?.id || '',
           DetachmentID: event.DetachmentID,
         };
       });
-      if (records.length) await base44.entities.EventNominalRoll.bulkCreate(records);
+      await base44.entities.EventNominalRoll.bulkCreate(payload);
       queryClient.invalidateQueries({ queryKey: ['event-nominal-roll', event.id] });
-      toast.success(`${records.length} cadets imported`);
+      toast.success(`${payload.length} cadets imported`);
     } catch (err) { toast.error(err.message); }
     setUploading(false);
     e.target.value = '';
@@ -93,31 +119,42 @@ export default function EventNominalRollSection({ event }) {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
-      const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url,
-        json_schema: {
-          type: 'object',
-          properties: {
-            records: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: { PNumber: { type: 'string' }, PartialCompletions: { type: 'array', items: { type: 'string' } } },
+      const ext = getExtension(file.name);
+      let records;
+      if (ext === 'csv' || ext === 'json') {
+        const text = await readText(file);
+        records = parsePartialCompletionsText(text, ext);
+      } else {
+        const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+        const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
+          file_url,
+          json_schema: {
+            type: 'object',
+            properties: {
+              records: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: { PNumber: { type: 'string' }, PartialCompletions: { type: 'array', items: { type: 'string' } } },
+                },
               },
             },
           },
-        },
-      });
-      const records = result.output?.records || result.output || [];
+        });
+        const raw = result.output?.records || result.output || [];
+        records = raw.map((r) => ({ PNumber: r.PNumber || '', PartialCompletions: r.PartialCompletions || [] }));
+      }
+
+      let updated = 0;
       for (const r of records) {
         const existing = roll.find((x) => x.PNumber === r.PNumber);
         if (existing) {
           await base44.entities.EventNominalRoll.update(existing.id, { PartialCompletions: r.PartialCompletions || [] });
+          updated++;
         }
       }
       queryClient.invalidateQueries({ queryKey: ['event-nominal-roll', event.id] });
-      toast.success('Partial completions updated');
+      toast.success(`${updated} partial completions updated`);
     } catch (err) { toast.error(err.message); }
     setUploading(false);
     e.target.value = '';
@@ -129,6 +166,9 @@ export default function EventNominalRollSection({ event }) {
         <CardContent className="pt-4 space-y-3">
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={() => setShowManual(true)}><UserPlus className="w-4 h-4 mr-1.5" />Add Cadet</Button>
+            <Button size="sm" variant="outline" onClick={() => downloadTextFile('nominal_roll_template.csv', buildNominalRollTemplateCsv())}>
+              <Download className="w-4 h-4 mr-1.5" />CSV Template
+            </Button>
             <Button size="sm" variant="outline" onClick={() => fileRef1.current?.click()} disabled={uploading}>
               {uploading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Upload className="w-4 h-4 mr-1.5" />}
               Upload Nominal Roll (CSV 1)
@@ -140,7 +180,7 @@ export default function EventNominalRollSection({ event }) {
             <input ref={fileRef1} type="file" accept=".csv,.xlsx,.json" className="hidden" onChange={handleUpload1} />
             <input ref={fileRef2} type="file" accept=".csv,.xlsx,.json" className="hidden" onChange={handleUpload2} />
           </div>
-          <p className="text-xs text-muted-foreground">CSV 1: PNumber, Rank, Surname, First Name, Detachment, M/F, Star Level, WHT Status, Subject Completions. Auto-links to existing personnel records.</p>
+          <p className="text-xs text-muted-foreground">Download the template for the correct column order and an example row. CSV 1 columns: PNumber, Rank, Surname, FirstName, Detachment, Gender, CurrentStarLevel, WHTAirRifle, WHTGPRifle, SubjectCompletions (pipe-separated). Auto-links to existing personnel records.</p>
         </CardContent>
       </Card>
 

@@ -22,7 +22,14 @@
     },
     "SubjectName": {
       "type": "string",
-      "description": "Subject taught in this stance, from SyllabusMaster"
+      "description": "Legacy single subject (kept for backward-compat reads). Prefer SubjectNames."
+    },
+    "SubjectNames": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Multiple subjects taught in this stance, from SyllabusMaster"
     },
     "LessonCodes": {
       "type": "array",

@@ -60,6 +60,11 @@ function cadetName(c) {
   return [c.Surname, c.FirstName].filter(Boolean).join(', ');
 }
 
+function stanceSubjects(s) {
+  if (s.SubjectNames && s.SubjectNames.length) return s.SubjectNames;
+  return s.SubjectName ? [s.SubjectName] : [];
+}
+
 // ── 1. Recruit Cadre Plan ────────────────────────────────────────────
 export function exportCadrePlanPDF(event, { stances, staff, roll, awards, scoreEntries }) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -88,7 +93,7 @@ export function exportCadrePlanPDF(event, { stances, staff, roll, awards, scoreE
     const rh = 7;
     rowBg(doc, y, rh, i);
     cx = PAGE.margin;
-    const cells = [s.StanceLabel, s.StartTime ? format(new Date(s.StartTime), 'dd MMM HH:mm') : '—', s.EndTime ? format(new Date(s.EndTime), 'dd MMM HH:mm') : '—', s.SubjectName || '—', instructors || '—'];
+    const cells = [s.StanceLabel, s.StartTime ? format(new Date(s.StartTime), 'dd MMM HH:mm') : '—', s.EndTime ? format(new Date(s.EndTime), 'dd MMM HH:mm') : '—', stanceSubjects(s).join(', ') || '—', instructors || '—'];
     cells.forEach((c, i) => { cell(doc, cx, y, sCols[i], rh, c, { size: 6.5 }); cx += sCols[i]; });
     gridLine(doc, y, rh);
     y += rh;
@@ -100,7 +105,7 @@ export function exportCadrePlanPDF(event, { stances, staff, roll, awards, scoreE
   stances.forEach((s) => {
     y = newPage(doc, y);
     doc.setFontSize(8); doc.setFont('helvetica', 'bold');
-    doc.text(`${s.StanceLabel} (${(s.CadetIDs || []).length}) — ${s.SubjectName || ''}`, PAGE.margin + 2, y);
+    doc.text(`${s.StanceLabel} (${(s.CadetIDs || []).length}) — ${stanceSubjects(s).join(', ') || ''}`, PAGE.margin + 2, y);
     y += 5;
     const names = (s.CadetIDs || []).map((id) => roll.find((x) => x.id === id)).filter(Boolean).map(cadetName);
     doc.setFontSize(7); doc.setFont('helvetica', 'normal');
@@ -226,7 +231,7 @@ export function exportWMCompletionsPDF(event, { stances, roll, completions, syll
   doc.setTextColor(0, 0, 0);
 
   // Build subject columns from all unique subjects across stances
-  const subjects = [...new Set(stances.map((s) => s.SubjectName).filter(Boolean))];
+  const subjects = [...new Set(stances.flatMap(stanceSubjects).filter(Boolean))];
   const nameW = 55;
   const colW = Math.max(18, (uw - nameW) / Math.max(subjects.length, 1));
 
@@ -250,7 +255,7 @@ export function exportWMCompletionsPDF(event, { stances, roll, completions, syll
     doc.text(cadetName(c).slice(0, 30), lm + 2, y + 4);
     subjects.forEach((subj, i) => {
       // find completions for this cadet in any stance with this subject
-      const stanceIds = stances.filter((s) => s.SubjectName === subj).map((s) => s.id);
+      const stanceIds = stances.filter((s) => stanceSubjects(s).includes(subj)).map((s) => s.id);
       const comp = completions.find((x) => x.CadetID === c.id && stanceIds.includes(x.StanceID) && x.Status);
       const val = comp?.Status === 'Pass' ? 'P' : comp?.Status === 'Stance' ? comp.StanceLabel || 'S' : comp?.Status === 'REVAL' ? 'REVAL' : '';
       doc.setTextColor(comp?.Status === 'REVAL' ? 200 : 0, comp?.Status === 'REVAL' ? 40 : 0, 0);
@@ -297,7 +302,7 @@ export function exportMELPDF(event, { stances, roll, staff, itinerary, syllabus 
       const isSlot = item._isSlot;
       const time = format(new Date(item.StartTime), 'HH:mm');
       const endT = item.EndTime ? format(new Date(item.EndTime), 'HH:mm') : '';
-      const label = isSlot ? `${item.SlotType}${item.Label ? ' — ' + item.Label : ''}` : `${item.StanceLabel} — ${item.SubjectName || ''}`;
+      const label = isSlot ? `${item.SlotType}${item.Label ? ' — ' + item.Label : ''}` : `${item.StanceLabel} — ${stanceSubjects(item).join(', ') || ''}`;
       doc.setFillColor(isSlot ? 240 : 220, isSlot ? 245 : 235, isSlot ? 250 : 225);
       doc.rect(PAGE.margin, y, PAGE.usableW, 7, 'F');
       doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(8, 63, 48);
@@ -320,4 +325,27 @@ export function exportMELPDF(event, { stances, roll, staff, itinerary, syllabus 
 
   footer(doc);
   doc.save(`${event.Title.replace(/\s+/g, '_')}_MEL.pdf`);
+}
+
+// ── 5. Full Event Report (editable, from frozen snapshots) ─────────
+export function exportFullEventReportPDF(event, sections) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  let y = 34;
+  header(doc, event.Title.toUpperCase(), 'EVENT FINAL REPORT');
+
+  (sections || []).forEach((sec) => {
+    y = newPage(doc, y);
+    y = sectionTitle(doc, sec.title.toUpperCase(), y);
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(0, 0, 0);
+    const lines = doc.splitTextToSize(String(sec.content || ''), PAGE.usableW - 4);
+    lines.forEach((line) => {
+      y = newPage(doc, y);
+      doc.text(line, PAGE.margin + 2, y + 4);
+      y += 4.5;
+    });
+    y += 3;
+  });
+
+  footer(doc);
+  doc.save(`${event.Title.replace(/\s+/g, '_')}_FinalReport.pdf`);
 }

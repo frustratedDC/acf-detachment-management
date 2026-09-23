@@ -23,11 +23,14 @@ import EventAwardsSection from '@/components/event/EventAwardsSection';
 import EventKASessionSection from '@/components/event/EventKASessionSection';
 import EventStoresSection from '@/components/event/EventStoresSection';
 import EventPaperworkSection from '@/components/event/EventPaperworkSection';
+import EventCadetRecordsSection from '@/components/event/EventCadetRecordsSection';
+import EventCompleteSection from '@/components/event/EventCompleteSection';
 
 const STATUS_COLOR = {
   Draft: 'bg-muted text-muted-foreground',
   Planned: 'bg-blue-500/20 text-blue-600',
   Committed: 'bg-chart-2/20 text-chart-2',
+  Complete: 'bg-chart-2/30 text-chart-2 font-semibold',
   Cancelled: 'bg-destructive/20 text-destructive',
 };
 
@@ -46,6 +49,8 @@ const SECTIONS = [
   { key: 'equipment', label: 'Equipment' },
   { key: 'itinerary', label: 'Itinerary' },
   { key: 'paperwork', label: 'Paperwork' },
+  { key: 'records', label: 'Cadet Records' },
+  { key: 'complete', label: 'Complete' },
   { key: 'commit', label: 'Commit' },
 ];
 
@@ -99,6 +104,8 @@ export default function EventTrainingPlanDetail() {
         <TabsContent value="equipment"><EventEquipmentSection event={event} /></TabsContent>
         <TabsContent value="itinerary"><EventItinerarySection event={event} /></TabsContent>
         <TabsContent value="paperwork"><EventPaperworkSection event={event} /></TabsContent>
+        <TabsContent value="records"><EventCadetRecordsSection event={event} /></TabsContent>
+        <TabsContent value="complete"><EventCompleteSection event={event} /></TabsContent>
         <TabsContent value="commit"><EventCommitSection event={event} /></TabsContent>
       </Tabs>
     </AccessGate>

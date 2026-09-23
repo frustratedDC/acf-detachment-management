@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, ChevronDown, ChevronUp, GripVertical, Clock } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Clock, X } from 'lucide-react';
 import { toast } from 'sonner';
+import DateTimeInput from '@/components/event/DateTimeInput';
 
 function nextLabel(stances) {
   const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -18,6 +19,12 @@ function nextLabel(stances) {
     }
   }
   return `S${stances.length + 1}`;
+}
+
+// Helper: get the array of subjects for a stance (supports new SubjectNames and legacy SubjectName)
+function stanceSubjects(s) {
+  if (s.SubjectNames && s.SubjectNames.length) return s.SubjectNames;
+  return s.SubjectName ? [s.SubjectName] : [];
 }
 
 export default function EventStanceSection({ event }) {
@@ -43,6 +50,7 @@ export default function EventStanceSection({ event }) {
 
   const sorted = useMemo(() => [...stances].sort((a, b) => (a.SortOrder || 0) - (b.SortOrder || 0)), [stances]);
   const subjects = useMemo(() => [...new Set(syllabus.map((s) => s.SubjectName).filter(Boolean))].sort(), [syllabus]);
+  const eventStarLevels = useMemo(() => event.TrainingStarLevels || [], [event]);
 
   const qKey = ['event-stances', event.id];
 
@@ -63,7 +71,7 @@ export default function EventStanceSection({ event }) {
     const label = nextLabel(sorted);
     createMutation.mutate({
       EventID: event.id, StanceLabel: label, StartTime: event.StartDateTime, EndTime: event.EndDateTime,
-      SubjectName: '', LessonCodes: [], StaffIDs: [], CadetIDs: [], SortOrder: sorted.length, DetachmentID: event.DetachmentID,
+      SubjectNames: [], LessonCodes: [], StaffIDs: [], CadetIDs: [], SortOrder: sorted.length, DetachmentID: event.DetachmentID,
     }, {
       onSuccess: () => toast.success(`Stance ${label} added`),
     });
@@ -74,6 +82,13 @@ export default function EventStanceSection({ event }) {
     const next = arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
     updateMutation.mutate({ id: stance.id, data: { [field]: next } });
   }
+
+  function toggleSubject(subj, stance) {
+    const current = stanceSubjects(stance);
+    const next = current.includes(subj) ? current.filter((x) => x !== subj) : [...current, subj];
+    updateMutation.mutate({ id: stance.id, data: { SubjectNames: next, SubjectName: next[0] || '', LessonCodes: [] } });
+  }
+
   function move(stance, dir) {
     const idx = sorted.findIndex((s) => s.id === stance.id);
     const swap = sorted[idx + dir];
@@ -82,24 +97,37 @@ export default function EventStanceSection({ event }) {
     updateMutation.mutate({ id: swap.id, data: { SortOrder: stance.SortOrder } });
   }
 
+  // Lessons: match ANY selected subject AND the event's star levels (if set)
+  function availableLessons(stance) {
+    const subs = stanceSubjects(stance);
+    return syllabus.filter((x) => {
+      const subjMatch = subs.length === 0 || subs.includes(x.SubjectName);
+      const starMatch = eventStarLevels.length === 0 || eventStarLevels.includes(x.StarLevel);
+      return subjMatch && starMatch;
+    });
+  }
+
   return (
     <div className="space-y-3 pb-20">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">Training Stances</h3>
-          <p className="text-xs text-muted-foreground">Time-blocked training rotations (A1, B2…). Independent of platoons.</p>
+          <p className="text-xs text-muted-foreground">Time-blocked training rotations (A1, B2…). Add multiple subjects; lessons filter to the event's star levels.</p>
         </div>
         <Button size="sm" onClick={addStance} disabled={createMutation.isPending}><Plus className="w-4 h-4 mr-1.5" />Add Stance</Button>
       </div>
+
+      {eventStarLevels.length > 0 && <p className="text-xs text-muted-foreground">Lessons filtered to star levels: {eventStarLevels.join(', ')}</p>}
 
       {sorted.length === 0 && <p className="text-center py-8 text-sm text-muted-foreground">No stances yet. Add one to build your training plan.</p>}
 
       {sorted.map((s, i) => {
         const isOpen = expanded === s.id;
+        const subs = stanceSubjects(s);
         const lessons = (s.LessonCodes || []).map((c) => syllabus.find((x) => x.LessonCode === c)).filter(Boolean);
         const stanceStaff = (s.StaffIDs || []).map((id) => staff.find((x) => x.id === id)).filter(Boolean);
         const cadets = (s.CadetIDs || []).map((id) => roll.find((x) => x.id === id)).filter(Boolean);
-        const subjectLessons = syllabus.filter((x) => !s.SubjectName || x.SubjectName === s.SubjectName);
+        const subjectLessons = availableLessons(s);
         return (
           <Card key={s.id}>
             <CardContent className="p-3">
@@ -110,7 +138,7 @@ export default function EventStanceSection({ event }) {
                 </div>
                 <Badge className="bg-primary text-primary-foreground">{s.StanceLabel}</Badge>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{s.SubjectName || 'No subject'}</p>
+                  <p className="text-sm font-medium truncate">{subs.length ? subs.join(', ') : 'No subject'}</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{s.StartTime ? new Date(s.StartTime).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}</p>
                 </div>
                 <div className="flex gap-1 text-xs">
@@ -124,33 +152,36 @@ export default function EventStanceSection({ event }) {
               {isOpen && (
                 <div className="mt-3 space-y-3 border-t pt-3">
                   <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs">Start</Label>
-                      <Input type="datetime-local" value={s.StartTime ? new Date(s.StartTime).toISOString().slice(0, 16) : ''} onChange={(e) => updateMutation.mutate({ id: s.id, data: { StartTime: e.target.value } })} className="text-xs h-8" />
-                    </div>
-                    <div>
-                      <Label className="text-xs">End</Label>
-                      <Input type="datetime-local" value={s.EndTime ? new Date(s.EndTime).toISOString().slice(0, 16) : ''} onChange={(e) => updateMutation.mutate({ id: s.id, data: { EndTime: e.target.value } })} className="text-xs h-8" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Subject</Label>
-                    <Select value={s.SubjectName || ''} onValueChange={(v) => updateMutation.mutate({ id: s.id, data: { SubjectName: v, LessonCodes: [] } })}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select subject…" /></SelectTrigger>
-                      <SelectContent>{subjects.map((sub) => <SelectItem key={sub} value={sub}>{sub}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <DateTimeInput label="Start" value={s.StartTime} onChange={(v) => updateMutation.mutate({ id: s.id, data: { StartTime: v } })} min={event.StartDateTime} max={event.EndDateTime} />
+                    <DateTimeInput label="End" value={s.EndTime} onChange={(v) => updateMutation.mutate({ id: s.id, data: { EndTime: v } })} min={s.StartTime || event.StartDateTime} max={event.EndDateTime} />
                   </div>
 
-                  {s.SubjectName && (
+                  <div>
+                    <Label className="text-xs">Subjects ({subs.length}) — select multiple</Label>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {subjects.map((sub) => {
+                        const active = subs.includes(sub);
+                        return (
+                          <button key={sub} type="button" onClick={() => toggleSubject(sub, s)} className={`text-xs px-2 py-1 rounded border flex items-center gap-1 ${active ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted'}`}>
+                            {sub}
+                            {active && <X className="w-3 h-3" />}
+                          </button>
+                        );
+                      })}
+                      {subjects.length === 0 && <p className="text-xs text-muted-foreground">No subjects in the syllabus.</p>}
+                    </div>
+                  </div>
+
+                  {subs.length > 0 && (
                     <div>
-                      <Label className="text-xs">Lessons (from Master Syllabus)</Label>
+                      <Label className="text-xs">Lessons (from Master Syllabus{eventStarLevels.length ? `, filtered to ${eventStarLevels.join('/')}` : ''})</Label>
                       <div className="max-h-32 overflow-y-auto border rounded p-2 space-y-1">
                         {subjectLessons.map((l) => (
                           <button key={l.LessonCode} type="button" onClick={() => toggleArr('LessonCodes', l.LessonCode, s)} className={`block w-full text-left text-xs px-2 py-1 rounded ${((s.LessonCodes || []).includes(l.LessonCode)) ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted'}`}>
-                            [{l.LessonCode}] {l.LessonName}
+                            [{l.LessonCode}] {l.LessonName} <span className="text-muted-foreground">({l.StarLevel})</span>
                           </button>
                         ))}
-                        {subjectLessons.length === 0 && <p className="text-xs text-muted-foreground">No lessons for this subject.</p>}
+                        {subjectLessons.length === 0 && <p className="text-xs text-muted-foreground">No lessons match the selected subjects and star levels.</p>}
                       </div>
                     </div>
                   )}

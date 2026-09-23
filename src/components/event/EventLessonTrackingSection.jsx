@@ -89,7 +89,7 @@ export default function EventLessonTrackingSection({ event }) {
             <div className="flex-1 min-w-40">
               <Select value={stanceId} onValueChange={setStanceId}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select a stance to track…" /></SelectTrigger>
-                <SelectContent>{sortedStances.map((s) => <SelectItem key={s.id} value={s.id}>{s.StanceLabel} — {s.SubjectName || 'No subject'}</SelectItem>)}</SelectContent>
+                <SelectContent>{sortedStances.map((s) => <SelectItem key={s.id} value={s.id}>{s.StanceLabel} — {(s.SubjectNames && s.SubjectNames.length ? s.SubjectNames : s.SubjectName ? [s.SubjectName] : []).join(', ') || 'No subject'}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading || stances.length === 0}>

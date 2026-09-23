@@ -1,0 +1,88 @@
+{
+  "name": "EventCadetSnapshot",
+  "type": "object",
+  "properties": {
+    "EventID": {
+      "type": "string",
+      "description": "Linked EventTrainingPlan ID"
+    },
+    "CadetID": {
+      "type": "string",
+      "description": "EventNominalRoll record ID of the cadet"
+    },
+    "PNumber": {
+      "type": "string"
+    },
+    "Rank": {
+      "type": "string"
+    },
+    "Name": {
+      "type": "string",
+      "description": "Surname, FirstName"
+    },
+    "StarLevel": {
+      "type": "string"
+    },
+    "SubjectsCompleted": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Subject names in which the cadet achieved at least one Pass"
+    },
+    "LessonsPassed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lesson codes with Pass status"
+    },
+    "LessonsStance": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lesson codes completed in-stance"
+    },
+    "LessonsREVAL": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lesson codes requiring revalidation"
+    },
+    "KASessionsAttended": {
+      "type": "number",
+      "default": 0
+    },
+    "KAScores": {
+      "type": "object",
+      "description": "Key-value map of activity to score for this cadet across KA sessions",
+      "additionalProperties": true
+    },
+    "CompetitionPoints": {
+      "type": "number",
+      "default": 0
+    },
+    "AwardsWon": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Award names this cadet won"
+    },
+    "SnapshotDate": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the snapshot was frozen"
+    },
+    "DetachmentID": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "EventID",
+    "CadetID",
+    "DetachmentID"
+  ]
+}

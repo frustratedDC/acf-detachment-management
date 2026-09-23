@@ -94,8 +94,8 @@ export default function EventDetailsSection({ event }) {
           <div className="text-xs font-semibold text-muted-foreground uppercase">Outbound</div>
           <div><Label>Departure Location</Label><Input value={form.OutboundDepartureLocation} onChange={(e) => set('OutboundDepartureLocation', e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Departure Date/Time</Label><Input type="datetime-local" value={form.OutboundDateTime} onChange={(e) => set('OutboundDateTime', e.target.value)} /></div>
-            <div><Label>Latest Arrival (Loading)</Label><Input type="datetime-local" value={form.OutboundLatestArrival} onChange={(e) => set('OutboundLatestArrival', e.target.value)} /></div>
+            <div><Label>Departure Date/Time</Label><Input type="datetime-local" value={form.OutboundDateTime} max={form.OutboundLatestArrival || undefined} onChange={(e) => set('OutboundDateTime', e.target.value)} /></div>
+            <div><Label>Latest Arrival (Loading)</Label><Input type="datetime-local" value={form.OutboundLatestArrival} min={form.OutboundDateTime || undefined} onChange={(e) => set('OutboundLatestArrival', e.target.value)} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -110,7 +110,7 @@ export default function EventDetailsSection({ event }) {
           {form.TransportMode === 'Coach' && <div><Label>Coach Officer</Label><Input value={form.CoachOfficer} onChange={(e) => set('CoachOfficer', e.target.value)} /></div>}
           <div className="text-xs font-semibold text-muted-foreground uppercase">Inbound</div>
           <div><Label>Arrival Location</Label><Input value={form.InboundArrivalLocation} onChange={(e) => set('InboundArrivalLocation', e.target.value)} /></div>
-          <div><Label>Arrival Date/Time</Label><Input type="datetime-local" value={form.InboundDateTime} onChange={(e) => set('InboundDateTime', e.target.value)} /></div>
+          <div><Label>Arrival Date/Time</Label><Input type="datetime-local" value={form.InboundDateTime} min={form.OutboundDateTime || undefined} onChange={(e) => set('InboundDateTime', e.target.value)} /></div>
         </CardContent>
       </Card>
 

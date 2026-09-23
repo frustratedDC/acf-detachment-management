@@ -35,7 +35,22 @@
       "items": {
         "type": "string"
       },
-      "description": "List of attendee PNumbers"
+      "description": "List of attendee PNumbers (from nominal roll)"
+    },
+    "AdHocAttendees": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "PNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Ad-hoc attendees added directly to this session, not on the event nominal roll"
     },
     "Scores": {
       "type": "object",

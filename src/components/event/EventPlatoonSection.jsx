@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Users, RefreshCw, Wand2, Group, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Users, RefreshCw, Wand2, Group, Loader2, Shield } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 const COMPANY_ROLES = [
@@ -70,6 +71,20 @@ export default function EventPlatoonSection({ event }) {
     },
   });
 
+  const updatePlatoonMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.EventPlatoon.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['event-platoons', event.id] }); toast.success('Platoon commander updated'); },
+  });
+
+  function assignCommander(platoon, staffId) {
+    if (!staffId) {
+      updatePlatoonMutation.mutate({ id: platoon.id, data: { CommanderStaffID: '', CommanderName: '' } });
+      return;
+    }
+    const s = staff.find((x) => x.id === staffId);
+    updatePlatoonMutation.mutate({ id: platoon.id, data: { CommanderStaffID: staffId, CommanderName: [s.Rank, s.Name].filter(Boolean).join(' ') } });
+  }
+
   async function handleAllocate() {
     setAllocating(true);
     try {
@@ -125,8 +140,17 @@ export default function EventPlatoonSection({ event }) {
                     <span className="font-medium text-sm">{p.PlatoonName}</span>
                     <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => deletePlatoonMutation.mutate(p)}><Trash2 className="w-3 h-3" /></Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">Cmdr: {p.CommanderName || '—'}</p>
-                  <p className="text-xs text-muted-foreground">Staff: {pStaff.length} · Cadets: {pCadets.length}</p>
+                  <div className="mt-1">
+                    <div className="flex items-center gap-1 mb-1"><Shield className="w-3 h-3 text-muted-foreground" /><span className="text-xs font-medium">Commander</span></div>
+                    <Select value={p.CommanderStaffID || ''} onValueChange={(v) => assignCommander(p, v)}>
+                      <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Assign commander…" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={null}>— None —</SelectItem>
+                        {staff.map((s) => <SelectItem key={s.id} value={s.id}>{[s.Rank, s.Name].filter(Boolean).join(' ')}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Staff: {pStaff.length} · Cadets: {pCadets.length}</p>
                   {pCadets.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {pCadets.slice(0, 8).map((c) => <Badge key={c.id} variant="outline" className="text-xs">{c.Surname}</Badge>)}
