@@ -1,0 +1,37 @@
+{
+  "name": "New Joiner Attendance Tracking",
+  "description": "Increments a New Joiner's tracked training night count when they're marked Present, and flags the 6-night milestone complete",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "DailyParadeState"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "new_joiner_attendance_tracking",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "checkNewJoinerAttendance",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "checkNewJoinerAttendance"
+  }
+}

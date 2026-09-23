@@ -1,0 +1,37 @@
+{
+  "name": "Check KA Milestones",
+  "description": "Checks accumulated KA points against thresholds (12, 16, 31) and creates a KAMilestoneTask for DC sign-off when crossed.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "KA_LogBook"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "check_ka_milestones",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "checkKAMilestones",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "checkKAMilestones"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "CE Milestone Check",
+  "description": "When a cadet's CE hours submission is approved, checks their total approved hours against milestones (4, 12, 28, 38) and creates a DC/2IC approval task when a new milestone is crossed.",
+  "trigger": {
+    "condition": "${ ((.trigger.changed_fields | index(\"Status\") != null) and (.trigger.data.Status == \"Approved\")) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "CommunityEngagementLedger"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "ce_milestone_check",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "checkCEMilestones",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "checkCEMilestones"
+  }
+}
