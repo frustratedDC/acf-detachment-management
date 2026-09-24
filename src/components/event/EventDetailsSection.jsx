@@ -18,7 +18,7 @@ export default function EventDetailsSection({ event }) {
   useEffect(() => {
     setForm({
       Title: event.Title || '', StartDateTime: event.StartDateTime || '', EndDateTime: event.EndDateTime || '',
-      Location: event.Location || '', EventCost: event.EventCost || 0, EventType: event.EventType || 'Detachment',
+      Location: event.Location || '', EventCost: event.EventCost || 0, FSMCost: event.FSMCost || 0, EventType: event.EventType || 'Detachment',
       ActivityTags: event.ActivityTags || [], TransportMode: event.TransportMode || 'Own Transport',
       OutboundDepartureLocation: event.OutboundDepartureLocation || '', OutboundDateTime: event.OutboundDateTime || '',
       OutboundLatestArrival: event.OutboundLatestArrival || '', TransportDressState: event.TransportDressState || 'MTP',
@@ -61,7 +61,10 @@ export default function EventDetailsSection({ event }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Location</Label><Input value={form.Location} onChange={(e) => set('Location', e.target.value)} /></div>
-            <div><Label>Cost (£/cadet)</Label><Input type="number" value={form.EventCost} onChange={(e) => set('EventCost', Number(e.target.value))} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Cost (£/cadet)</Label><Input type="number" value={form.EventCost} onChange={(e) => set('EventCost', Number(e.target.value))} /></div>
+              <div><Label>FSM Cost (£/cadet)</Label><Input type="number" value={form.FSMCost} onChange={(e) => set('FSMCost', Number(e.target.value))} /></div>
+            </div>
           </div>
           <div>
             <Label>Event Type</Label>

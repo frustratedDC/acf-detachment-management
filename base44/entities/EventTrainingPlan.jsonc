@@ -23,6 +23,11 @@
       "type": "number",
       "description": "Cost per cadet in GBP"
     },
+    "FSMCost": {
+      "type": "number",
+      "default": 0,
+      "description": "Cost per cadet eligible for Free School Meals (FSM) in GBP"
+    },
     "EventType": {
       "type": "string",
       "enum": [
