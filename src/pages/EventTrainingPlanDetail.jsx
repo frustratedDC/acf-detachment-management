@@ -25,6 +25,7 @@ import EventStoresSection from '@/components/event/EventStoresSection';
 import EventPaperworkSection from '@/components/event/EventPaperworkSection';
 import EventCadetRecordsSection from '@/components/event/EventCadetRecordsSection';
 import EventCompleteSection from '@/components/event/EventCompleteSection';
+import EventOfflineSheetsSection from '@/components/event/EventOfflineSheetsSection';
 
 const STATUS_COLOR = {
   Draft: 'bg-muted text-muted-foreground',
@@ -50,6 +51,7 @@ const SECTIONS = [
   { key: 'itinerary', label: 'Itinerary' },
   { key: 'paperwork', label: 'Paperwork' },
   { key: 'records', label: 'Cadet Records' },
+  { key: 'offline', label: 'Offline Sheets' },
   { key: 'complete', label: 'Complete' },
   { key: 'commit', label: 'Commit' },
 ];
@@ -105,6 +107,7 @@ export default function EventTrainingPlanDetail() {
         <TabsContent value="itinerary"><EventItinerarySection event={event} /></TabsContent>
         <TabsContent value="paperwork"><EventPaperworkSection event={event} /></TabsContent>
         <TabsContent value="records"><EventCadetRecordsSection event={event} /></TabsContent>
+        <TabsContent value="offline"><EventOfflineSheetsSection event={event} /></TabsContent>
         <TabsContent value="complete"><EventCompleteSection event={event} /></TabsContent>
         <TabsContent value="commit"><EventCommitSection event={event} /></TabsContent>
       </Tabs>
