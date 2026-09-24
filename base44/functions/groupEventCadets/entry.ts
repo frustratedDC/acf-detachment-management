@@ -1,6 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.48';
 import { STAR_TRAJECTORY_ORDER } from '../../shared/eventConstants.ts';
 
+const SECTIONS_PER_PLATOON = 3;
+
 export default async function(req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
@@ -11,9 +13,10 @@ export default async function(req: Request): Promise<Response> {
     const { eventId } = body;
     if (!eventId) return Response.json({ error: 'eventId required' }, { status: 400 });
 
-    const [cadets, platoons] = await Promise.all([
+    const [cadets, platoons, existingSections] = await Promise.all([
       base44.entities.EventNominalRoll.filter({ EventID: eventId }),
       base44.entities.EventPlatoon.filter({ EventID: eventId }),
+      base44.entities.EventSection.filter({ EventID: eventId }),
     ]);
 
     if (platoons.length === 0) {
@@ -47,23 +50,78 @@ export default async function(req: Request): Promise<Response> {
       platoonCadets[platoon.id].push(cs.cadet);
     });
 
-    // Persist assignments
+    // Index existing sections by platoon id so we reuse rather than duplicate
+    const sectionsByPlatoon = {};
+    existingSections.forEach((s) => {
+      if (!sectionsByPlatoon[s.PlatoonID]) sectionsByPlatoon[s.PlatoonID] = [];
+      sectionsByPlatoon[s.PlatoonID].push(s);
+    });
+
+    const groupings = [];
+
+    // Persist platoon assignments + create/distribute sections within each platoon
     for (const platoon of platoons) {
       const assigned = platoonCadets[platoon.id];
       const cadetIds = assigned.map((c) => c.id);
       await base44.entities.EventPlatoon.update(platoon.id, { CadetIDs: cadetIds });
-      for (const c of assigned) {
-        await base44.entities.EventNominalRoll.update(c.id, { PlatoonID: platoon.id });
+
+      // Ensure exactly SECTIONS_PER_PLATOON sections exist for this platoon
+      let platoonSections = sectionsByPlatoon[platoon.id] || [];
+      while (platoonSections.length < SECTIONS_PER_PLATOON) {
+        const created = await base44.entities.EventSection.create({
+          EventID: eventId,
+          PlatoonID: platoon.id,
+          SectionName: String(platoonSections.length + 1),
+          CadetIDs: [],
+          SortOrder: platoonSections.length,
+          DetachmentID: platoon.DetachmentID,
+        });
+        platoonSections.push(created);
       }
+      // Trim extra sections (reassign their cadets back into the platoon pool first)
+      if (platoonSections.length > SECTIONS_PER_PLATOON) {
+        const extras = platoonSections.slice(SECTIONS_PER_PLATOON);
+        for (const ex of extras) {
+          for (const cid of ex.CadetIDs || []) {
+            assigned.push({ id: cid, _recovered: true });
+          }
+          await base44.entities.EventSection.delete(ex.id);
+        }
+        platoonSections = platoonSections.slice(0, SECTIONS_PER_PLATOON);
+      }
+
+      // Round-robin distribute this platoon's cadets across its sections
+      const sectionCadets = {};
+      platoonSections.forEach((s) => { sectionCadets[s.id] = []; });
+      assigned.forEach((c, i) => {
+        if (c._recovered) return;
+        const section = platoonSections[i % platoonSections.length];
+        sectionCadets[section.id].push(c);
+      });
+
+      for (const section of platoonSections) {
+        const sectionCadetIds = sectionCadets[section.id].map((c) => c.id);
+        await base44.entities.EventSection.update(section.id, { CadetIDs: sectionCadetIds });
+        for (const c of sectionCadets[section.id]) {
+          await base44.entities.EventNominalRoll.update(c.id, { PlatoonID: platoon.id, SectionID: section.id });
+        }
+      }
+
+      groupings.push({
+        platoonId: platoon.id,
+        platoonName: platoon.PlatoonName,
+        cadetCount: assigned.filter((c) => !c._recovered).length,
+        sections: platoonSections.map((s) => ({
+          sectionId: s.id,
+          sectionName: s.SectionName,
+          cadetCount: sectionCadets[s.id].length,
+        })),
+      });
     }
 
     return Response.json({
       success: true,
-      groupings: platoons.map((p) => ({
-        platoonId: p.id,
-        platoonName: p.PlatoonName,
-        cadetCount: platoonCadets[p.id].length,
-      })),
+      groupings,
       totalCadets: cadets.length,
     });
   } catch (error) {

@@ -17,6 +17,14 @@
       "type": "string",
       "description": "Display name of platoon commander"
     },
+    "Commander2ICStaffID": {
+      "type": "string",
+      "description": "EventStaff record ID of platoon second-in-command"
+    },
+    "Commander2ICName": {
+      "type": "string",
+      "description": "Display name of platoon second-in-command"
+    },
     "StaffIDs": {
       "type": "array",
       "items": {

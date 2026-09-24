@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Users, RefreshCw, Wand2, Group, Loader2, Shield } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import EventSectionCard from '@/components/event/EventSectionCard';
 
 const COMPANY_ROLES = [
   { key: 'CompanyStaffOC', label: 'OC' },
@@ -37,6 +38,12 @@ export default function EventPlatoonSection({ event }) {
     queryKey: ['event-nominal-roll', event.id],
     queryFn: () => base44.entities.EventNominalRoll.filter({ EventID: event.id }),
   });
+  const { data: sections = [] } = useQuery({
+    queryKey: ['event-sections', event.id],
+    queryFn: () => base44.entities.EventSection.filter({ EventID: event.id }),
+  });
+
+  const adultStaff = staff.filter((s) => s.StaffType === 'Adult Instructor');
 
   useEffect(() => {
     const form = {};
@@ -56,6 +63,13 @@ export default function EventPlatoonSection({ event }) {
 
   const deletePlatoonMutation = useMutation({
     mutationFn: async (platoon) => {
+      const platoonSections = sections.filter((s) => s.PlatoonID === platoon.id);
+      for (const sec of platoonSections) {
+        for (const cid of sec.CadetIDs || []) {
+          await base44.entities.EventNominalRoll.update(cid, { SectionID: '' });
+        }
+        await base44.entities.EventSection.delete(sec.id);
+      }
       for (const sid of platoon.StaffIDs || []) {
         await base44.entities.EventStaff.update(sid, { PlatoonID: '' });
       }
@@ -68,12 +82,18 @@ export default function EventPlatoonSection({ event }) {
       queryClient.invalidateQueries({ queryKey: ['event-platoons', event.id] });
       queryClient.invalidateQueries({ queryKey: ['event-staff', event.id] });
       queryClient.invalidateQueries({ queryKey: ['event-nominal-roll', event.id] });
+      queryClient.invalidateQueries({ queryKey: ['event-sections', event.id] });
     },
   });
 
   const updatePlatoonMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.EventPlatoon.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['event-platoons', event.id] }); toast.success('Platoon commander updated'); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['event-platoons', event.id] }); toast.success('Platoon updated'); },
+  });
+
+  const createSectionMutation = useMutation({
+    mutationFn: (data) => base44.entities.EventSection.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['event-sections', event.id] }),
   });
 
   function assignCommander(platoon, staffId) {
@@ -83,6 +103,27 @@ export default function EventPlatoonSection({ event }) {
     }
     const s = staff.find((x) => x.id === staffId);
     updatePlatoonMutation.mutate({ id: platoon.id, data: { CommanderStaffID: staffId, CommanderName: [s.Rank, s.Name].filter(Boolean).join(' ') } });
+  }
+
+  function assign2IC(platoon, staffId) {
+    if (!staffId) {
+      updatePlatoonMutation.mutate({ id: platoon.id, data: { Commander2ICStaffID: '', Commander2ICName: '' } });
+      return;
+    }
+    const s = staff.find((x) => x.id === staffId);
+    updatePlatoonMutation.mutate({ id: platoon.id, data: { Commander2ICStaffID: staffId, Commander2ICName: [s.Rank, s.Name].filter(Boolean).join(' ') } });
+  }
+
+  function addSection(platoon) {
+    const platoonSections = sections.filter((s) => s.PlatoonID === platoon.id);
+    createSectionMutation.mutate({
+      EventID: event.id,
+      PlatoonID: platoon.id,
+      SectionName: String(platoonSections.length + 1),
+      CadetIDs: [],
+      SortOrder: platoonSections.length,
+      DetachmentID: event.DetachmentID,
+    }, { onSuccess: () => toast.success('Section added') });
   }
 
   async function handleAllocate() {
@@ -105,6 +146,7 @@ export default function EventPlatoonSection({ event }) {
       else toast.success(`Grouped ${res.data.totalCadets} cadets across ${res.data.groupings?.length} platoons`);
       queryClient.invalidateQueries({ queryKey: ['event-platoons', event.id] });
       queryClient.invalidateQueries({ queryKey: ['event-nominal-roll', event.id] });
+      queryClient.invalidateQueries({ queryKey: ['event-sections', event.id] });
     } catch (err) { toast.error(err.message); }
     setGrouping(false);
   }
@@ -134,29 +176,50 @@ export default function EventPlatoonSection({ event }) {
             {platoons.map((p) => {
               const pStaff = (p.StaffIDs || []).map((id) => staff.find((s) => s.id === id)).filter(Boolean);
               const pCadets = (p.CadetIDs || []).map((id) => roll.find((c) => c.id === id)).filter(Boolean);
+              const pSections = sections.filter((s) => s.PlatoonID === p.id).sort((a, b) => (a.SortOrder || 0) - (b.SortOrder || 0));
               return (
                 <div key={p.id} className="p-3 rounded-lg border">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium text-sm">{p.PlatoonName}</span>
                     <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive" onClick={() => deletePlatoonMutation.mutate(p)}><Trash2 className="w-3 h-3" /></Button>
                   </div>
-                  <div className="mt-1">
-                    <div className="flex items-center gap-1 mb-1"><Shield className="w-3 h-3 text-muted-foreground" /><span className="text-xs font-medium">Commander</span></div>
-                    <Select value={p.CommanderStaffID || ''} onValueChange={(v) => assignCommander(p, v)}>
-                      <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Assign commander…" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={null}>— None —</SelectItem>
-                        {staff.map((s) => <SelectItem key={s.id} value={s.id}>{[s.Rank, s.Name].filter(Boolean).join(' ')}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">Staff: {pStaff.length} · Cadets: {pCadets.length}</p>
-                  {pCadets.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {pCadets.slice(0, 8).map((c) => <Badge key={c.id} variant="outline" className="text-xs">{c.Surname}</Badge>)}
-                      {pCadets.length > 8 && <span className="text-xs text-muted-foreground">+{pCadets.length - 8}</span>}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                    <div>
+                      <div className="flex items-center gap-1 mb-1"><Shield className="w-3 h-3 text-muted-foreground" /><span className="text-xs font-medium">Commander</span></div>
+                      <Select value={p.CommanderStaffID || ''} onValueChange={(v) => assignCommander(p, v)}>
+                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Assign commander…" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={null}>— None —</SelectItem>
+                          {adultStaff.map((s) => <SelectItem key={s.id} value={s.id}>{[s.Rank, s.Name].filter(Boolean).join(' ')}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  )}
+                    <div>
+                      <div className="flex items-center gap-1 mb-1"><Shield className="w-3 h-3 text-muted-foreground/60" /><span className="text-xs font-medium">2IC</span></div>
+                      <Select value={p.Commander2ICStaffID || ''} onValueChange={(v) => assign2IC(p, v)}>
+                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Assign 2IC…" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={null}>— None —</SelectItem>
+                          {adultStaff.map((s) => <SelectItem key={s.id} value={s.id}>{[s.Rank, s.Name].filter(Boolean).join(' ')}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-semibold">Sections ({pSections.length})</span>
+                      <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => addSection(p)}><Plus className="w-3 h-3 mr-1" />Add Section</Button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {pSections.map((sec) => (
+                        <EventSectionCard key={sec.id} section={sec} platoon={p} staff={adultStaff} roll={roll} />
+                      ))}
+                      {pSections.length === 0 && <p className="text-xs text-muted-foreground col-span-full">No sections yet. Add sections or run Group Cadets to auto-create 3 per platoon.</p>}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground mt-2">Staff: {pStaff.length} · Cadets: {pCadets.length}</p>
                 </div>
               );
             })}
@@ -181,7 +244,7 @@ export default function EventPlatoonSection({ event }) {
               <RefreshCw className="w-4 h-4 mr-1.5" />Redo Grouping
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">Allocation priority: subject match → qualified status → command role. Grouping priority: fastest star trajectory → most completed subjects → targeted training.</p>
+          <p className="text-xs text-muted-foreground">Allocation assigns 2 adult staff per platoon (commander + 2IC). Grouping distributes cadets into platoons and creates 3 sections per platoon.</p>
         </CardContent>
       </Card>
     </div>

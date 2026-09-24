@@ -47,6 +47,10 @@ export default function EventStanceSection({ event }) {
     queryKey: ['event-nominal-roll', event.id],
     queryFn: () => base44.entities.EventNominalRoll.filter({ EventID: event.id }),
   });
+  const { data: sections = [] } = useQuery({
+    queryKey: ['event-sections', event.id],
+    queryFn: () => base44.entities.EventSection.filter({ EventID: event.id }),
+  });
 
   const sorted = useMemo(() => [...stances].sort((a, b) => (a.SortOrder || 0) - (b.SortOrder || 0)), [stances]);
   const subjects = useMemo(() => [...new Set(syllabus.map((s) => s.SubjectName).filter(Boolean))].sort(), [syllabus]);
@@ -201,11 +205,14 @@ export default function EventStanceSection({ event }) {
                   <div>
                     <Label className="text-xs">Cadets ({cadets.length})</Label>
                     <div className="max-h-32 overflow-y-auto border rounded p-1.5 flex flex-wrap gap-1">
-                      {roll.map((c) => (
-                        <button key={c.id} type="button" onClick={() => toggleArr('CadetIDs', c.id, s)} className={`text-xs px-1.5 py-0.5 rounded border ${((s.CadetIDs || []).includes(c.id)) ? 'bg-primary text-primary-foreground border-primary' : 'border-border'}`}>
-                          {c.Surname}
-                        </button>
-                      ))}
+                      {roll.map((c) => {
+                        const sec = sections.find((x) => x.id === c.SectionID);
+                        return (
+                          <button key={c.id} type="button" onClick={() => toggleArr('CadetIDs', c.id, s)} className={`text-xs px-1.5 py-0.5 rounded border ${((s.CadetIDs || []).includes(c.id)) ? 'bg-primary text-primary-foreground border-primary' : 'border-border'}`}>
+                            {c.Surname}{sec ? ` · ${sec.SectionName}` : ''}
+                          </button>
+                        );
+                      })}
                       {roll.length === 0 && <p className="text-xs text-muted-foreground">Add cadets on the Nominal Roll tab first.</p>}
                     </div>
                   </div>

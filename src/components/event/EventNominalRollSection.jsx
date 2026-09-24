@@ -26,6 +26,14 @@ export default function EventNominalRollSection({ event }) {
     queryKey: ['all-personnel'],
     queryFn: () => base44.entities.PersonnelManager.filter({}),
   });
+  const { data: platoons = [] } = useQuery({
+    queryKey: ['event-platoons', event.id],
+    queryFn: () => base44.entities.EventPlatoon.filter({ EventID: event.id }),
+  });
+  const { data: sections = [] } = useQuery({
+    queryKey: ['event-sections', event.id],
+    queryFn: () => base44.entities.EventSection.filter({ EventID: event.id }),
+  });
 
   const filtered = useMemo(() => roll.filter((r) => {
     const q = search.toLowerCase();
@@ -200,6 +208,8 @@ export default function EventNominalRollSection({ event }) {
                 <p className="text-sm font-medium">{[c.Rank, c.FirstName, c.Surname].filter(Boolean).join(' ')}</p>
                 <p className="text-xs text-muted-foreground">{c.PNumber} · {c.CurrentStarLevel} · {c.Gender || '—'}</p>
                 <div className="flex flex-wrap gap-1 mt-1">
+                  {c.PlatoonID && platoons.find((p) => p.id === c.PlatoonID) && <Badge variant="outline" className="text-xs">{platoons.find((p) => p.id === c.PlatoonID).PlatoonName}</Badge>}
+                  {c.SectionID && sections.find((s) => s.id === c.SectionID) && <Badge variant="outline" className="text-xs">Sec {sections.find((s) => s.id === c.SectionID).SectionName}</Badge>}
                   {c.WHTAirRifle && <Badge variant="outline" className="text-xs">AR: {c.WHTAirRifle}</Badge>}
                   {c.WHTGPRifle && <Badge variant="outline" className="text-xs">GP: {c.WHTGPRifle}</Badge>}
                   {(c.SubjectCompletions || []).length > 0 && <Badge variant="outline" className="text-xs">{c.SubjectCompletions.length} completed</Badge>}

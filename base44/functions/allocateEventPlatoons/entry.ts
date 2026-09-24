@@ -71,13 +71,20 @@ export default async function(req: Request): Promise<Response> {
       }
 
       const staffIds = platoonStaff.map((s) => s.id);
-      const commanderName = platoonStaff[0]
-        ? [platoonStaff[0].Rank, platoonStaff[0].Name].filter(Boolean).join(' ')
+      const commander = platoonStaff[0];
+      const twoIC = platoonStaff[1];
+      const commanderName = commander
+        ? [commander.Rank, commander.Name].filter(Boolean).join(' ')
         : platoon.CommanderName || '';
+      const twoICName = twoIC
+        ? [twoIC.Rank, twoIC.Name].filter(Boolean).join(' ')
+        : '';
 
       await base44.entities.EventPlatoon.update(platoon.id, {
         StaffIDs: staffIds,
         CommanderName: commanderName,
+        Commander2ICStaffID: twoIC ? twoIC.id : '',
+        Commander2ICName: twoICName,
       });
 
       for (const s of platoonStaff) {
@@ -88,6 +95,7 @@ export default async function(req: Request): Promise<Response> {
         platoonId: platoon.id,
         platoonName: platoon.PlatoonName,
         commanderName,
+        twoICName,
         staff: platoonStaff.map((s) => ({ id: s.id, name: s.Name, qualifiedStatus: s.QualifiedStatus })),
       });
     }

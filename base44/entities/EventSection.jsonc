@@ -1,0 +1,46 @@
+{
+  "name": "EventSection",
+  "type": "object",
+  "properties": {
+    "EventID": {
+      "type": "string",
+      "description": "Linked EventTrainingPlan ID"
+    },
+    "PlatoonID": {
+      "type": "string",
+      "description": "Parent EventPlatoon ID"
+    },
+    "SectionName": {
+      "type": "string",
+      "description": "Section label e.g. 1, 2, 3"
+    },
+    "CommanderStaffID": {
+      "type": "string",
+      "description": "EventStaff record ID of the section commander (adult instructor)"
+    },
+    "CommanderName": {
+      "type": "string",
+      "description": "Display name of the section commander"
+    },
+    "CadetIDs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "EventNominalRoll record IDs whose home section this is"
+    },
+    "SortOrder": {
+      "type": "number",
+      "default": 0
+    },
+    "DetachmentID": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "EventID",
+    "PlatoonID",
+    "SectionName",
+    "DetachmentID"
+  ]
+}

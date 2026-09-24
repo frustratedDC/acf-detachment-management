@@ -69,6 +69,10 @@
       "type": "string",
       "description": "Assigned platoon EventPlatoon ID"
     },
+    "SectionID": {
+      "type": "string",
+      "description": "Assigned home section EventSection ID"
+    },
     "TargetedTraining": {
       "type": "array",
       "items": {
