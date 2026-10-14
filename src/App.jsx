@@ -7,8 +7,6 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { PersonnelProvider, usePersonnel } from '@/lib/usePersonnel';
 import { TaskModalProvider } from '@/lib/TaskModalContext';
-import { ShieldAlert } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -65,8 +63,6 @@ import PromotionReadiness from '@/pages/PromotionReadiness';
 import NewJoiners from '@/pages/NewJoiners';
 import Awards from '@/pages/Awards';
 import ProjectBoard from '@/pages/ProjectBoard';
-import EventTrainingPlanning from '@/pages/EventTrainingPlanning';
-import EventTrainingPlanDetail from '@/pages/EventTrainingPlanDetail';
 
 const AppContent = () => {
   const { personnel, loading } = usePersonnel();
@@ -134,8 +130,6 @@ const AppContent = () => {
         <Route path="/new-joiners" element={<NewJoiners />} />
         <Route path="/awards" element={<Awards />} />
         <Route path="/project-board" element={<ProjectBoard />} />
-        <Route path="/event-planning" element={<EventTrainingPlanning />} />
-        <Route path="/event-planning/:eventId" element={<EventTrainingPlanDetail />} />
         <Route path="/help" element={<HelpWiki />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
@@ -143,25 +137,8 @@ const AppContent = () => {
   );
 };
 
-const ALLOWED_EMAIL = 'leighdc@armymail.mod.uk';
-
-const AccessDeniedScreen = ({ email, onLogout }) => (
-  <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-background p-6 text-center">
-    <ShieldAlert className="w-16 h-16 text-destructive/40" />
-    <div>
-      <h1 className="text-xl font-bold">Access Restricted</h1>
-      <p className="text-sm text-muted-foreground mt-2 max-w-sm">
-        This application is locked to a single authorised user.
-        Please contact the administrator if you believe this is an error.
-      </p>
-      <p className="text-xs text-muted-foreground/60 mt-3">Signed in as: {email}</p>
-    </div>
-    <Button variant="outline" onClick={onLogout}>Sign Out</Button>
-  </div>
-);
-
 const AuthenticatedApp = () => {
-  const { user, isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, logout } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -178,10 +155,6 @@ const AuthenticatedApp = () => {
       navigateToLogin();
       return null;
     }
-  }
-
-  if (user && user.email !== ALLOWED_EMAIL) {
-    return <AccessDeniedScreen email={user.email} onLogout={() => logout(true)} />;
   }
 
   return (

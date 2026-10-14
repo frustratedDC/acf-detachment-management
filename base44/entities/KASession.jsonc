@@ -35,39 +35,45 @@
       "items": {
         "type": "string"
       },
-      "description": "List of attendee PNumbers (from nominal roll)"
-    },
-    "AdHocAttendees": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "Name": {
-            "type": "string"
-          },
-          "PNumber": {
-            "type": "string"
-          }
-        }
-      },
-      "description": "Ad-hoc attendees added directly to this session, not on the event nominal roll"
+      "description": "List of attendee PNumbers"
     },
     "Scores": {
       "type": "object",
       "description": "Key-value map of PNumber to activity score subsets",
       "additionalProperties": true
-    },
-    "EventID": {
-      "type": "string",
-      "description": "Linked EventTrainingPlan ID when this session runs during an event"
-    },
-    "StanceID": {
-      "type": "string",
-      "description": "Linked EventTrainingStance ID when this session runs against a stance cadet subset"
     }
   },
   "required": [
     "Date",
     "StartTime"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.Name": "{{user.PNumber}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }
