@@ -21,6 +21,21 @@ import { useTaskModal } from '@/lib/TaskModalContext';
 // Each group optionally has `separator: true` to render a section divider above it.
 // `level` maps directly to ACCESS_LEVELS numeric values (L1=1, L2=2, etc.).
 const NAV_GROUPS = [
+  // ── 0. DC Command (commander-focused quick access) ───────────────────────────
+  {
+    label: 'DC Command',
+    icon: Shield,
+    separator: true,
+    separatorLabel: 'COMMAND',
+    items: [
+      { path: '/schedule',          label: 'Training Plan',     icon: Calendar,       level: 5 },
+      { path: '/syllabus',          label: 'Syllabus',           icon: BookOpen,       level: 5 },
+      { path: '/all-availability',  label: 'Staff Availability',  icon: CalendarCheck,  level: 5 },
+      { path: '/personnel',         label: 'Cadet Nominal Roll',  icon: Users,          level: 5 },
+      { path: '/progress',          label: 'Lesson Completion',   icon: Layers,         level: 5 },
+    ],
+  },
+
   // ── 1. Dashboard ─────────────────────────────────────────────────────────────
   {
     label: 'Dashboard',

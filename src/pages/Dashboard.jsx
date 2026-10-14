@@ -19,6 +19,7 @@ import KADashboardWidget from '@/components/dashboard/KADashboardWidget';
 import MyToDoWidget from '@/components/dashboard/MyToDoWidget';
 import SetupCommandCenter from '@/components/onboarding/SetupCommandCenter';
 import { useOnboardingStatus } from '@/lib/useOnboarding';
+import DCHub from '@/pages/DCHub';
 
 const PRIORITY_COLORS = {
   Urgent: 'border-l-4 border-destructive bg-destructive/5',
@@ -190,6 +191,11 @@ export default function Dashboard() {
       ? s.InstructorPNumber === personnel?.PNumber
       : isCadet(level) && s.AssignedStarLevel === personnel?.CurrentStarLevel
   );
+
+  // DCs get a streamlined command hub once onboarding is complete
+  if (isDC && !setupIncomplete) {
+    return <DCHub />;
+  }
 
   return (
     <div className="space-y-6">
